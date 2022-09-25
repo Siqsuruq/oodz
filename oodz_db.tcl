@@ -1,4 +1,7 @@
 nx::Class create oodz_db -superclass oodz_superclass {
+	# Possible result formats are: D - Tcl dict, L - Tcl list, J - JSON, default is Tcl dict
+	:property {result_format "D"}
+	
 	:method init {} {
 		set :db [ns_db gethandle ${:srv}pool1 1]
 	
@@ -17,10 +20,56 @@ nx::Class create oodz_db -superclass oodz_superclass {
 			} else {
 				set result 0
 			}
-			
 		}
 		: release
 		return $result
+	}
+
+	:public method select_uuid_by_id {table id} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT uuid_${table} FROM $table WHERE id=[pg_quote $id]"
+		try {
+			set row [ns_db 0or1row ${:db_handles} $query]
+			set result [ns_set array $row]
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return [dict getnull $result uuid_${table}]
+		}
+	}
+
+	:public method select_id_by_uuid {table uuid} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT id FROM $table WHERE uuid_${table}=[pg_quote $uuid]"
+		try {
+			set row [ns_db 0or1row ${:db_handles} $query]
+			set result [ns_set array $row]
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return [dict getnull $result id]
+		}
+	}
+
+	:public method select_id_by_name {table name} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT id FROM $table WHERE name=[pg_quote $name]"
+		try {
+			set rows [ns_db select ${:db_handles} $query]
+			while {[ns_db getrow ${:db_handles} $rows]} {
+				lappend result [ns_set array $rows]
+			}
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
+		}
 	}
 
 	# Release all db handlers
