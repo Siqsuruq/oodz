@@ -9,8 +9,6 @@ nx::Class create apiin -superclass oodz_superclass {
 		set :obj_answer_content_type "application/json"
 		set :obj_ts [ns_localsqltimestamp]
 		set :obj_uuid [ns_uuid]
-		set :error_codes [dict create 400 "Bad request" 401 "Unauthorized" 403 "Forbidden" 404 "Resource not found" 405 "Method not allowed" 413 "Request Entity Too Large" 418 "I'm a teapot" 500 "Internal server error"]
-		
 		# REST must be stateless
 		# set :obj_sid [ns_session id]
 		set :obj_header [ns_conn headers]
@@ -42,8 +40,7 @@ nx::Class create apiin -superclass oodz_superclass {
 	
 	:public method answer_request {args} {
 		if {[[self] cget -ssl] ne "nsssl"} {
-			: answer_error {code 405 detail "HTTP Requests are Not Allowed, please use HTTPS"}
-			oodzLog warning "HTTP Requests are Not Allowed, please use HTTPS"
+			: answer_error {code 405 detail "HTTP Requests are Not Allowed, please use HTTPS"}	
 		} else {
 			set surl [[self] split_url]
 			set resource [lindex $surl 3]
@@ -51,18 +48,15 @@ nx::Class create apiin -superclass oodz_superclass {
 			read_config
 
 			#Check if resource folder exists and if it has API proc
-			# checking for api proc will fail if not initialized, ex. need to open webpage or load tcl files
-			
 			if {[file isdirectory [file join ${:path} [set ${:srv}::mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
 				oodzLog notice "It exists"
 				set params [: get_body]
-				
 				set values [lrange $surl 4 end]
 				# # Execute call and get result list.
-				set result [::${resource}::api ${:reqType} $values $params ${:url}]
-				: answer $result
-				# set content "$result"
-				# ns_return 200 text/html $content
+				# set result [::${resource}::api $method $values $params $url]
+				# ::api::response $result
+				set content "REQUEST TYPE: ${:reqType}<br/ >URL: ${:url}<br/ >REQUESTED: [: get_header content_type]<br /><hr>$params <hr> $values"
+				ns_return 200 text/html $content
 			} else {
 				: answer_error {code 404}
 			}
@@ -121,6 +115,8 @@ nx::Class create apiin -superclass oodz_superclass {
 	
 	
 	:method answer_error {args} {
+		set codes [dict create 400 "Bad request" 401 "Unauthorized" 403 "Forbidden" 404 "Resource not found" 405 "Method not allowed" 413 "Request Entity Too Large" 418 "I'm a teapot" 500 "Internal server error"]
+		
 		set json_head [lindex $args 0]
 		set json [new_CkJsonObject]
 		CkJsonObject_put_Utf8 $json 1
@@ -131,7 +127,7 @@ nx::Class create apiin -superclass oodz_superclass {
 		dict for {key val} $json_head {
 			if {$key eq "code"} {
 				CkJsonObject_AddNumberAt $json -1 "$key" $val
-				CkJsonObject_AddStringAt $json -1 "text" [dict getnull ${:error_codes} $val]
+				CkJsonObject_AddStringAt $json -1 "text" [dict getnull $codes $val]
 			} else {
 				CkJsonObject_AddStringAt $json -1 "$key" "$val"
 			}
@@ -144,49 +140,7 @@ nx::Class create apiin -superclass oodz_superclass {
 		delete_CkJsonObject $json
 	}
 	
-	:method answer {args} {
-		# puts "$args"
-		set response [lindex $args 0]
-		set code [dict getnull $response code]
-		# Check if its error code
-		if {[dict exists ${:error_codes} $code] == 1} {
-			: answer_error [dict create code $code detail [dict getnull $response detail]]
-		} else {
-			switch [dict getnull $response type] {
-				json {set content_type "application/json"}
-				xml {set content_type "application/xml"}
-				text {set content_type "text/plain"}
-				html {set content_type "text/html"}
-				default {set content_type "application/json"}
-			}
-			
-			switch $code {
-				1 {puts "\tAPI CALL OK"}
-				200 {
-					ns_return 200 $content_type [dict get $response data]
-				}
-				201 {
-					ns_return 201 $content_type [dict get $response data]
-				}
-				301 {
-					ns_returnmoved [dict get $response data]
-				}
-				302 {
-					ns_returnredirect [dict getnull $response redirect_url]
-				}
-				303 {
-					ns_returnredirect "https://google.com"
-				}
-				400 {
-					::api::api_error $response
-				}
-				404 {
-					ns_returnnotfound
-				}
-				405 {
-					::api::api_error [dict create code 404 method $method request $url]
-				}
-			}		
-		}
+	:method answer {} {
+	
 	}
 }

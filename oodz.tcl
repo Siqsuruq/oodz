@@ -1,8 +1,9 @@
-# Main OODZ Superclass (What is my purpose? To keep server name, path) 
+# Main OODZ Superclass (What is my purpose? To keep server name, path and hardcoded address https:// + $name_server) 
 
 nx::Class create oodz_superclass {
 	:property {srv:substdefault {[ns_info server]}}
 	:property {path:substdefault {[ns_pagepath]}}
+	:property {srvaddress:substdefault {https://[ns_info server]}}
 }
 
 # Simple class to write separate log file

@@ -1,4 +1,4 @@
-nx::Class create oodz_restansw -superclass apiin {
+nx::Class create oodz_baseobj -superclass apiin {
 	:method init {} {
 		set :obj_answer_content_type "application/json"
 		set :obj_ts [ns_localsqltimestamp]
