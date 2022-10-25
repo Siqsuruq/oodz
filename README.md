@@ -23,7 +23,8 @@ Just run this git command inside **/opt/ns/tcl**
 Edit your configuration for virtual server:
 
 # Modules to load
-<code tcl>
+{{{
+#!tcl
 ns_section			"ns/server/${server}/modules" {
 	ns_param		oodz				tcl
 }
@@ -34,4 +35,4 @@ ns_section			"ns/server/${server}/module/oodz" {
 	ns_param		ssl						1
 	ns_param		api_version				"v2"
 }
-</code>
+}}}
