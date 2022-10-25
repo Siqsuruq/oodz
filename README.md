@@ -11,13 +11,19 @@ It is still a work in progress :)
 "OODZ" is a simple Tcl module for Naviserver, it is basically a folder in the global tcl library on Naviserver.
 To install it just clone repo to global tcl library folder.
 
-For example,lets assume that Naviserver installed in **/opt/ns**, and global tcl library folder is **/opt/ns/tcl**. Run this inside **/opt/ns/tcl**
+For example, let's assume Naviserver installed in **/opt/ns**, and the global tcl library folder is **/opt/ns/tcl**. 
+
+Just run this git command inside **/opt/ns/tcl**
+
 > git clone https://maksym_zinchenko@bitbucket.org/maksym_zinchenko/oodz.git
 
 ---
 ## OODZ Init Config
 
+Edit your configuration for virtual server:
+
 # Modules to load
+<code tcl>
 ns_section			"ns/server/${server}/modules" {
 	ns_param		oodz				tcl
 }
@@ -28,3 +34,4 @@ ns_section			"ns/server/${server}/module/oodz" {
 	ns_param		ssl						1
 	ns_param		api_version				"v2"
 }
+</code>
