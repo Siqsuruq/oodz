@@ -73,23 +73,6 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		}
 	}
 	
-	# Return 1 if object data is empty, 0 otherwise
-	:public method is_empty {args} {
-		if {${:obj_data} eq ""} {
-			return 1
-		} else {
-			return 0
-		}
-	}
-	# Return 1 if object data is not empty, 0 otherwise
-	:public method is_not_empty {args} {
-		if {${:obj_data} eq ""} {
-			return 0
-		} else {
-			return 1
-		}
-	}
-
 	:method format_result {result {result_type "D"}} {
 		if {$result_type eq "D"} {
 			return $result
