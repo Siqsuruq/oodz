@@ -14,7 +14,6 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		} else {
 			oodzLog write "Cant init object TABLE doesnt exist"
 		}
-
 	}
 
 ################################################################
@@ -32,6 +31,7 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 			return [dict getnull [select_all ${:obj} * ${:obj}.id=\'${:identifier}\'] 0]
 		}
 	}
+	
 	:method update {} {
 	
 	}
@@ -43,7 +43,6 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 
 	# Public part to get data
 	:public method get {args} {
-		
 		set params [lindex $args 1]
 		set result_type [lindex $args 2]
 		if {$result_type eq ""} { set result_type "D" } elseif {$result_type ne "" && $result_type ne "L"} { set result_type "D" }
@@ -65,6 +64,32 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		next
 	}
 	
+	:public method load_data {args} {
+		set a [lindex $args 0]
+		if {$a ne "" && [dict is_dict $a] == 1} {
+			foreach key [dict keys $a] {
+				set :obj_data [dict getnull [select_all ${:obj} * ${:obj}.$key=\'[dict get $a $key]\'] 0]
+			}
+		}
+	}
+	
+	# Return 1 if object data is empty, 0 otherwise
+	:public method is_empty {args} {
+		if {${:obj_data} eq ""} {
+			return 1
+		} else {
+			return 0
+		}
+	}
+	# Return 1 if object data is not empty, 0 otherwise
+	:public method is_not_empty {args} {
+		if {${:obj_data} eq ""} {
+			return 0
+		} else {
+			return 1
+		}
+	}
+
 	:method format_result {result {result_type "D"}} {
 		if {$result_type eq "D"} {
 			return $result
