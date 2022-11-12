@@ -2,10 +2,11 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 	:property {identifier ""}
 	:property obj:required
 	:property obj_data
+	:property {db:object,required}
 	
 	:method init {} {
 		set :obj_data ""
-		if {[db table_exists ${:obj}] eq 1} {
+		if {[${:db} table_exists ${:obj}] eq 1} {
 			if {${:identifier} ne "" && [is_uuid ${:identifier}] == 1} {
 				set :obj_data [: read uuid]
 			} elseif {${:identifier} ne "" && [string is entier -strict ${:identifier}] == 1} {
@@ -19,16 +20,18 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 ################################################################
 # Basic CRUD operations
 ################################################################
-
+	:public method a {} {
+		return [${:db} select_all ${:obj}]
+	}
 	:method create {} {
 	
 	}
 	:method read {args} {
 		set idType [lindex $args 0]
 		if {$idType eq "uuid"} {
-			return [dict getnull [select_all ${:obj} * uuid_${:obj}=\'${:identifier}\'] 0]
+			return [lindex [${:db} select_all ${:obj} * uuid_${:obj}=\'${:identifier}\'] 0]
 		} elseif {$idType eq "id"} {
-			return [dict getnull [select_all ${:obj} * ${:obj}.id=\'${:identifier}\'] 0]
+			return [lindex [${:db} select_all ${:obj} * ${:obj}.id=\'${:identifier}\'] 0]
 		}
 	}
 	
@@ -68,7 +71,7 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		set a [lindex $args 0]
 		if {$a ne "" && [dict is_dict $a] == 1} {
 			foreach key [dict keys $a] {
-				set :obj_data [dict getnull [select_all ${:obj} * ${:obj}.$key=\'[dict get $a $key]\'] 0]
+				set :obj_data [lindex [${:db} select_all ${:obj} * ${:obj}.$key=\'[dict get $a $key]\'] 0]
 			}
 		}
 	}

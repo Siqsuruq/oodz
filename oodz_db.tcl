@@ -62,7 +62,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 		try {
 			set rows [ns_db select ${:db_handles} $query]
 			while {[ns_db getrow ${:db_handles} $rows]} {
-				lappend result [ns_set array $rows]
+				lappend result [dict get [ns_set array $rows] id]
 			}
 		} trap {} {arr} {
 			oodzLog error "DB ERROR: $arr"
@@ -72,6 +72,108 @@ nx::Class create oodz_db -superclass oodz_superclass {
 		}
 	}
 
+	:public method select_uuid_by_name {table name} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT uuid_$table FROM $table WHERE name=[pg_quote $name]"
+		try {
+			set rows [ns_db select ${:db_handles} $query]
+			while {[ns_db getrow ${:db_handles} $rows]} {
+				lappend result [dict get [ns_set array $rows] uuid_$table]
+			}
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
+		}
+	}
+	
+	:public method select_col_by_id {table column id} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT $column FROM $table WHERE id=[pg_quote $id]"
+		try {
+			set row [ns_db 0or1row ${:db_handles} $query]
+			set result [ns_set array $row]
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return [dict getnull $result $column]
+		}
+	}
+	
+	:public method select_col_by_uuid {table column uuid} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT $column FROM $table WHERE uuid_${table}=[pg_quote $uuid]"
+		try {
+			set row [ns_db 0or1row ${:db_handles} $query]
+			set result [ns_set array $row]
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return [dict getnull $result $column]
+		}
+	}
+	
+	:public method select_name_by_id {table id} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT name FROM $table WHERE id=[pg_quote $id]"
+		try {
+			set row [ns_db 0or1row ${:db_handles} $query]
+			set result [ns_set array $row]
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return [dict getnull $result name]
+		}
+	}
+	
+	:public method select_name_by_uuid {table uuid} {
+		set result ""
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT name FROM $table WHERE uuid_${table}=[pg_quote $uuid]"
+		try {
+			set row [ns_db 0or1row ${:db_handles} $query]
+			set result [ns_set array $row]
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return [dict getnull $result name]
+		}
+	}
+	
+	:public method get_columns_types {table {columns "*"}} {
+		set col_type [dict create]
+		set :db_handles [ns_db gethandle ${:srv}pool1 1]
+		set query "SELECT * FROM information_schema.columns WHERE table_name = '$table'"
+		try {
+			set rows [ns_db select ${:db_handles} $query]
+			while {[ns_db getrow ${:db_handles} $rows]} {
+				dict append col_type [dict get [ns_set array $rows] column_name] [dict get [ns_set array $rows] data_type]
+			}
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			if {$columns eq "*"} {
+				return [dict values $col_type]
+			} else {
+				set a ""
+				foreach col $columns {
+					lappend a [dict getnull $col_type $col]
+				}
+				return $a
+			}
+		}
+	}
+	
 	# Release all db handlers
 	:method release {} {
 		foreach handle ${:db_handles} {

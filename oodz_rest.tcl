@@ -1,7 +1,6 @@
 nx::Class create apiin -superclass oodz_superclass {
 	:property reqType:required
 	:property url:required
-	:property auth:required
 	:property ssl:required
 	:property api_version:required
 	

@@ -45,6 +45,20 @@ nx::Class create oodz_baseclass -superclass oodz_superclass {
 		}
 	}
 
+	:public method clear {args} {
+		set params [lindex $args 1]
+		if {[lindex $args 0] eq "data"} {
+			if {$params ne ""} {
+				puts "WE ARE HERE: $params"
+				foreach param $params {
+					: remove $param
+				}
+			} else {
+				set :obj_data ""
+			}
+		}
+	}
+
 	# Public part to get data from obj_data property
 	:public method get {args} {
 		set params [lindex $args 1]
