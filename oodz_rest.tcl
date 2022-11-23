@@ -41,30 +41,28 @@ nx::Class create apiin -superclass oodz_superclass {
 	
 	:public method answer_request {args} {
 		if {[[self] cget -ssl] ne "nsssl"} {
-			: answer_error {code 405 detail "HTTP Requests are Not Allowed, please use HTTPS"}
-			oodzLog warning "HTTP Requests are Not Allowed, please use HTTPS"
-		} else {
-			set surl [[self] split_url]
-			set resource [lindex $surl 3]
-			# must change this part to be more general
-			read_config
+			oodzLog warning "HTTP Requests are Not Safe, please use HTTPS"
+		}
+		set surl [[self] split_url]
+		set resource [lindex $surl 3]
+		# must change this part to be more general
+		read_config
 
-			#Check if resource folder exists and if it has API proc
-			# checking for api proc will fail if not initialized, ex. need to open webpage or load tcl files
+		#Check if resource folder exists and if it has API proc
+		# checking for api proc will fail if not initialized, ex. need to open webpage or load tcl files
 			
-			if {[file isdirectory [file join ${:path} [set ${:srv}::mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
-				oodzLog notice "It exists"
-				set params [: get_body]
+		if {[file isdirectory [file join ${:path} [set ${:srv}::mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
+			oodzLog notice "It exists"
+			set params [: get_body]
 				
-				set values [lrange $surl 4 end]
-				# # Execute call and get result list.
-				set result [::${resource}::api ${:reqType} $values $params ${:url}]
-				: answer $result
-				# set content "$result"
-				# ns_return 200 text/html $content
-			} else {
-				: answer_error {code 404}
-			}
+			set values [lrange $surl 4 end]
+			# # Execute call and get result list.
+			set result [::${resource}::api ${:reqType} $values $params ${:url}]
+			: answer $result
+			# set content "$result"
+			# ns_return 200 text/html $content
+		} else {
+			: answer_error {code 404}
 		}
 	}
 
