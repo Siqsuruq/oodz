@@ -45,6 +45,7 @@ nx::Class create oodz_baseclass -superclass oodz_superclass {
 		}
 	}
 
+	# Public interface to erase all data or some specific keys, accept 2 parameters first must be data and second, list of keys to delete. If only one parameter "data" supplied erase all data
 	:public method clear {args} {
 		set params [lindex $args 1]
 		if {[lindex $args 0] eq "data"} {
@@ -108,5 +109,9 @@ nx::Class create oodz_baseclass -superclass oodz_superclass {
 		} else {
 			return [dict values $result]
 		}
+	}
+	
+	:method unknown {called_method args} {
+		oodzLog warning "Unknown method '$called_method' called"
 	}
 }

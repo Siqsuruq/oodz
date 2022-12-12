@@ -1,6 +1,9 @@
 package require nx
 package require nsf
 package require dicttool
+package require csv
+package require textutil
+
 
 # Get API Version from configuration, if there is no such ns_param set it to "v1"
 set api_version [ns_config ns/server/[ns_info server]/module/oodz api_version ""]
@@ -16,3 +19,5 @@ proc apiincall {args} {
 foreach method {GET POST PUT DELETE} {
 	ns_register_proc $method api/$api_version apiincall $api_version
 }
+
+# Loading sources in order

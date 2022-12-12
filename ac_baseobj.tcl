@@ -13,7 +13,7 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 				set :obj_data [: read id]
 			}
 		} else {
-			oodzLog write "Cant init object TABLE doesnt exist"
+			oodzLog error "Cant init object TABLE doesnt exist"
 		}
 	}
 
@@ -23,9 +23,7 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 	:public method a {} {
 		return [${:db} select_all ${:obj}]
 	}
-	:method create {} {
-	
-	}
+
 	:method read {args} {
 		set idType [lindex $args 0]
 		if {$idType eq "uuid"} {
@@ -35,9 +33,6 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		}
 	}
 	
-	:method update {} {
-	
-	}
 	:method delete {} {
 		delete_row ${:obj}
 	}

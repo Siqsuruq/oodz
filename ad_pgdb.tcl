@@ -9,13 +9,13 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	
 	:public method table_exists {args} {
 		set table_name [lindex $args 0]
-		set query "SELECT EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename  = [pg_quote $table_name])"
+		set query "SELECT tbl_view_exists([ns_dbquotevalue $table_name])"
 		set :db_handles [ns_db gethandle]
 		set row [ns_db 0or1row ${:db_handles} $query]
 		if {$row eq ""} {
 			set result 0
 		} else {
-			if {[dict get [ns_set array $row] exists] eq "t"} {
+			if {[dict get [ns_set array $row] tbl_view_exists] eq "t"} {
 				set result 1
 			} else {
 				set result 0
@@ -28,7 +28,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_uuid_by_id {table id} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT uuid_${table} FROM $table WHERE id=[pg_quote $id]"
+		set query "SELECT uuid_${table} FROM $table WHERE id=[ns_dbquotevalue $id]"
 		try {
 			set row [ns_db 0or1row ${:db_handles} $query]
 			set result [ns_set array $row]
@@ -43,7 +43,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_id_by_uuid {table uuid} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT id FROM $table WHERE uuid_${table}=[pg_quote $uuid]"
+		set query "SELECT id FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 		try {
 			set row [ns_db 0or1row ${:db_handles} $query]
 			set result [ns_set array $row]
@@ -58,7 +58,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_id_by_name {table name} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT id FROM $table WHERE name=[pg_quote $name]"
+		set query "SELECT id FROM $table WHERE name=[ns_dbquotevalue $name]"
 		try {
 			set rows [ns_db select ${:db_handles} $query]
 			while {[ns_db getrow ${:db_handles} $rows]} {
@@ -75,7 +75,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_uuid_by_name {table name} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT uuid_$table FROM $table WHERE name=[pg_quote $name]"
+		set query "SELECT uuid_$table FROM $table WHERE name=[ns_dbquotevalue $name]"
 		try {
 			set rows [ns_db select ${:db_handles} $query]
 			while {[ns_db getrow ${:db_handles} $rows]} {
@@ -92,7 +92,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_col_by_id {table column id} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT $column FROM $table WHERE id=[pg_quote $id]"
+		set query "SELECT $column FROM $table WHERE id=[ns_dbquotevalue $id]"
 		try {
 			set row [ns_db 0or1row ${:db_handles} $query]
 			set result [ns_set array $row]
@@ -107,7 +107,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_col_by_uuid {table column uuid} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT $column FROM $table WHERE uuid_${table}=[pg_quote $uuid]"
+		set query "SELECT [ns_dbquotevalue $column] FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 		try {
 			set row [ns_db 0or1row ${:db_handles} $query]
 			set result [ns_set array $row]
@@ -122,7 +122,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_name_by_id {table id} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT name FROM $table WHERE id=[pg_quote $id]"
+		set query "SELECT name FROM $table WHERE id=[ns_dbquotevalue $id]"
 		try {
 			set row [ns_db 0or1row ${:db_handles} $query]
 			set result [ns_set array $row]
@@ -137,7 +137,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method select_name_by_uuid {table uuid} {
 		set result ""
 		set :db_handles [ns_db gethandle]
-		set query "SELECT name FROM $table WHERE uuid_${table}=[pg_quote $uuid]"
+		set query "SELECT name FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 		try {
 			set row [ns_db 0or1row ${:db_handles} $query]
 			set result [ns_set array $row]
@@ -226,40 +226,6 @@ nx::Class create oodz_db -superclass oodz_superclass {
 		}
 	}
 	
-	:public method select {table {columns "*"} {extra "none"} {res_type "dict"} args} {
-		set query "SELECT "
-		if {$columns == "*"} {
-			set columns [: select_columns_names $table]
-		}
-		set my_columns [list]
-		set my_tables [list $table]
-		set fklist [list]
-
-		foreach col $columns {
-			if {[string match fk_* $col] == 1} {
-				lappend my_tables [set fk_table [::textutil::trim::trim $col fk_]]
-				# lappend my_columns "$fk_table.name as $fk_table\_name"
-				lappend my_columns "$fk_table.name as $col"
-				lappend fklist " $table.$col=$fk_table.id "
-				if {$search ne "" && $def_search_col ne ""} {
-					if {$def_search_col eq $col} {
-						set def_search_col $fk_table.name
-					}
-				}
-			} elseif {[string match ufk_* $col] == 1} {
-				lappend my_tables [set fk_table [::textutil::trim::trim $col ufk_]]
-				lappend my_columns "$fk_table.name as ${fk_table}_name"
-				lappend my_columns $table.$col
-				lappend fklist " $table.$col=$fk_table.uuid_${fk_table} "
-			} else {
-				lappend my_columns $table.$col
-			}
-		}
-		append query "[::csv::join $my_columns]"
-		append query " FROM [::csv::join $my_tables] "
-		return $query
-	}
-	
 	:public method select_all {table {columns "*"} {extra "none"} {res_type "dict"} args} {
 		set result ""
 		if {$columns == "*"} {
@@ -306,6 +272,11 @@ nx::Class create oodz_db -superclass oodz_superclass {
 						set def_search_col $fk_table.name
 					}
 				}
+			} elseif {[string match ufk_* $col] == 1} {
+				lappend my_tables [set fk_table [::textutil::trim::trim $col ufk_]]
+				lappend my_columns "$fk_table.name as ${fk_table}_name"
+				lappend my_columns $table.$col
+				lappend fklist " $table.$col=$fk_table.uuid_${fk_table} "
 			} else {
 				lappend my_columns $table.$col
 			}
@@ -397,7 +368,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:public method insert_all {table data {conflict ""} {returning ""} {nspace 1}} {
 		set result ""
 		set tbl_cols [: select_columns_names $table]
-		set :db_handles [ns_db gethandle]
+
 		set my_columns [list]
 		set my_values [list]
 		
@@ -407,7 +378,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 				lappend my_columns \"$col\"
 				if {[string match fk_* $col] == 1} {
 					if {[dict get $data $col] != ""} {
-						lappend my_values [pg_quote [: select_id_by_name [::textutil::trim::trim $col fk_] [dict get $data $col]]]
+						lappend my_values [ns_dbquotevalue [: select_id_by_name [::textutil::trim::trim $col fk_] [dict get $data $col]]]
 					} else {
 						lappend my_values NULL
 					}
@@ -417,9 +388,9 @@ nx::Class create oodz_db -superclass oodz_superclass {
 							lappend my_values '[pg_escape_bytea [dict get $data $col]]'
 						} else {
 							if {$nspace != 1} {
-								lappend my_values [pg_quote [dict get $data $col]]
+								lappend my_values [ns_dbquotevalue [dict get $data $col]]
 							} else {
-								lappend my_values [pg_quote [normalize_spaces [dict get $data $col]]]
+								lappend my_values [ns_dbquotevalue [normalize_spaces [dict get $data $col]]]
 							}
 						}
 					} else {
@@ -429,21 +400,23 @@ nx::Class create oodz_db -superclass oodz_superclass {
 			} else {oodzLog warning "Column ${table}.${col} does not exists"}
 		}
 		
+		set query "INSERT INTO \"$table\" ([::csv::join $my_columns , ""]) VALUES ([::csv::join $my_values , ""])"
+		
 		if {$conflict ne ""} {
-			if {$returning ne ""} { 
-				set query "INSERT INTO \"$table\" ([::csv::join $my_columns , ""]) VALUES ([::csv::join $my_values , ""]) ON CONFLICT ([lindex $conflict 0]) DO [lindex $conflict 1] RETURNING [::csv::join $returning , ""]"
+			append query " ON CONFLICT ([lindex $conflict 0]) DO [lindex $conflict 1]"
+		}
+		if {$returning ne ""} {
+			if {$returning eq "*"} {
+				append query " RETURNING *"
 			} else {
-				set query "INSERT INTO \"$table\" ([::csv::join $my_columns , ""]) VALUES ([::csv::join $my_values , ""]) ON CONFLICT ([lindex $conflict 0]) DO [lindex $conflict 1]"
-			}
-		} else {
-			if {$returning ne ""} { 
-				set query "INSERT INTO \"$table\" ([::csv::join $my_columns , ""]) VALUES ([::csv::join $my_values , ""]) RETURNING [::csv::join $returning , ""]"
-			} else {
-				set query "INSERT INTO \"$table\" ([::csv::join $my_columns , ""]) VALUES ([::csv::join $my_values , ""])"
+				append query " RETURNING [::csv::join $returning , ""]"
 			}
 		}
+		
 		oodzLog notice "QUERY: $query"
+
 		try {
+			set :db_handles [ns_db gethandle]
 			if {$returning ne ""} {
 				set query_res [ns_db 0or1row ${:db_handles} $query]
 				if {$query_res ne ""} {
@@ -462,6 +435,142 @@ nx::Class create oodz_db -superclass oodz_superclass {
 		}
 	}
 	
+	:public method update_all {table data {nspace 1}} {
+		set result ""
+		set my_values [list]
+		
+		# Ensuring id key is the first in the columns list
+		if {[dict exists $data id] == 1} {
+			lappend my_values id='[dict get $data id]'
+			set data [dict remove $data id]
+		}
+		
+		foreach col [dict keys $data] val [dict values $data] {
+			if {[string match fk_* $col] == 1} {
+				lappend my_values $col=[ns_dbquotevalue [: select_id_by_name [::textutil::trim::trim $col fk_] $val]]
+			} else {
+				if {$val != ""} {
+					if {[: get_columns_types $table $col] eq "bytea"} {
+						lappend my_values $col='[pg_escape_bytea $val]'
+					} else {
+						if {$nspace != 1} {
+							lappend my_values $col=[ns_dbquotevalue $val]
+						} else {
+							lappend my_values $col=[ns_dbquotevalue [normalize_spaces $val]]
+						}
+					}
+						
+				} else {
+					lappend my_values $col=NULL
+				}
+			}
+		}
+		set query "UPDATE $table SET [::csv::join $my_values , ""] WHERE [lindex $my_values 0]"
+		
+		oodzLog notice "QUERY: $query"
+
+		try {
+			set :db_handles [ns_db gethandle]
+			ns_db dml ${:db_handles} $query
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
+		}
+	}
+	
+	########################################################## hstore ##########################################################
+	:public method update_hstore {table id data {col "extra"} {uuid_col ""}}  {
+		set result ""
+		set hst_data ""
+		dict for {key val} $data {
+			append hst_data "\"$key\"=>\"$val\","
+		}
+		set hst_data [string trimright $hst_data ,]
+		
+		if {[is_uuid ${id}] == 1} {
+			if {$uuid_col eq ""} {
+				set uuid_col uuid_${table}
+			}
+			set query "UPDATE $table SET $col = $col || ('$hst_data') ::hstore WHERE $table.$uuid_col='$id';"
+		} else {
+			set query "UPDATE $table SET $col = $col || ('$hst_data') ::hstore WHERE $table.id='$id';"
+		}
+		
+		oodzLog notice "QUERY: $query"
+
+		try {
+			set :db_handles [ns_db gethandle]
+			ns_db dml ${:db_handles} $query
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
+		}
+	}
+	
+	:public method delete_hstore {table id key_2_del {col "extra"} {uuid_col ""}} {
+		set result ""
+		if {[is_uuid ${id}] == 1} {
+			if {$uuid_col eq ""} {
+				set uuid_col uuid_${table}
+			}
+			set query "UPDATE $table SET $col = delete($col, '$key_2_del') WHERE $table.$uuid_col='$id';"
+		} else {
+			set query "UPDATE $table SET $col = delete($col, '$key_2_del') WHERE $table.id='$id';"
+		}
+		oodzLog notice "QUERY: $query"
+		try {
+			set :db_handles [ns_db gethandle]
+			ns_db dml ${:db_handles} $query
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
+		}
+	}
+	
+	:public method get_hstore_dict {table id {col "extra"} {uuid_col ""}} {
+		set result ""
+		if {[is_uuid ${id}] == 1} {
+			if {$uuid_col eq ""} {
+				set uuid_col uuid_${table}
+			}
+			set query "SELECT hstore_to_json($col) FROM $table WHERE $table.$uuid_col='$id';"
+		} else {
+			set query "SELECT hstore_to_json($col) FROM $table WHERE id='$id';"
+		}
+		oodzLog notice "QUERY: $query"
+		try {
+			set :db_handles [ns_db gethandle]
+			set row [ns_db 0or1row ${:db_handles} $query]
+			if {$row ne ""} {
+				set result [::json::json2dict [dict get [ns_set array $row] hstore_to_json]]
+			} 
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
+		}
+	}
+	
+	# For backward compatibility, do not use. Use: get_hstore_dict
+	:public method get_hstore_dict_uuid {table uuid {col "extra"} {uuid_col ""}} {
+		return [: get_hstore_dict $table $uuid $col $uuid_col]
+	}
+	
+	:public method get_hstore_val {table id vals {col "extra"} {uuid_col ""}} {
+		set result ""
+		set hstrdict [: get_hstore_dict $table $id $col $uuid_col]
+		foreach val $vals {
+			dict append result $val [dict getnull $hstrdict $val]
+		}
+		return $result
+	}
 }
 
 oodz_db create db

@@ -1,29 +1,19 @@
 # Help classes to read global, private configuration , translation etc.
 
 nx::Class create oodz_conf_global -superclass oodz_superclass {
+	:variable instance:object
+
+	:public object method create {args} {
+		return [expr {[info exists :instance] ? ${:instance} : [set :instance [next]]}]
+	}
+	
 	:method init {} {
 		: read_config
 		# : read_dz_conf
 		# : load_dz_procs
 		# : load_trns
 	}
-	
-	:public method get {args} {
-		switch [lindex $args 0] {
-			srv {
-				return ${:srv}
-			}
-			root {
-				return ${:root}
-			}
-			path {
-				return ${:path}
-			}
-			default {
-				return [dict create srv ${:srv} root ${:root} path ${:path}]
-			}
-		}
-	}
+
 	
 	:public method read_config {} {
 		# ns_log Notice "OODZ READING CONFIG"

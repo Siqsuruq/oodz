@@ -6,8 +6,14 @@ nx::Class create oodz_superclass {
 	:property {srvaddress:substdefault {https://[ns_info server]}}
 }
 
-# Simple class to write separate log file
+# Simple singleton class to write separate log file
 nx::Class create oodz_log -superclass oodz_superclass {
+	:variable instance:object
+
+	:public object method create {args} {
+		return [expr {[info exists :instance] ? ${:instance} : [set :instance [next]]}]
+	}
+
 	:method init {} {
 		set oodz_log_dir [file join [ns_info home] logs]
 		set logfile [file join $oodz_log_dir ${:srv}.oodz.log]
