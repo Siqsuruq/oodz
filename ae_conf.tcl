@@ -16,8 +16,7 @@ nx::Class create oodz_conf_global -superclass oodz_superclass {
 
 	
 	:public method read_config {} {
-		# ns_log Notice "OODZ READING CONFIG"
-		oodzLog write "OODZ READING CONFIG"
+		oodzLog notice "OODZ READING CONFIG: [file join ${:path} ../ conf daidze.ini]"
 		set config_file [file join ${:path} ../ conf daidze.ini]
 		set ini_handler [::ini::open $config_file]
 		namespace eval ${:srv} {}
