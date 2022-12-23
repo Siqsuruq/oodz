@@ -3,6 +3,7 @@ package require nsf
 package require dicttool
 package require csv
 package require textutil
+package require inifile
 
 
 # Get API Version from configuration, if there is no such ns_param set it to "v1"
