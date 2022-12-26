@@ -1,15 +1,16 @@
 nx::Class create oodz_baseobj -superclass oodz_baseclass {
 	:property {identifier ""}
 	:property obj:required
-	:property obj_data
+	# :property obj_data
 	:property {db:object,required}
 	
 	:method init {} {
-		set :obj_data ""
+		next
 		if {[${:db} table_exists ${:obj}] eq 1} {
 			if {${:identifier} ne "" && [is_uuid ${:identifier}] == 1} {
 				set :obj_data [: read uuid]
 			} elseif {${:identifier} ne "" && [string is entier -strict ${:identifier}] == 1} {
+				puts "MUST READ ID DATA"
 				set :obj_data [: read id]
 			}
 		} else {
@@ -45,6 +46,7 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		set result_type [lindex $args 2]
 		if {$result_type eq ""} { set result_type "D" } elseif {$result_type ne "" && $result_type ne "L"} { set result_type "D" }
 		if {[lindex $args 0] eq "identifier"} {return ${:identifier}}
+		# Atention in the case of views this will return empty value ass uuid
 		if {[lindex $args 0] eq "uuid"} {
 			set :uuid [dict getnull ${:obj_data} uuid_${:obj}]
 			return ${:uuid}

@@ -1,12 +1,10 @@
 nx::Class create oodz_baseclass -superclass oodz_superclass {
-	:property {data ""}
+	:property {obj_data ""}
 	
 	:method init {} {
-		if {${:data} ne "" && [dict is_dict ${:data}] == 1} {
-			set :obj_data ${:data}
-		} else {
-			set :obj_data ""
-		}
+		puts "CALLING BASECLASS INIT"
+		if {${:obj_data} ne "" && [dict is_dict ${:obj_data}] == 1} {
+		} else {set :obj_data ""}
 	}
 
 
@@ -46,11 +44,11 @@ nx::Class create oodz_baseclass -superclass oodz_superclass {
 	}
 
 	# Public interface to erase all data or some specific keys, accept 2 parameters first must be data and second, list of keys to delete. If only one parameter "data" supplied erase all data
+	# Probably wrong definition about delete key, must chane to se t empty string
 	:public method clear {args} {
 		set params [lindex $args 1]
 		if {[lindex $args 0] eq "data"} {
 			if {$params ne ""} {
-				puts "WE ARE HERE: $params"
 				foreach param $params {
 					: remove $param
 				}
