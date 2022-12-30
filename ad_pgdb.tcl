@@ -437,12 +437,16 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	
 	:public method update_all {table data {nspace 1}} {
 		set result ""
+		set where [list]
 		set my_values [list]
 		
 		# Ensuring id key is the first in the columns list
 		if {[dict exists $data id] == 1} {
-			lappend my_values id='[dict get $data id]'
+			lappend where id='[dict get $data id]'
 			set data [dict remove $data id]
+		} elseif {[dict exists $data uuid_${table}] == 1} {
+			lappend where uuid_${table}='[dict get $data uuid_${table}]'
+			set data [dict remove $data uuid_${table}]
 		}
 		
 		foreach col [dict keys $data] val [dict values $data] {
@@ -465,7 +469,7 @@ nx::Class create oodz_db -superclass oodz_superclass {
 				}
 			}
 		}
-		set query "UPDATE $table SET [::csv::join $my_values , ""] WHERE [lindex $my_values 0]"
+		set query "UPDATE $table SET [::csv::join $my_values , ""] WHERE [lindex $where 0]"
 		
 		oodzLog notice "QUERY: $query"
 
