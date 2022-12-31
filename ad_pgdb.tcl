@@ -263,7 +263,10 @@ nx::Class create oodz_db -superclass oodz_superclass {
 
 		foreach col $columns {
 			if {[string match fk_* $col] == 1} {
-				lappend my_tables [set fk_table [::textutil::trim::trim $col fk_]]
+				set trimmed_tbl_name [::textutil::trim::trim $col fk_]
+				if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
+					lappend my_tables [set fk_table $trimmed_tbl_name]
+				}
 				# lappend my_columns "$fk_table.name as $fk_table\_name"
 				lappend my_columns "$fk_table.name as $col"
 				lappend fklist " $table.$col=$fk_table.id "
@@ -273,7 +276,10 @@ nx::Class create oodz_db -superclass oodz_superclass {
 					}
 				}
 			} elseif {[string match ufk_* $col] == 1} {
-				lappend my_tables [set fk_table [::textutil::trim::trim $col ufk_]]
+				set trimmed_tbl_name [::textutil::trim::trim $col ufk_]
+				if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
+					lappend my_tables [set fk_table $trimmed_tbl_name]
+				}
 				lappend my_columns "$fk_table.name as ${fk_table}_name"
 				lappend my_columns $table.$col
 				lappend fklist " $table.$col=$fk_table.uuid_${fk_table} "
