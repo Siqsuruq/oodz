@@ -581,6 +581,30 @@ nx::Class create oodz_db -superclass oodz_superclass {
 		}
 		return $result
 	}
+	
+	
+###################################### Execute Query #################################################
+	:public method execute_query {args} {
+		set result ""
+		set query [lindex $args 0]
+		oodzLog notice "QUERY: $query"
+
+		try {
+			set :db_handles [ns_db gethandle]
+			set query_res [ns_db exec ${:db_handles} $query]
+			if {$query_res eq "NS_ROWS"} {
+				set rows [ns_db bindrow ${:db_handles}]
+				while {[ns_db getrow ${:db_handles} $rows]} {
+					lappend result [ns_set array $rows]
+				}
+			} 
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
+		}
+	}
 }
 
 oodz_db create db
