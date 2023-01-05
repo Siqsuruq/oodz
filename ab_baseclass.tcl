@@ -2,7 +2,6 @@ nx::Class create oodz_baseclass -superclass oodz_superclass {
 	:property {obj_data ""}
 	
 	:method init {} {
-		puts "CALLING BASECLASS INIT"
 		if {${:obj_data} ne "" && [dict is_dict ${:obj_data}] == 1} {
 		} else {set :obj_data ""}
 	}
