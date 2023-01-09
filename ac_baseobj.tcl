@@ -73,6 +73,13 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		}
 	}
 	
+	:public method load_default {args} {
+		set a [lindex $args 0]
+		if {$a ne ""} {
+			set :obj_data [lindex [${:db} select_all ${:obj} * "${:obj}.$a IS TRUE"] 0]
+		}
+	}
+	
 	:method format_result {result {result_type "D"}} {
 		if {$result_type eq "D"} {
 			return $result
