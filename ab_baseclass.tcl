@@ -1,3 +1,21 @@
+#
+# Scripted Value Constraint. Value checker named "uuid"
+#
+# # ::nx::Slot method type=uuid {name value} {
+	# # if {[regexp {([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})} $value] != 1} {
+		# # error "Value '$value' of parameter $name is not UUID"
+	# # }
+# # }
+
+::nx::ObjectParameterSlot method type=uuid {name value} {
+	set pattern {^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$}
+	if {![regexp $pattern $value]} {
+		error "Value '$value' of parameter $name is not UUID"
+	}
+	return $value
+}
+
+
 nx::Class create oodz_baseclass -superclass oodz_superclass {
 	:property {obj_data ""}
 	

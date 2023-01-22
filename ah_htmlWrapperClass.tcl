@@ -6,10 +6,10 @@ nx::Class create htmlWrapper -superclass oodz_conf_global {
 
 	:method init {} {
 		set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] ${:module} ${:xmlFile} ]
-		puts $xml_file
+		ns_adp_puts "Hello: $xml_file"
 		set doc [dom parse [tdom::xmlReadFile $xml_file]]
 		set hd "[$doc asXML]"
-		puts $hd
+		ns_adp_puts "<br> $hd"
 		::htmlparse::parse -cmd [list [: html_wrapper main ${:module}]] $hd
 	}
 	
