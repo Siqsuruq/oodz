@@ -33,9 +33,9 @@ nx::Class create oodz_baseclass -superclass oodz_superclass {
 	:public method add {args} {
 		set a [lindex $args 0]
 		if {$a ne "" && [dict is_dict $a] == 1} {
-			foreach key [dict keys $a] {
-				dict set :obj_data  $key [dict get $a $key]
-			}
+							   
+			set :obj_data [dict merge ${:obj_data} $a]
+	
 		}
 	}
 

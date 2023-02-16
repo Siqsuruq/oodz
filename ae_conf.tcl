@@ -58,4 +58,4 @@ nx::Class create oodz_conf_global -superclass oodz_baseclass {
 	}
 }
 
-# oodz_conf_global create ConfigObj -db db
+oodz_conf_global create oodzConf -db db

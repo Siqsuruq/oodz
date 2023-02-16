@@ -6,37 +6,12 @@ nx::Class create apiin -superclass oodz_superclass {
 	
 	:method init {} {
 		set :obj_answer_content_type "application/json"
-		set :obj_ts [ns_localsqltimestamp]
-		set :obj_uuid [ns_uuid]
 		set :error_codes [dict create 400 "Bad request" 401 "Unauthorized" 403 "Forbidden" 404 "Resource not found" 405 "Method not allowed" 413 "Request Entity Too Large" 418 "I'm a teapot" 500 "Internal server error"]
 		
-		# REST must be stateless
-		# set :obj_sid [ns_session id]
 		set :obj_header [ns_conn headers]
 		oodzLog notice "************ API CALL ******************"
-		oodzLog notice "METHOD: ${:reqType}"
-		oodzLog notice "URL: ${:url}"
-		oodzLog notice "****************************************"
-	}
-	
-	:public method inf {args} {
-		switch [lindex $args 0] {
-			obj_ts {
-				return ${:obj_ts}
-			}
-			obj_domain {
-				return ${:obj_domain}
-			}
-			obj_uuid {
-				return ${:obj_uuid}
-			}
-			# obj_sid {
-				# return ${:obj_sid}
-			# }
-			default {
-				return [dict create obj_domain ${:srv} obj_uuid ${:obj_uuid} obj_ts ${:obj_ts}]
-			}
-		}
+		oodzLog notice "METHOD: ${:reqType} - URL: ${:url}"
+		oodzLog notice "HEADER: [ns_set array ${:obj_header}]"
 	}
 	
 	:public method answer_request {args} {
@@ -45,20 +20,19 @@ nx::Class create apiin -superclass oodz_superclass {
 		}
 		set surl [[self] split_url]
 		set resource [lindex $surl 3]
-		# must change this part to be more general
-		read_config
 
 		#Check if resource folder exists and if it has API proc
-		# checking for api proc will fail if not initialized, ex. need to open webpage or load tcl files
+		if {[file isdirectory [file join ${:path} [oodzConf get_global mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
+			oodzLog notice "Controler exists"
+			if {[set params [: get_body]] != 0} {
+				set values [lrange $surl 4 end]
+				# Execute call and get result list.
+				set result [::${resource}::api ${:reqType} $values $params ${:url}]
+				: answer $result
+			}
 			
-		if {[file isdirectory [file join ${:path} [set ${:srv}::mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
-			oodzLog notice "It exists"
-			set params [: get_body]
 				
-			set values [lrange $surl 4 end]
-			# # Execute call and get result list.
-			set result [::${resource}::api ${:reqType} $values $params ${:url}]
-			: answer $result
+			
 			# set content "$result"
 			# ns_return 200 text/html $content
 		} else {
@@ -91,29 +65,51 @@ nx::Class create apiin -superclass oodz_superclass {
 	
 	# Accepted: none, json, form-data, x-www-form-urlencoded, raw, binary
 	# this method will convert body data to Tcl dict
-	:method get_body {args} {
+	:method get_body {} {
 		set params ""
 		set content_type [: get_header content_type]
 		set content_length [: get_header content_length]
 		# API can accept GET requests with non empty body, only multipart/form-data and application/x-www-form-urlencoded
 		if {${:reqType} in {GET DELETE}} {
-			set params [dz::ns_set_to_dict [ns_getform]]
+			set params [ns_set array [ns_getform]]
+			return $params
 		} elseif {${:reqType} in {POST PUT}} {
 			if {$content_type eq "application/json"} {
-				set params [json::json2dict [ns_getcontent -as_file false -binary false]]
+				try { set params [json::json2dict [ns_getcontent -as_file false -binary false]] } on error {} {
+					oodzLog error "JSON payload is malformed."
+					: answer_error [dict create code 400 detail "JSON payload is malformed."]
+					set params 0
+				} finally { return $params } 
 			} elseif {$content_type eq "application/x-www-form-urlencoded" || $content_type eq "multipart/form-data"} {
-				set params [dz::ns_set_to_dict [ns_getform]]
+				try { set params [ns_set array [ns_getform]] } on error {} {
+					oodzLog error "It is not possible to handle form payload."
+					: answer_error [dict create code 400 detail "It is not possible to handle form payload."]
+					set params 0
+				} finally { return $params }
 			} elseif {$content_type eq "text/html" || $content_type eq "text/plain"} {
-				set params [ns_getcontent -as_file false -binary false]
+				try { set params [ns_getcontent -as_file false -binary false] } on error {} {
+					oodzLog error "Unable to process text file sent."
+					: answer_error [dict create code 400 detail "Unable to process text file sent."]
+					set params 0
+				} finally { return $params }
 			} elseif {$content_type eq "application/xml"} {
-				set params [ns_getcontent -as_file false -binary false]
+				try { set params [ns_getcontent -as_file false -binary false] } on error {} {
+					oodzLog error "Unable to process XML file sent."
+					: answer_error [dict create code 400 detail "Unable to process XML file sent."]
+					set params 0
+				} finally { return $params }
 			} elseif {$content_length ne 0} {
-				set params [ns_getcontent -as_file true -binary true]
+				try { set params [ns_getcontent -as_file true -binary true] } on error {} {
+					oodzLog error "Unable to process binary file sent."
+					: answer_error [dict create code 400 detail "Unable to process binary file sent."]
+					set params 0
+				} finally { return $params }
 			} else {
-				puts "NO BODY CONTENT"
+				# Normally we need body but for some weird reason we allow empty requests :)
+				oodzLog warning "Empty payload."
+				return $params
 			}
 		}
-		return $params
 	}
 	
 	
@@ -123,7 +119,7 @@ nx::Class create apiin -superclass oodz_superclass {
 		CkJsonObject_put_Utf8 $json 1
 		
 		CkJsonObject_AddStringAt $json -1 "version" "${:api_version}"
-		CkJsonObject_AddStringAt $json -1 "currentTime" "${:obj_ts}"
+		CkJsonObject_AddStringAt $json -1 "currentTime" [clock format [clock seconds] -format "%y-%m-%d %H:%M:%S"]
 		CkJsonObject_AddStringAt $json -1 "status" "ERROR"
 		dict for {key val} $json_head {
 			if {$key eq "code"} {
@@ -145,7 +141,7 @@ nx::Class create apiin -superclass oodz_superclass {
 		# puts "$args"
 		set response [lindex $args 0]
 		set code [dict getnull $response code]
-		# Check if its error code
+		# Check if its an error code
 		if {[dict exists ${:error_codes} $code] == 1} {
 			: answer_error [dict create code $code detail [dict getnull $response detail]]
 		} else {
