@@ -21,9 +21,9 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 ################################################################
 # Basic CRUD operations
 ################################################################
-	:public method a {} {
-		return [${:db} select_all ${:obj}]
-	}
+					  
+									
+  
 
 	:method read {args} {
 		set idType [lindex $args 0]
