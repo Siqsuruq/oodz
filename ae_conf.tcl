@@ -56,6 +56,12 @@ nx::Class create oodz_conf_global -superclass oodz_baseclass {
 			}
 		}
 	}
+	
+	:public method relaod {args} {
+		: read_dz_conf
+		: load_trns
+		: load_dz_procs
+	}
 }
 
 oodz_conf_global create oodzConf -db db
