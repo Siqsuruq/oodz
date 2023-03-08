@@ -1,6 +1,6 @@
 # Help classes to read global, private configuration , translation etc.
 
-nx::Class create oodz_conf_global -superclass oodz_baseclass {
+nx::Class create oodz_confclass -superclass oodz_baseclass {
 	:property {db:object,required}
 	:property {conf_file "default.ini"}
 	
@@ -64,4 +64,4 @@ nx::Class create oodz_conf_global -superclass oodz_baseclass {
 	}
 }
 
-oodz_conf_global create oodzConf -db db
+oodz_confclass create oodzConf -db db
