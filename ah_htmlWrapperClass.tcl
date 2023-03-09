@@ -1,4 +1,4 @@
-nx::Class create htmlWrapper -superclass oodz_conf_global {
+nx::Class create htmlWrapper -superclass oodz_confclass {
 	:property {conf:object,required}
 	:property {frame "main"}
 	:property module:required
