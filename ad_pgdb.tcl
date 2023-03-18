@@ -3,26 +3,28 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	:property {result_format "D"}
 	
 	:method init {} {
-		# set :db [ns_db gethandle ${:srv}pool1 1]
-		# puts "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF: ${:db}"
 	}
 	
 	:public method table_exists {args} {
+		set result 0
 		set table_name [lindex $args 0]
 		set query "SELECT tbl_view_exists([ns_dbquotevalue $table_name])"
 		set :db_handles [ns_db gethandle]
-		set row [ns_db 0or1row ${:db_handles} $query]
-		if {$row eq ""} {
-			set result 0
-		} else {
-			if {[dict get [ns_set array $row] tbl_view_exists] eq "t"} {
-				set result 1
-			} else {
+		try {
+			set row [ns_db 0or1row ${:db_handles} $query]
+			if {$row eq ""} {
 				set result 0
+			} else {
+				if {[dict get [ns_set array $row] tbl_view_exists] eq "t"} {
+					set result 1
+				}
 			}
+		} trap {} {arr} {
+			oodzLog error "DB ERROR: $arr"
+		} finally {
+			: release
+			return $result
 		}
-		: release
-		return $result
 	}
 
 	:public method select_uuid_by_id {table id} {
@@ -370,14 +372,14 @@ nx::Class create oodz_db -superclass oodz_superclass {
 			return $result
 		}
 	}
-	
+
+
+	# Should always return inserted id and uuid get rid of returning empty, unless defined * ()return everything
 	:public method insert_all {table data {conflict ""} {returning ""} {nspace 1}} {
 		set result ""
 		set tbl_cols [: select_columns_names $table]
-
 		set my_columns [list]
 		set my_values [list]
-		
 		foreach col [dict keys $data] {
 			# Checking if column exists, if not ignore it and save log
 			if {[lsearch -exact $tbl_cols $col] != -1} {
@@ -405,22 +407,18 @@ nx::Class create oodz_db -superclass oodz_superclass {
 				}
 			} else {oodzLog warning "Column ${table}.${col} does not exists"}
 		}
-		
-		set query "INSERT INTO \"$table\" ([::csv::join $my_columns , ""]) VALUES ([::csv::join $my_values , ""])"
-		
+		set query "INSERT INTO \"$table\" ([join $my_columns ,]) VALUES ([join $my_values ,])"
 		if {$conflict ne ""} {
 			append query " ON CONFLICT ([lindex $conflict 0]) DO [lindex $conflict 1]"
 		}
 		if {$returning ne ""} {
 			if {$returning eq "*"} {
-				append query " RETURNING *"
+				append query { RETURNING *}
 			} else {
-				append query " RETURNING [::csv::join $returning , ""]"
+				append query " RETURNING [join $returning ,]"
 			}
 		}
-		
 		oodzLog notice "QUERY: $query"
-
 		try {
 			set :db_handles [ns_db gethandle]
 			if {$returning ne ""} {

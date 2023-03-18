@@ -73,6 +73,13 @@ nx::Class create oodz_baseobj -superclass oodz_baseclass {
 		}
 	}
 	
+	# Should always return id and uuid
+	:public method save2db {args} {
+		set res [${:db} insert_all ${:obj} ${:obj_data} "" [list uuid_${:obj}]]
+		: load_data [dict create uuid_${:obj} [lindex $res 0]]
+		return [lindex $res 0]
+	}
+	
 	:public method load_default {args} {
 		set a [lindex $args 0]
 		if {$a ne ""} {
