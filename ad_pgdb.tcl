@@ -2,13 +2,10 @@ nx::Class create oodz_db -superclass oodz_superclass {
 	# Possible result formats are: D - Tcl dict, L - Tcl list, J - JSON, default is Tcl dict
 	:property {result_format "D"}
 	
-	:method init {} {
-	}
-	
-	:public method table_exists {args} {
+
+	:public method table_exists {$table} {
 		set result 0
-		set table_name [lindex $args 0]
-		set query "SELECT tbl_view_exists([ns_dbquotevalue $table_name])"
+		set query "SELECT tbl_view_exists([ns_dbquotevalue $table])"
 		set :db_handles [ns_db gethandle]
 		try {
 			set row [ns_db 0or1row ${:db_handles} $query]
@@ -228,7 +225,44 @@ nx::Class create oodz_db -superclass oodz_superclass {
 		}
 	}
 	
-	:public method select_all {table {columns "*"} {extra "none"} {res_type "dict"} args} {
+	:method my_columns {table columns} {
+		set my_columns [list]
+		set my_tables [list $table]
+		set fklist [list]
+
+		foreach col $columns {
+			if {[string match fk_* $col] == 1} {
+				set trimmed_tbl_name [::textutil::trim::trim $col fk_]
+				if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
+					lappend my_tables [set fk_table $trimmed_tbl_name]
+				}
+				# lappend my_columns "$fk_table.name as $fk_table\_name"
+				lappend my_columns "$fk_table.name AS $col"
+				lappend fklist " $table.$col=$fk_table.id "
+				# if {$search ne "" && $def_search_col ne ""} {
+					# if {$def_search_col eq $col} {
+						# set def_search_col $fk_table.name
+					# }
+				# }
+			} elseif {[string match ufk_* $col] == 1} {
+				set trimmed_tbl_name [::textutil::trim::trim $col ufk_]
+				if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
+					lappend my_tables [set fk_table $trimmed_tbl_name]
+				}
+				lappend my_columns "$fk_table.name as ${fk_table}_name"
+				lappend my_columns $table.$col
+				lappend fklist " $table.$col=$fk_table.uuid_${fk_table} "
+			} else {
+				lappend my_columns $table.$col
+			}
+		}
+		# puts "MY COLUMNS: $my_columns"
+		# puts "MY TABLES: $my_tables"
+		# puts "MY FKLIST: $fklist"
+		return [list $my_columns $my_tables $fklist]
+	}
+	
+	:public method select_all {table {columns "*"} {extra "none"} args} {
 		set result ""
 		if {$columns == "*"} {
 			set columns [: select_columns_names $table]
@@ -236,6 +270,10 @@ nx::Class create oodz_db -superclass oodz_superclass {
 		set :db_handles [ns_db gethandle]
 	
 		set params [lindex $args 0]
+		puts "*****************"
+		puts $params
+		puts "******************"
+		
 		if {[dict getnull $params sort] ne ""} {
 			set sort [dict get $params sort]
 		} else {set sort "id"}
@@ -259,36 +297,40 @@ nx::Class create oodz_db -superclass oodz_superclass {
 			set return_count 1
 		} else {set return_count 0}
 		
-		set my_columns [list]
-		set my_tables [list $table]
-		set fklist [list]
+		set a [: my_columns $table $columns]
+		set my_columns [lindex $a 0]
+		set my_tables [lindex $a 1]
+		set fklist [lindex $a 2]
+		# set my_columns [list]
+		# set my_tables [list $table]
+		# set fklist [list]
 
-		foreach col $columns {
-			if {[string match fk_* $col] == 1} {
-				set trimmed_tbl_name [::textutil::trim::trim $col fk_]
-				if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
-					lappend my_tables [set fk_table $trimmed_tbl_name]
-				}
-				# lappend my_columns "$fk_table.name as $fk_table\_name"
-				lappend my_columns "$fk_table.name as $col"
-				lappend fklist " $table.$col=$fk_table.id "
-				if {$search ne "" && $def_search_col ne ""} {
-					if {$def_search_col eq $col} {
-						set def_search_col $fk_table.name
-					}
-				}
-			} elseif {[string match ufk_* $col] == 1} {
-				set trimmed_tbl_name [::textutil::trim::trim $col ufk_]
-				if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
-					lappend my_tables [set fk_table $trimmed_tbl_name]
-				}
-				lappend my_columns "$fk_table.name as ${fk_table}_name"
-				lappend my_columns $table.$col
-				lappend fklist " $table.$col=$fk_table.uuid_${fk_table} "
-			} else {
-				lappend my_columns $table.$col
-			}
-		}
+		# foreach col $columns {
+			# if {[string match fk_* $col] == 1} {
+				# set trimmed_tbl_name [::textutil::trim::trim $col fk_]
+				# if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
+					# lappend my_tables [set fk_table $trimmed_tbl_name]
+				# }
+				# # lappend my_columns "$fk_table.name as $fk_table\_name"
+				# lappend my_columns "$fk_table.name as $col"
+				# lappend fklist " $table.$col=$fk_table.id "
+				# if {$search ne "" && $def_search_col ne ""} {
+					# if {$def_search_col eq $col} {
+						# set def_search_col $fk_table.name
+					# }
+				# }
+			# } elseif {[string match ufk_* $col] == 1} {
+				# set trimmed_tbl_name [::textutil::trim::trim $col ufk_]
+				# if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
+					# lappend my_tables [set fk_table $trimmed_tbl_name]
+				# }
+				# lappend my_columns "$fk_table.name as ${fk_table}_name"
+				# lappend my_columns $table.$col
+				# lappend fklist " $table.$col=$fk_table.uuid_${fk_table} "
+			# } else {
+				# lappend my_columns $table.$col
+			# }
+		# }
 		# puts "MY COLUMNS: $my_columns"
 		# puts "MY TABLES: $my_tables"
 		# puts "MY FKLIST: $fklist"
@@ -347,8 +389,8 @@ nx::Class create oodz_db -superclass oodz_superclass {
 				oodzLog notice "QUERY: $query"
 				
 				set row [ns_db 0or1row ${:db_handles} $query]
-				oodzLog notice "ROW: $row"
-				oodzLog notice "ROW ARRAY: [ns_set array $row]"
+				# oodzLog notice "ROW: $row"
+				# oodzLog notice "ROW ARRAY: [ns_set array $row]"
 				set result [dict get [ns_set array $row] json_agg]			
 			} elseif {${:result_format} eq "L"} { 
 				set rows [ns_db select ${:db_handles} $query]
@@ -589,13 +631,19 @@ nx::Class create oodz_db -superclass oodz_superclass {
 
 		try {
 			set :db_handles [ns_db gethandle]
-			set query_res [ns_db exec ${:db_handles} $query]
-			if {$query_res eq "NS_ROWS"} {
-				set rows [ns_db bindrow ${:db_handles}]
-				while {[ns_db getrow ${:db_handles} $rows]} {
-					lappend result [ns_set array $rows]
-				}
-			} 
+			
+			if {${:result_format} eq "J"} {
+				set query "SELECT json_agg(t) FROM ($query) t"
+				set result [dict getnull [ns_set array [ns_db 0or1row ${:db_handles} $query]] json_agg]
+			} else {
+				set query_res [ns_db exec ${:db_handles} $query]
+				if {$query_res eq "NS_ROWS"} {
+					set rows [ns_db bindrow ${:db_handles}]
+					while {[ns_db getrow ${:db_handles} $rows]} {
+						lappend result [ns_set array $rows]
+					}
+				} 
+			}
 		} trap {} {arr} {
 			oodzLog error "DB ERROR: $arr"
 		} finally {

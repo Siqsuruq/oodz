@@ -9,7 +9,7 @@ nx::Class create apiin -superclass oodz_superclass {
 		set :error_codes [dict create 400 "Bad request" 401 "Unauthorized" 403 "Forbidden" 404 "Resource not found" 405 "Method not allowed" 413 "Request Entity Too Large" 418 "I'm a teapot" 500 "Internal server error"]
 		
 		set :obj_header [ns_conn headers]
-		oodzLog notice "************ API CALL ******************"
+		oodzLog notice "************ V2 API CALL ******************"
 		oodzLog notice "METHOD: ${:reqType} - URL: ${:url}"
 		oodzLog notice "HEADER: [ns_set array ${:obj_header}]"
 	}
@@ -65,14 +65,18 @@ nx::Class create apiin -superclass oodz_superclass {
 	
 	# Accepted: none, json, form-data, x-www-form-urlencoded, raw, binary
 	# this method will convert body data to Tcl dict
+	# Notice not only body but url also
 	:method get_body {} {
 		set params ""
 		set content_type [: get_header content_type]
 		set content_length [: get_header content_length]
 		# API can accept GET requests with non empty body, only multipart/form-data and application/x-www-form-urlencoded
 		if {${:reqType} in {GET DELETE}} {
-			set params [ns_set array [ns_getform]]
-			return $params
+			try { set params [ns_set array [ns_getform]] } on error {} {
+				oodzLog error "Error getting URL/Multipart form data."
+				: answer_error [dict create code 400 detail "JSON payload is malformed."]
+				set params 0
+			} finally { return $params } 
 		} elseif {${:reqType} in {POST PUT}} {
 			if {$content_type eq "application/json"} {
 				try { set params [json::json2dict [ns_getcontent -as_file false -binary false]] } on error {} {

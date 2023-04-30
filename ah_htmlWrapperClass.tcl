@@ -82,7 +82,7 @@ nx::Class create htmlWrapper -superclass oodz_confclass {
 		################################################# ENTRY ################################################# 
 		} elseif {$tag eq "entry"} {
 			if {$tagsgn eq "/"} {
-				ns_adp_puts "\n"
+				ns_adp_puts "<br>"
 			} else {
 				set pr_dict [: props_2_dict $props $tag $val]
 				dict with pr_dict {}
@@ -141,11 +141,17 @@ nx::Class create htmlWrapper -superclass oodz_confclass {
 				ns_adp_puts "<input id=\"$var\" type=\"file\" class=\"$class\" data-preview-file-type=\"text\" data-show-upload=\"false\" name=\"$var\" $mandatory $state $multiple accept=\"$accept\">"
 				ns_adp_puts "</div>"
 			}
+		################################################# BUTTON ################################################# 
+		} elseif {$tag eq "button"} {
+			if {$tagsgn eq "/"} {
+				ns_adp_puts "\n"
+			} else {
+				: button $props $tag $val
+			}
 		################################################# TABLE ################################################# 
 		} elseif {$tag eq "table"} {
 			if {$tagsgn eq "/"} {
-				ns_adp_puts "</table>"
-				ns_adp_puts "</div></div>"
+				ns_adp_puts "</div>"
 			} else {
 				set pr_dict [props_2_dict $props $tag $val]
 				dict with pr_dict {}
@@ -169,44 +175,62 @@ nx::Class create htmlWrapper -superclass oodz_confclass {
 				#------------- STOP Table Headers
 				
 				
-				ns_adp_puts "<div class=\"col\">"
+				
+				
+				ns_adp_puts "<br>"
 				ns_adp_puts "<div class=\"table-responsive-xl\">"
-				ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table table-striped table-hover\" style=\"width:100%\">"
+				ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table table-sm table-striped table-hover\" style=\"width:100%\">"
 				
 				# THEAD
 				ns_adp_puts "<thead class=\"table-dark\">"
 					ns_adp_puts "<tr>"
-					 
 					foreach thead $theads thead_trns $theads_trns {
 						ns_adp_puts "<th>$thead_trns</th>"
 					}
-					
 					ns_adp_puts "</tr>"
 				ns_adp_puts "</thead>"
 				
+				#------------- START Table Data
+				#------------- STOP Table Data
 				
-				# TFOOT
-				ns_adp_puts "<tfoot>"
-					ns_adp_puts "<tr>"
-					 
-					foreach thead $theads thead_trns $theads_trns {
-						ns_adp_puts "<th>$thead_trns</th>"
-					}
-					
-					ns_adp_puts "</tr>"
-				ns_adp_puts "</tfoot>"
+				
+				# TFOOT, show table footer if tfoot option is true
+				if {[dz_DataType is_bool [dict getnull $pr_dict tfoot]] == 1} {
+					ns_adp_puts "<tfoot>"
+						ns_adp_puts "<tr>"
+						foreach thead $theads thead_trns $theads_trns {
+							ns_adp_puts "<th>$thead_trns</th>"
+						}
+						ns_adp_puts "</tr>"
+					ns_adp_puts "</tfoot>"
+				}
+				
+				ns_adp_puts "</table>"
 				
 				#------JScript
-
-				
 				ns_adp_puts "<script>"
 					ns_adp_puts "\$('\#$var').DataTable( {"
-						ns_adp_puts "serverSide: true,"
-						ns_adp_puts "ajax: '$val',"
-						ns_adp_puts "select: 'true',"
+						ns_adp_puts "processing: true,"
+						ns_adp_puts "order: \[\[ 0, 'asc' \]\],"
+						if {[dz_DataType is_bool [dict getnull $pr_dict select]]} { ns_adp_puts "select: 'os', blurable: true," } else { ns_adp_puts "select: false," }
+						
+						if {[dz_DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
+						if {[dict get $pr_dict type] ne "empty"} {
+							ns_adp_puts "serverSide: $serverSide,"
+							ns_adp_puts "ajax: '$val',"
+							ns_adp_puts "type: 'POST',"
+						}
+						
+						if {[dz_DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
+						ns_adp_puts "multiSort: $multiSort,"
+						set a_trns [::msgcat::mc "Show all"]
+					    ns_adp_puts "lengthMenu: \[\[ 10, 25, 50, 100, -1 \],\[ '10', '25', '50', '100', \"$a_trns\" \]\],"
+						ns_adp_puts "dom: \"<'row'<'col-sm-4'B><'col-sm-6'f><'col-sm-2'l>>tr<'row'<'col-sm-6'i><'col-sm-6'p>>\" ,"
+
+						ns_adp_puts "buttons: \['copy', 'excel', 'pdf'\],"
 						ns_adp_puts "columns: \["
-							foreach thead $theads {
-								ns_adp_puts "{ data: '$thead' },"
+							foreach thead $theads thead_trns $theads_trns {
+								ns_adp_puts "{ data: '$thead' , name: '$thead_trns' },"
 							}	
 						ns_adp_puts "\],"
 					ns_adp_puts "} );"
@@ -215,6 +239,42 @@ nx::Class create htmlWrapper -superclass oodz_confclass {
 		}
 	}
 	
+	:method button {props tag val} {
+		set pr_dict [: props_2_dict $props $tag $val]
+		dict with pr_dict {}
+		set link [list]
+
+		# ADD IMAGE TO THE BUTTON
+		if {[dict exists $pr_dict img] != 0} {
+			set img_tag "<img src=\"[ns_absoluteurl [dict get $pr_dict img] [oodzConf get_global icons_dir]]\">"
+		} else {set img_tag ""}
+
+		if {[lindex $cmd 0] eq "\$::daidze_main"} {
+			if {[lindex $cmd 1] eq "clear_values"} {
+				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"reset\" value=\"$val\" name=\"dz_name\" onclick=\"reset_all();\">$img_tag [::msgcat::mc "$val"]</button>"
+			} else {
+				set module [lindex $cmd 2]
+				if {[chk_mod_acc $module] == 1} {
+					set xml [lindex $cmd 3]
+					lappend link "?mod=$module&xml=$xml"
+					ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"$link\" role=\"button\">$img_tag [::msgcat::mc "$val"]</a>"
+				}
+			}
+		} elseif {[lindex $cmd 0] eq "js"} {
+			ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\" $js>$img_tag [::msgcat::mc "$val"]</button>"
+		} else {
+			set module [lindex [split $cmd "::"] 2]
+			if {$module ne ""} {
+				if {[chk_mod_acc $module] == 1} {
+					ns_adp_puts "<input type=\"hidden\" value='\{[::msgcat::mc "$val"]\} $cmd' name=\"cmd\">"
+					ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"submit\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\">$img_tag [::msgcat::mc "$val"]</button>"
+				}
+			} else {
+				ns_adp_puts "<input type=\"hidden\" value='\{[::msgcat::mc "$val"]\} $cmd' name=\"cmd\">"
+				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"submit\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\">$img_tag [::msgcat::mc "$val"]</button>"
+			}
+		}
+	}
 	
 	############################################ PROP2DICT ############################################
 

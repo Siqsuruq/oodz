@@ -1,0 +1,160 @@
+nx::Class create SQLBuilder {
+    # Define the class variables
+    :property tableName:required
+    :property {columnsList ""}
+    :property {whereClause ""}
+    :property {joinList ""}
+    :property {groupByList ""}
+    :property {orderByList ""}
+	:property {limit ""}
+	:property {offset ""}
+
+    # Define the addColumn method
+    :public method addColumn {columns} {
+        foreach column $columns {
+            lappend :columnsList $column
+        }
+    }
+
+    # Define the removeColumn method
+    :public method removeColumn {columns} {
+        foreach column $columns {
+            set idx [lsearch ${:columnsList} $column]
+            if {$idx != -1} {
+                set :columnsList [lreplace ${:columnsList} $idx $idx]
+            }
+        }
+    }
+
+    # Define the addCondition method
+    :public method addCondition {condition} {
+        if {${:whereClause} eq ""} {
+            set :whereClause $condition
+        } else {
+            append :whereClause " AND $condition"
+        }
+    }
+
+    # Define the addJoin method
+    :public method addJoin {joinType table joinCondition} {
+        lappend :joinList [list $joinType $table $joinCondition]
+    }
+
+    # Define the addGroupBy method
+    :public method addGroupBy {column} {
+        lappend :groupByList $column
+    }
+
+    # Define the addOrderBy method
+    :public method addOrderBy {columnOrders} {
+        foreach {column order} $columnOrders {
+			set order [string toupper $order]
+			if {($order ne "ASC") && ($order ne "DESC")} {
+				return -code error "Invalid sorting order: '$order'. Must be 'ASC' or 'DESC'."
+			}
+            lappend :orderByList [list $column $order]
+        }
+    }
+
+    # Define the search method
+    :public method search {term columns} {
+        set conditions {}
+        foreach column $columns {
+			# ILIKE makes search case-insensitive and CAST to text more versatile in terms of the data types it can handle. However, may afect the performance of the search, especially if you're working with large datasets or complex data types.
+			# Commented line is more general and will work with all databases and types
+			# lappend conditions "$column LIKE '%$term%'"
+            lappend conditions "CAST($column AS TEXT) ILIKE '%$term%'"
+        }
+        if {[llength $conditions] > 0} {
+            set :whereClause [join $conditions " OR "]
+        }
+    }
+
+    # Define the setLimit method
+    :public method setLimit {limitValue} {
+        set :limit $limitValue
+    }
+
+    # Define the setOffset method
+    :public method setOffset {offsetValue} {
+        set :offset $offsetValue
+    }
+
+    # Define the clear method
+	# Method that resets the SQLBuilder's properties related to LIMIT, OFFSET, ORDER BY, GROUP BY, and conditions (the WHERE clause)
+    :public method clear {} {
+        set :whereClause ""
+        set :joinList ""
+        set :groupByList ""
+        set :orderByList ""
+        set :limit ""
+        set :offset ""
+    }
+
+    # Define the buildCountQuery method
+    :public method buildCountQuery {} {
+        set query "SELECT COUNT(*) FROM ${:tableName}"
+
+        foreach join ${:joinList} {
+            set joinType [lindex $join 0]
+            set joinTable [lindex $join 1]
+            set joinCondition [lindex $join 2]
+            append query " $joinType JOIN $joinTable ON $joinCondition"
+        }
+        
+        if {${:whereClause} ne ""} {
+            append query " WHERE ${:whereClause}"
+        }
+
+        if {[llength ${:groupByList}] > 0} {
+            set groupBy [join ${:groupByList} ", "]
+            append query " GROUP BY $groupBy"
+        }
+
+        return $query
+    }
+
+    # Define the buildSelectQuery method
+    :public method buildSelectQuery {} {
+        set columns [join ${:columnsList} ", "]
+        if {$columns eq ""} {
+            set columns "*"
+        }
+
+        set query "SELECT $columns FROM ${:tableName}"
+
+        foreach join ${:joinList} {
+            set joinType [lindex $join 0]
+            set joinTable [lindex $join 1]
+            set joinCondition [lindex $join 2]
+            append query " $joinType JOIN $joinTable ON $joinCondition"
+        }
+        
+        if {${:whereClause} ne ""} {
+            append query " WHERE ${:whereClause}"
+        }
+
+        if {[llength ${:groupByList}] > 0} {
+            set groupBy [join ${:groupByList} ", "]
+            append query " GROUP BY $groupBy"
+        }
+
+        if {[llength ${:orderByList}] > 0} {
+			puts ${:orderByList}
+			set orderBy [join ${:orderByList} ", "]
+			append query " ORDER BY $orderBy NULLS LAST"
+        }
+		
+		# Add the LIMIT clause
+        if {${:limit} ne ""} {
+            append query " LIMIT ${:limit}"
+        }
+        
+        # Add the OFFSET clause
+        if {${:offset} ne ""} {
+            append query " OFFSET ${:offset}"
+        }
+		
+        return $query
+    }
+}

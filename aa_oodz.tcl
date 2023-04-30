@@ -22,6 +22,8 @@ nx::Class create oodz_log -superclass oodz_superclass {
 	
 	:public method notice {args} {
 		: write [lindex $args 0] Notice 
+		# Put to system log too
+		puts [lindex $args 0]
 	}
 	
 	:public method warning {args} {
@@ -29,7 +31,10 @@ nx::Class create oodz_log -superclass oodz_superclass {
 	}
 
 	:public method error {args} {
-		: write [lindex $args 0] Error 
+		: write [lindex $args 0] Error
+		# Put to system log too
+		puts [lindex $args 0]
+
 	}
 
 	:public method fatal {args} {
