@@ -6,6 +6,16 @@ package require textutil
 package require inifile
 package require msgcat
 
+# Load OODZ Framework source files, sources in alphabetical order
+set lib_shared [ns_library shared]
+set oodzFrameworkModules [list base db conf ui rest dateTime helpers]
+foreach oodzModule $oodzFrameworkModules {
+	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *]]
+	foreach sourceFile $sourceFiles {
+		puts "SOURCE >>>>>>>> $sourceFile"
+		source $sourceFile
+	}
+}
 
 # Get API Version from configuration, if there is no such ns_param set it to "v1"
 set api_version [ns_config ns/server/[ns_info server]/module/oodz api_version ""]
@@ -22,4 +32,4 @@ foreach method {GET POST PUT DELETE} {
 	ns_register_proc $method api/$api_version apiincall $api_version
 }
 
-# Loading sources in order
+
