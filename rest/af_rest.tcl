@@ -1,4 +1,4 @@
-nx::Class create apiin -superclass oodz_superclass {
+nx::Class create apiin -superclass ::oodz::superClass {
 	:property reqType:required
 	:property url:required
 	:property ssl:required

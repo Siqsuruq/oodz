@@ -64,4 +64,4 @@ namespace eval oodz {
 	}
 }
 
-::oodz::conf create oodzConf -db db
+::oodz::conf create ::oodzConf -db ::db

@@ -1,5 +1,5 @@
 namespace eval oodz {
-	nx::Class create baseObj -superclass superClass {
+	nx::Class create baseObj -superclass baseClass {
 		:property {identifier ""}
 		:property obj:required
 		:property {db:object,required}

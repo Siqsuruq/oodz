@@ -6,7 +6,7 @@ package require textutil
 package require inifile
 package require msgcat
 
-# Load OODZ Framework source files, sources in alphabetical order
+# Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 set lib_shared [ns_library shared]
 set oodzFrameworkModules [list base db conf ui rest dateTime helpers]
 foreach oodzModule $oodzFrameworkModules {

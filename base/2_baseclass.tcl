@@ -66,6 +66,7 @@ namespace eval oodz {
 			if {[lindex $args 0] eq "srv"} {return ${:srv}}
 			if {[lindex $args 0] eq "path"} {return ${:path}}
 			if {[lindex $args 0] eq "srvaddress"} {return ${:srvaddress}}
+			if {[lindex $args 0] eq "namespace"} {return [namespace current]}
 			if {[lindex $args 0] eq "id"} {
 				set :id [dict getnull ${:obj_data} id]
 				return ${:id}
