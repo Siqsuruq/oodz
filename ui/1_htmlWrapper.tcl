@@ -173,7 +173,7 @@ namespace eval oodz {
 					
 					
 					# TFOOT, show table footer if tfoot option is true
-					if {[dz_DataType is_bool [dict getnull $pr_dict tfoot]] == 1} {
+					if {[::oodz::DataType is_bool [dict getnull $pr_dict tfoot]] == 1} {
 						ns_adp_puts "<tfoot>"
 							ns_adp_puts "<tr>"
 							foreach thead $theads thead_trns $theads_trns {
@@ -190,16 +190,16 @@ namespace eval oodz {
 						ns_adp_puts "\$('\#$var').DataTable( {"
 							ns_adp_puts "processing: true,"
 							ns_adp_puts "order: \[\[ 0, 'asc' \]\],"
-							if {[dz_DataType is_bool [dict getnull $pr_dict select]]} { ns_adp_puts "select: 'os', blurable: true," } else { ns_adp_puts "select: false," }
+							if {[::oodz::DataType is_bool [dict getnull $pr_dict select]]} { ns_adp_puts "select: 'os', blurable: true," } else { ns_adp_puts "select: false," }
 							
-							if {[dz_DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
+							if {[::oodz::DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
 							if {[dict get $pr_dict type] ne "empty"} {
 								ns_adp_puts "serverSide: $serverSide,"
 								ns_adp_puts "ajax: '$val',"
 								ns_adp_puts "type: 'POST',"
 							}
 							
-							if {[dz_DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
+							if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
 							ns_adp_puts "multiSort: $multiSort,"
 							set a_trns [::msgcat::mc "Show all"]
 							ns_adp_puts "lengthMenu: \[\[ 10, 25, 50, 100, -1 \],\[ '10', '25', '50', '100', \"$a_trns\" \]\],"

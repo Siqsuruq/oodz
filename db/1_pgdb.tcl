@@ -530,7 +530,38 @@ namespace eval oodz {
 				return $result
 			}
 		}
+		########################################################## Delete ##########################################################
+		# For compatibility, do not use for new code, will be removed in the future
+		:public method delete_row {table ids} {
+			: delete_rows $table $ids
+		}
 		
+		:public method delete_rows {table ids} {
+			set result ""
+			try {
+				set :db_handles [ns_db gethandle]
+				set int_ids [list]
+				set uuids_ids [list]
+				foreach id $ids {
+					if {[string is entier -strict $id] == 1} {
+						lappend int_ids $id
+					} elseif {[::oodz::DataType is_uuid $id] == 1} {
+						lappend uuids_ids $id
+					}
+				}
+				if {[llength $int_ids] > 0} {
+					set query "DELETE FROM $table WHERE id IN ([::csv::join $int_ids , ""])"
+				} elseif {[llength $uuids_ids] > 0} {
+					set query "DELETE FROM $table WHERE uuid_${table} IN ([ns_dbquotelist $uuids_ids])"
+				}
+				ns_db dml ${:db_handles} $query
+			} trap {} {arr} {
+				oodzLog error "DB ERROR: $arr"
+			} finally {
+				: release
+				return $result
+			}
+		}
 		########################################################## hstore ##########################################################
 		:public method update_hstore {table id data {col "extra"} {uuid_col ""}}  {
 			set result ""

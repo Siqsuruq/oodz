@@ -10,7 +10,6 @@ namespace eval oodz {
 				if {${:identifier} ne "" && [is_uuid ${:identifier}] == 1} {
 					set :obj_data [: read uuid]
 				} elseif {${:identifier} ne "" && [string is entier -strict ${:identifier}] == 1} {
-					puts "MUST READ ID DATA"
 					set :obj_data [: read id]
 				}
 			} else {
@@ -34,8 +33,8 @@ namespace eval oodz {
 			}
 		}
 		
-		:method delete {} {
-			delete_row ${:obj}
+		:method delete {args} {
+			${:db} delete_rows ${:obj}
 		}
 
 	################################################################
@@ -84,7 +83,9 @@ namespace eval oodz {
 			set a [lindex $args 0]
 			if {$a ne ""} {
 				set :obj_data [lindex [${:db} select_all ${:obj} * "${:obj}.$a IS TRUE"] 0]
-			}
+			} else {
+				set :obj_data [lindex [${:db} select_all ${:obj} * "${:obj}.def IS TRUE"] 0]
+			} 
 		}
 		
 		:method format_result {result {result_type "D"}} {
