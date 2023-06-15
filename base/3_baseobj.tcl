@@ -33,8 +33,10 @@ namespace eval oodz {
 			}
 		}
 		
-		:method delete {args} {
-			${:db} delete_rows ${:obj}
+		:public method delete {args} {
+			if {![: is_empty]} {
+				${:db} delete_rows ${:obj} [: get uuid]
+			}
 		}
 
 	################################################################

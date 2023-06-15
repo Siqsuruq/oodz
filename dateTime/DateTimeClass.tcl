@@ -70,6 +70,16 @@ namespace eval oodz {
 			return [clock format $systemTime -format ${:date_format} -timezone "${:timezone}"]
 		}
 
+		:public method ISO_today {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format %Y-%m-%d -timezone "${:timezone}"]
+		}
+		
+		:public method ISO_now {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format %H:%M -timezone "${:timezone}"]
+		}
+
 		:public method tomorrow {} {
 			return [clock format [clock scan "tomorrow"] -format ${:date_format}]
 		}
