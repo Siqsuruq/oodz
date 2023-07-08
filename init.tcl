@@ -10,6 +10,7 @@ package require msgcat
 set lib_shared [ns_library shared]
 set oodzFrameworkModules [list base db conf ui rest dateTime helpers]
 foreach oodzModule $oodzFrameworkModules {
+	puts "OODZ MODULE: $oodzModule"
 	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *]]
 	foreach sourceFile $sourceFiles {
 		puts "SOURCE >>>>>>>> $sourceFile"
@@ -33,3 +34,10 @@ foreach method {GET POST PUT DELETE} {
 }
 
 
+
+ns_register_proc GET /process_form process_form GET
+ns_register_proc POST /process_form process_form POST
+
+ns_runonce {
+	load_dz_procs
+}

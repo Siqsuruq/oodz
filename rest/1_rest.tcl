@@ -1,12 +1,17 @@
+# This is main Routing/Endpoint class, it defines the routing logic for REST API
+# 1. Extracts any necessary data from the request (such as path parameters, query parameters, or the request body),
+# 2. Calls the appropriate service method(s) to perform the required business logic,
+# 3. Constructs the HTTP response to send back to the client.
+
 nx::Class create apiin -superclass ::oodz::superClass {
 	:property reqType:required
 	:property url:required
 	:property ssl:required
 	:property api_version:required
-	
+	:variable error_codes [dict create 400 "Bad request" 401 "Unauthorized" 403 "Forbidden" 404 "Resource not found" 405 "Method not allowed" 413 "Request Entity Too Large" 418 "I'm a teapot" 500 "Internal server error"]
+		
 	:method init {} {
 		set :obj_answer_content_type "application/json"
-		set :error_codes [dict create 400 "Bad request" 401 "Unauthorized" 403 "Forbidden" 404 "Resource not found" 405 "Method not allowed" 413 "Request Entity Too Large" 418 "I'm a teapot" 500 "Internal server error"]
 		
 		set :obj_header [ns_conn headers]
 		oodzLog notice "************ V2 API CALL ******************"
@@ -22,19 +27,14 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		set resource [lindex $surl 3]
 
 		#Check if resource folder exists and if it has API proc
-		if {[file isdirectory [file join ${:path} [oodzConf get_global mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
-			oodzLog notice "Controler exists"
+		if {[file isdirectory [file join ${:path} [oodzConf get_global mod_dir] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
+			oodzLog notice "API Controler exists"
 			if {[set params [: get_body]] != 0} {
 				set values [lrange $surl 4 end]
 				# Execute call and get result list.
-				set result [::${resource}::api ${:reqType} $values $params ${:url}]
+				set result [::${resource}::Api dispatcher ${:reqType} $values $params ${:url}]
 				: answer $result
 			}
-			
-				
-			
-			# set content "$result"
-			# ns_return 200 text/html $content
 		} else {
 			: answer_error {code 404}
 		}
@@ -113,7 +113,12 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				oodzLog warning "Empty payload."
 				return $params
 			}
-		}
+		} else {
+			oodzLog error "Request to an unallowed method."
+			: answer_error [dict create code 405 detail "Method not allowed."]
+			set params 0
+			return $params
+		} 
 	}
 	
 	

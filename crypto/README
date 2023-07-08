@@ -1,0 +1,44 @@
+When implementing a crypto class for your project, the methods you'll need to implement will largely depend on what kind of cryptographic functionality you require. 
+Below are some of the common methods that might be included in a general-purpose crypto class:
+
+    Key Generation:
+        generate_key(length): Generate a secure random key of a given length.
+        generate_key_pair(): Generate a public/private key pair (for asymmetric encryption).
+
+    Encryption:
+        encrypt(plain_text, key): Encrypt a plain text using a provided key.
+        encrypt_with_public_key(plain_text, public_key): Encrypt a plain text using a provided public key (for asymmetric encryption).
+
+    Decryption:
+        decrypt(cipher_text, key): Decrypt a cipher text using a provided key.
+        decrypt_with_private_key(cipher_text, private_key): Decrypt a cipher text using a provided private key (for asymmetric encryption).
+
+    Hashing:
+        hash(data): Generate a hash of the provided data.
+        hash_file(file_path): Generate a hash of the file content at the given path.
+
+    Signing and Verification (for asymmetric encryption):
+        sign(data, private_key): Generate a digital signature for the given data using a private key.
+        verify_signature(data, signature, public_key): Verify the digital signature of the given data using the corresponding public key.
+
+    Secure Random Numbers and Strings:
+        generate_random_bytes(length): Generate secure random bytes of a given length.
+        generate_random_string(length): Generate a secure random string of a given length.
+
+    Serialization and Encoding:
+        encode_to_base64(data): Encode binary data to a base64 string.
+        decode_from_base64(base64_string): Decode a base64 string to binary data.
+
+    Key Derivation:
+        derive_key(password, salt, iterations, key_length): Derive a cryptographic key from a password using a salt, number of iterations and desired key length.
+
+    File Encryption and Decryption:
+        encrypt_file(file_path, key, output_path): Encrypt a file with a given key.
+        decrypt_file(file_path, key, output_path): Decrypt an encrypted file with a given key.
+
+    Helper Methods:
+        is_valid_key(key): Check if the provided key is valid.
+        is_valid_signature(signature): Check if the provided signature is valid.
+
+This is not an exhaustive list but includes many of the core methods that are commonly used in cryptographic libraries. 
+Note that implementing cryptography securely is complex and it's generally recommended to use established libraries (like OpenSSL, libsodium, or language-specific libraries like PyCryptodome for Python) rather than implementing cryptographic algorithms from scratch.

@@ -2,17 +2,18 @@ namespace eval oodz {
 	nx::Class create htmlWrapper {
 		:property {conf:object,required}
 		:property {frame "main"}
-		:property module:required
-		:property xmlFile:required
 
-		:method init {} {
-			set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] ${:module} ${:xmlFile} ]
-			ns_adp_puts "File to wrap: $xml_file"
+		:public method parse {module xmlFile} {
+			set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xmlFile]
 			set doc [dom parse [tdom::xmlReadFile $xml_file]]
 			set hd "[$doc asXML]"
 			::htmlparse::parse -cmd [list [self] html_wrapper] $hd
+			: add_FormHandler
 		}
 		
+		:method add_FormHandler {args} {
+			ns_adp_puts  "<script>let ${:frame}FormHandler = new FormHandler('${:frame}');</script>"
+		}
 		
 		:public method html_wrapper {args} {
 			foreach a $args {
@@ -29,10 +30,14 @@ namespace eval oodz {
 			if {$tag eq "form"} {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts  "</form><br>"
+					# ns_adp_puts "<script>new FormHandler(\'${:frame}\');</script>"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					if {[dict exists $pr_dict var]} {set id [dict get $pr_dict var]} else {set id ${:frame}}
+					if {[dict exists $pr_dict var]} {
+						set id [dict get $pr_dict var]
+						set :frame $id
+					} else {set id ${:frame}}
 					if {[dict exists $pr_dict autocomplete] != 0 && [dict get $pr_dict autocomplete] eq "off"} {
 						ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"/process_form\" enctype=\"multipart/form-data\" autocomplete=\"off\">"
 					} else {
@@ -367,7 +372,26 @@ namespace eval oodz {
 					ns_adp_puts "</div>"
 					ns_adp_puts "</div>"
 				}
+			################################################# LIST ################################################# 
+			} elseif {$tag eq "list"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "</ul>"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "<ul class=\"$class\">"
+					
+				}
+			} elseif {$tag eq "li"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "</li>"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "<li class=\"$class\">"
+				}
 			}
+			
 		}
 		
 		:method input {props tag val} {
@@ -411,30 +435,22 @@ namespace eval oodz {
 				set img_tag "<span class=\"me-2\"><img src=\"[ns_absoluteurl [dict get $pr_dict img] [oodzConf get_global icons_dir]]\"></span>"
 			} else {set img_tag ""}
 
-			if {[lindex $cmd 0] eq "\$::daidze_main"} {
-				if {[lindex $cmd 1] eq "clear_values"} {
-					ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"reset\" value=\"$val\" name=\"dz_name\" onclick=\"reset_all();\">$img_tag $placeholder</button>"
-				} else {
-					set module [lindex $cmd 2]
+			if {$cmd eq "clear_values"} {
+				ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"#\" role=\"button\" onclick=\"${:frame}FormHandler.clearForm(event)\">$img_tag $placeholder</a>"
+			} elseif {[regexp {::\w+::\w+} $cmd] == 1 } {
+				set module [lindex [split $cmd "::"] 2]
+				set val [lindex [split $cmd "::"] 4]
+				if {[file extension $val] eq ".xml"} {
 					if {[chk_mod_acc $module] == 1} {
-						set xml [lindex $cmd 3]
-						lappend link "?mod=$module&xml=$xml"
+						lappend link "?mod=$module&xml=$val"
 						ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"$link\" role=\"button\">$img_tag $placeholder</a>"
 					}
-				}
-			} elseif {[lindex $cmd 0] eq "js"} {
-				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" value=\"$placeholder\" name=\"dz_name\" $js>$img_tag $placeholder</button>"
-			} else {
-				set module [lindex [split $cmd "::"] 2]
-				if {$module ne ""} {
-					if {[chk_mod_acc $module] == 1} {
-						ns_adp_puts "<input type=\"hidden\" value='\{[::msgcat::mc "$val"]\} $cmd' name=\"cmd\">"
-						ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"submit\" value=\"$placeholder\" name=\"dz_name\">$img_tag $placeholder</button>"
-					}
 				} else {
-					ns_adp_puts "<input type=\"hidden\" value='\{[::msgcat::mc "$val"]\} $cmd' name=\"cmd\">"
-					ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"submit\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\">$img_tag $placeholder</button>"
+					puts "CMD: $cmd"
+					ns_adp_puts "<a class=\"$class\" id=\"$var\" onclick=\"${:frame}FormHandler.addFieldAndSubmitForm(event, '$cmd')\" href=\"#\" role=\"button\">$img_tag $placeholder</a>"
 				}
+			} else {
+				ns_adp_puts "<a class=\"$class\" id=\"$var\" onclick=\"${:frame}FormHandler.addFieldAndSubmitForm(event, '$cmd')\" href=\"#\" role=\"button\">$img_tag $placeholder</a>"
 			}
 		}
 		
@@ -443,36 +459,42 @@ namespace eval oodz {
 		:method props_2_dict {props tag val} {
 			set prop [string map {= { }} $props]
 			
-			### FOR ALL WIDGETS ###
+			######################### FOR ALL WIDGETS #########################
+			
+			# Set placeholder
 			dict set prop placeholder [::msgcat::mc "$val"]
-			
-			# Props related to UI (class & Id)
-			# Check class field for all widgets
+			# Set class and id
 			if {[dict exists $prop class] == 1} {
-				set prop [dict replace $prop class [: modify_class $tag [dict getnull $prop class]]]
-			} else {set prop [dict replace $prop class [: modify_class $tag]]}
-			
-			if {[dict exists $prop id] == 1} {
-				set prop [dict replace $prop id [dict get $prop id]]
+				dict set prop class [: modify_class $tag [dict getnull $prop class]]
+			} else {
+				dict set prop class [: modify_class $tag]
 			}
-			
-			# Check default value
+			if {[dict exists $prop id] == 1} {
+				dict set prop id [dict get $prop id]
+			}
+			# Check var field for all widgets (set as unique id)
+			if {[dict exists $prop var] == 1} {
+				dict set prop var [dict get $prop var]
+			}
+			# Check mandatory field for all widgets
+			if {[dict exists $prop mandatory] == 1 && [dict get $prop mandatory] == 1} {
+				dict set prop mandatory required
+			} else {set prop [dict replace $prop mandatory ""]}
+			# Check default, if exists set value 
 			if {[dict getnull $prop default] ne ""} {
 				dict set prop value [dict getnull $prop default]
 			} else {set prop [dict replace $prop value ""]}
+			# Check readonly field for all widgets
+			if {[dict exists $prop state] == 1 && [dict get $prop state] == "readonly"} {
+			} elseif {[dict exists $prop state] == 1 && [dict get $prop state] == "disabled"} {
+			} else {
+				set prop [dict replace $prop state ""]
+			}
 			
-			if {$tag eq "date" || $tag eq "datetime-local" && [dict exists $prop default] == 1 } {
-				set res [dict getnull $prop default]
-				if {$res ne "" && $res eq "today"} {
-					dict set prop value [::oodzTime ISO_today]
-				}
-			}
-			if {$tag eq "time" && [dict exists $prop default] == 1 } {
-				set res [dict getnull $prop default]
-				if {$res ne "" && $res eq "now"} {
-					dict set prop value [::oodzTime ISO_now]
-				}
-			}
+			################### END CHECKS FOR ALL WIDGETS ###################
+
+			
+
 
 			# JavaScript events
 			# if {[dict exists $prop js] == 1} {
@@ -506,24 +528,23 @@ namespace eval oodz {
 			} else {set prop [dict replace $prop js ""]}
 
 			
-			# Check var field for all widgets (set as unique id)
-			if {[dict exists $prop var] == 1} {
-				set prop [dict replace $prop var [dict get $prop var]]
-			}
+			######################### CHECKS FOR SPECIFIC TAGS #########################
 
-			# Check mandatory field for all widgets
-			if {[dict exists $prop mandatory] == 1 && [dict get $prop mandatory] == 1} {
-				set prop [dict replace $prop mandatory required]
-			} else {set prop [dict replace $prop mandatory ""]}
-
-
-
-			# Check readonly field for all widgets
-			if {[dict exists $prop state] == 1 && [dict get $prop state] == "readonly"} {
-			} elseif {[dict exists $prop state] == 1 && [dict get $prop state] == "disabled"} {
-			} else {set prop [dict replace $prop state ""]}
-			
-			if {$tag eq "entry" || $tag eq "barcode"} {
+			if {$tag eq "date" || $tag eq "datetime-local"} {
+				if {[dict exists $prop default] == 1} {
+					set res [dict getnull $prop default]
+					if {$res ne "" && $res eq "today"} {
+						dict set prop value [::oodzTime ISO_today]
+					}
+				}
+			} elseif {$tag eq "time"} {
+				if {[dict exists $prop default] == 1} {
+					set res [dict getnull $prop default]
+					if {$res ne "" && $res eq "now"} {
+						dict set prop value [::oodzTime ISO_now]
+					}
+				}
+			} elseif {$tag eq "entry" || $tag eq "barcode"} {
 				set default [dict create type "text" default ""]
 				foreach key [dict keys $default] {
 					if {[dict exists $prop $key] == 0} {
@@ -541,7 +562,11 @@ namespace eval oodz {
 					}
 				}
 			} elseif {$tag eq "text"} {
-				if {[dict exists $prop rows] != 0} { dict set prop rows [dict get $prop rows] } else { dict set prop rows 5 }
+				if {[dict exists $prop rows] != 0} {
+					dict set prop rows [dict get $prop rows]
+				} else {
+					dict set prop rows 5
+				}
 			} elseif {$tag eq "table"} {
 				foreach key [dict keys $prop] {
 					if {$key eq "headers"} {
@@ -568,8 +593,10 @@ namespace eval oodz {
 				# } else {set onSelect ""}
 			} elseif {$tag eq "accordion"} {
 				if {[dict exists $prop collapse] == 1 && [::oodz::DataType is_bool [dict getnull $prop collapse]] == 1} {
-					set prop [dict replace $prop collapse ""]
-				} else {set prop [dict replace $prop collapse "show"]}
+					dict set prop collapse ""
+				} else {
+					dict set prop collapse "show"
+				}
 			} elseif {$tag eq "label"} {
 				if {[dict exists $prop h] == 1 && [dict get $prop h] <= 6 && [dict get $prop h] >= 1 } {
 					set prop [dict replace $prop h "h[dict get $prop h]"]
@@ -578,6 +605,10 @@ namespace eval oodz {
 				if {[dict exists $prop target] == 1 && [dict get $prop target] ne ""} {
 					set prop [dict replace $prop target "[dict get $prop target]"]
 				} else {set prop [dict replace $prop target ""]}
+			} elseif {$tag eq "input"} {
+				if {[dict get  $prop type] eq "reset"} {
+					dict set prop class [: modify_class $tag button]
+				}
 			}
 			dict append prop sid [ns_session id]
 			return $prop
@@ -670,8 +701,12 @@ namespace eval oodz {
 				table "btable table-sm table-striped table-hover"\
 				calendar ""\
 				video "video-js vjs-fluid vjs-theme-forest"\
+				list "list-group list-group-flush"\
+				li "list-group-item list-group-item-action small-list-item"\
 			]
 			return [dict getnull $def_class $tag]
 		}
 	}
 }
+
+::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf

@@ -7,7 +7,6 @@ namespace eval oodz {
 			: read_config
 			: read_dz_conf
 			: load_trns
-			: load_dz_procs
 		}
 
 		# Load config options from default.ini
@@ -59,7 +58,6 @@ namespace eval oodz {
 		:public method relaod {args} {
 			: read_dz_conf
 			: load_trns
-			: load_dz_procs
 		}
 	}
 }
