@@ -36,6 +36,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				: answer $result
 			}
 		} else {
+			oodzLog notice "API Controler doesnt exists"
 			: answer_error {code 404}
 		}
 	}
@@ -74,7 +75,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		if {${:reqType} in {GET DELETE}} {
 			try { set params [ns_set array [ns_getform]] } on error {} {
 				oodzLog error "Error getting URL/Multipart form data."
-				: answer_error [dict create code 400 detail "JSON payload is malformed."]
+				: answer_error [dict create code 400 detail "Form payload is malformed."]
 				set params 0
 			} finally { return $params } 
 		} elseif {${:reqType} in {POST PUT}} {

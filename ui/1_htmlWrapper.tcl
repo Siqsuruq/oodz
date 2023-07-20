@@ -9,10 +9,11 @@ namespace eval oodz {
 			set hd "[$doc asXML]"
 			::htmlparse::parse -cmd [list [self] html_wrapper] $hd
 			: add_FormHandler
+			set :frame "main"
 		}
 		
 		:method add_FormHandler {args} {
-			ns_adp_puts  "<script>let ${:frame}FormHandler = new FormHandler('${:frame}');</script>"
+			ns_adp_puts  "<script>let ${:frame}formData = new formData('${:frame}');</script>"
 		}
 		
 		:public method html_wrapper {args} {
@@ -30,7 +31,6 @@ namespace eval oodz {
 			if {$tag eq "form"} {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts  "</form><br>"
-					# ns_adp_puts "<script>new FormHandler(\'${:frame}\');</script>"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
@@ -39,9 +39,9 @@ namespace eval oodz {
 						set :frame $id
 					} else {set id ${:frame}}
 					if {[dict exists $pr_dict autocomplete] != 0 && [dict get $pr_dict autocomplete] eq "off"} {
-						ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"/process_form\" enctype=\"multipart/form-data\" autocomplete=\"off\">"
+						ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"multipart/form-data\" autocomplete=\"off\" data-api-url=\"$action\">"
 					} else {
-						ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"/process_form\" enctype=\"multipart/form-data\">"
+						ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"multipart/form-data\" data-api-url=\"$action\">"
 					}
 
 				}
@@ -262,7 +262,11 @@ namespace eval oodz {
 					
 					ns_adp_puts "<br>"
 					ns_adp_puts "<div class=\"table-responsive-xl\">"
-					ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table table-sm table-striped table-hover\" style=\"width:100%\">"
+					if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
+						ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"etable table-sm table-striped table-hover\" style=\"width:100%\">"
+					} else {
+						ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table table-sm table-striped table-hover\" style=\"width:100%\">"
+					}
 					
 					# THEAD
 					ns_adp_puts "<thead class=\"table-dark\">"
@@ -291,10 +295,25 @@ namespace eval oodz {
 					ns_adp_puts "</table>"
 					
 					#------JScript
+					if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
+						ns_adp_puts "<script>"
+							ns_adp_puts "var editor = new DataTable.Editor( {"
+								ns_adp_puts "ajax:  '/api/staff',"
+								ns_adp_puts "table: '\#$var',"
+								ns_adp_puts "fields: \["
+									ns_adp_puts "{ label: 'First name', name: 'first_name' },"
+									ns_adp_puts "{ label: 'Last name',  name: 'last_name'  }"
+								ns_adp_puts "\]"
+							ns_adp_puts "} );"
+						
+						ns_adp_puts "</script>"
+					}
+					
+					
 					ns_adp_puts "<script>"
 						ns_adp_puts "\$('\#$var').DataTable( {"
 							ns_adp_puts "processing: true,"
-							ns_adp_puts "order: \[\[ 0, 'asc' \]\],"
+							ns_adp_puts "order: \[\[ 0, 'desc' \]\],"
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict select]]} { ns_adp_puts "select: 'os', blurable: true," } else { ns_adp_puts "select: false," }
 							
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
@@ -318,6 +337,9 @@ namespace eval oodz {
 							ns_adp_puts "\],"
 						ns_adp_puts "} );"
 					ns_adp_puts "</script>"
+					
+
+					
 				}
 			################################################# DATE #################################################
 			# NEW DATE TIME RELATED 
@@ -327,16 +349,6 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					if {[dict exists $pr_dict default]} {
-						set def_comm [dict get $pr_dict default]
-						if {$def_comm eq "today"} {
-							set def_val [date]
-						} else {
-							set def_val "$def_comm"
-						}
-					} else {
-						set def_val ""
-					}
 					set i_v [Check_sdata $var]
 
 					: input $props $tag $val
@@ -429,14 +441,15 @@ namespace eval oodz {
 			set pr_dict [: props_2_dict $props $tag $val]
 			dict with pr_dict {}
 			set link [list]
-
+			
 			# ADD IMAGE TO THE BUTTON
 			if {[dict exists $pr_dict img] != 0} {
 				set img_tag "<span class=\"me-2\"><img src=\"[ns_absoluteurl [dict get $pr_dict img] [oodzConf get_global icons_dir]]\"></span>"
 			} else {set img_tag ""}
 
-			if {$cmd eq "clear_values"} {
-				ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"#\" role=\"button\" onclick=\"${:frame}FormHandler.clearForm(event)\">$img_tag $placeholder</a>"
+			puts "CMD: $cmd"
+			if {$cmd eq "clear_values" || $type eq "reset"} {
+				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}FormHandler.clearForm(event)\">$img_tag $placeholder</button>"
 			} elseif {[regexp {::\w+::\w+} $cmd] == 1 } {
 				set module [lindex [split $cmd "::"] 2]
 				set val [lindex [split $cmd "::"] 4]
@@ -446,11 +459,14 @@ namespace eval oodz {
 						ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"$link\" role=\"button\">$img_tag $placeholder</a>"
 					}
 				} else {
-					puts "CMD: $cmd"
-					ns_adp_puts "<a class=\"$class\" id=\"$var\" onclick=\"${:frame}FormHandler.addFieldAndSubmitForm(event, '$cmd')\" href=\"#\" role=\"button\">$img_tag $placeholder</a>"
+					ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
 				}
+			}  elseif {[lindex $cmd 0] eq "modal"} {
+				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" data-bs-toggle=\"modal\" data-bs-target=\"\#[dict get $pr_dict but_cmd]\">$img_tag [::msgcat::mc "$val"]</button><br>"
+			} elseif {[lindex $cmd 0] eq "js"} {
+				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\" $js>$img_tag [::msgcat::mc "$val"]</button><br>"
 			} else {
-				ns_adp_puts "<a class=\"$class\" id=\"$var\" onclick=\"${:frame}FormHandler.addFieldAndSubmitForm(event, '$cmd')\" href=\"#\" role=\"button\">$img_tag $placeholder</a>"
+				ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
 			}
 		}
 		
@@ -529,8 +545,13 @@ namespace eval oodz {
 
 			
 			######################### CHECKS FOR SPECIFIC TAGS #########################
-
-			if {$tag eq "date" || $tag eq "datetime-local"} {
+			if {$tag eq "form"} {
+				if {[set action [dict getnull $prop action]] ne ""} {
+					dict set prop action $action
+				} else {
+					dict set prop action "/process_form"
+				}
+			} elseif {$tag eq "date" || $tag eq "datetime-local"} {
 				if {[dict exists $prop default] == 1} {
 					set res [dict getnull $prop default]
 					if {$res ne "" && $res eq "today"} {
@@ -609,7 +630,17 @@ namespace eval oodz {
 				if {[dict get  $prop type] eq "reset"} {
 					dict set prop class [: modify_class $tag button]
 				}
+			} elseif {$tag eq "button"} {
+				if {[dict getnull $prop type] eq "submit"} {
+					dict set prop type submit
+				} elseif {[dict getnull $prop type] eq "reset"} {
+					dict set prop type reset
+				} else {
+					dict set prop type button
+				}
 			}
+			
+			
 			dict append prop sid [ns_session id]
 			return $prop
 		}
