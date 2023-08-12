@@ -102,6 +102,12 @@ namespace eval oodz {
 			}
 		}
 		
+		:public method asJSON {} {
+			if {${:obj_data} ne ""} {
+				return [tcl_dictd2json ${:obj_data}]
+			}
+		}
+		
 		:method format_result {result {result_type "D"}} {
 			if {$result_type eq "D"} {
 				return $result

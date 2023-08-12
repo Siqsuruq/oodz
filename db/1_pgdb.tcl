@@ -3,6 +3,21 @@ namespace eval oodz {
 		# Possible result formats are: D - Tcl dict, L - Tcl list, J - JSON, default is Tcl dict
 		:property {result_format "D"}
 		
+		:public method show_pg_version {} {
+			set result ""
+			set :db_handles [ns_db gethandle]
+			set query "SELECT version();"
+			try {
+				set row [ns_db 0or1row ${:db_handles} $query]
+				set result [ns_set array $row]
+			} trap {} {arr} {
+				oodzLog error "DB ERROR: $arr"
+			} finally {
+				: release
+				return [dict getnull $result version]
+			}			
+			set rows [ns_db select $db0 ]
+		}
 
 		:public method table_exists {table} {
 			set result 0

@@ -2,18 +2,18 @@ namespace eval oodz {
 	nx::Class create htmlWrapper {
 		:property {conf:object,required}
 		:property {frame "main"}
+		:property {db:object}
 
 		:public method parse {module xmlFile} {
 			set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xmlFile]
 			set doc [dom parse [tdom::xmlReadFile $xml_file]]
 			set hd "[$doc asXML]"
 			::htmlparse::parse -cmd [list [self] html_wrapper] $hd
-			: add_FormHandler
 			set :frame "main"
 		}
 		
 		:method add_FormHandler {args} {
-			ns_adp_puts  "<script>let ${:frame}formData = new formData('${:frame}');</script>"
+			ns_adp_puts  "<script>let ${:frame}Data = new formData('${:frame}');</script>"
 		}
 		
 		:public method html_wrapper {args} {
@@ -31,6 +31,7 @@ namespace eval oodz {
 			if {$tag eq "form"} {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts  "</form><br>"
+					: add_FormHandler
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
@@ -87,6 +88,58 @@ namespace eval oodz {
 					ns_adp_puts "<div id=\"$var\" class=\"accordion-collapse collapse $collapse\" aria-labelledby=\"heading_$var\" data-bs-parent=\"#accordion_$var\">"
 					ns_adp_puts "<div class=\"accordion-body\">"				
 				}
+			################################################# HTML Tags and Typography #################################################
+			} elseif {$tag eq "h1"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "</h1>\n"
+				} else {
+					ns_adp_puts "\n<h1>"
+					ns_adp_puts "[::msgcat::mc $val]"
+				}
+			} elseif {$tag eq "h2"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "</h2>\n"
+				} else {
+					ns_adp_puts "\n<h2>"
+					ns_adp_puts "[::msgcat::mc $val]"
+				}
+			} elseif {$tag eq "h3"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "</h3>\n"
+				} else {
+					ns_adp_puts "\n<h3>"
+					ns_adp_puts "[::msgcat::mc $val]"
+				}
+			} elseif {$tag eq "h4"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "</h4>\n"
+				} else {
+					ns_adp_puts "\n<h4>"
+					ns_adp_puts "[::msgcat::mc $val]"
+				}
+			} elseif {$tag eq "h5"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "</h5>\n"
+				} else {
+					ns_adp_puts "\n<h5>"
+					ns_adp_puts "[::msgcat::mc $val]"
+				}
+			} elseif {$tag eq "h6"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "</h6>\n"
+				} else {
+					ns_adp_puts "\n<h6>"
+					ns_adp_puts "[::msgcat::mc $val]"
+				}
+			} elseif {$tag eq "p"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "</p>\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "\n<p class=\"$class\">"
+					ns_adp_puts "[subst $val]"
+				}
 			################################################# LABEL ################################################# 
 			} elseif {$tag eq "label"} {
 				if {$tagsgn eq "/"} {
@@ -132,14 +185,14 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					set i_v [Check_sdata $var]
+					set i_v [: Check_sdata $var]
 					if {$i_v eq "t" || $i_v == 1} {
 						set ch checked
 					} else {set ch ""}
 				
 					ns_adp_puts "<div class=\"form-check\">"
 					ns_adp_puts "<input name=\"$var\" type=\"hidden\" value=\"0\">"
-					ns_adp_puts "<input name=\"$var\" id=\"$var\" type=\"checkbox\" class=\"$class\" $js $ch $mandatory>"
+					ns_adp_puts "<input class=\"$class\" name=\"$var\" id=\"$var\" type=\"checkbox\" $js $ch $mandatory>"
 					ns_adp_puts "<label class=\"form-check-label\" for=\"$var\">$placeholder</label>"
 					ns_adp_puts "</div>"
 				}
@@ -156,10 +209,11 @@ namespace eval oodz {
 						set values [unquotehtml [dict get $pr_dict values]]
 						foreach val $values {dict append option_dict $val $val}
 					} elseif {[dict get $pr_dict vtype] eq "table"} {
-						set tbl [lindex [dict get $pr_dict values] 0]
-						set col [lindex [dict get $pr_dict values] 1]
-						set values [lsort -dictionary [select_all $tbl "$col" "none" list]]
-						foreach val $values {dict append option_dict $val $val}
+						set values [: dbtable_data [lindex [dict get $pr_dict values] 0] [lrange [dict get $pr_dict values] 1 end]]
+						dict for {key val} $values {
+							if {$val eq ""} {set val $key}
+							dict append option_dict $key $val
+						}
 					} elseif {[dict get $pr_dict vtype] eq "func"} {
 						set func [lindex [dict get $pr_dict values] 0]
 						set values [lsort -dictionary [$func]]
@@ -182,7 +236,7 @@ namespace eval oodz {
 						}
 					}
 					
-					set i_v [Check_sdata $var]
+					set i_v [: Check_sdata $var]
 					ns_adp_puts "<div class=\"form-group\">"
 					if {[dict exists $pr_dict but_cmd]} {
 						ns_adp_puts "<div class=\"input-group\">"
@@ -192,7 +246,7 @@ namespace eval oodz {
 					}
 
 					ns_adp_puts "<select name=\"$var\" id=\"$var\" class=\"$class\" $js data-placeholder=\"$placeholder\" $mandatory $state>"
-					ns_adp_puts "<option value=\"\" selected></option>"
+					ns_adp_puts "<option value=\"\" selected> </option>"
 
 					dict for {dkey dval} $option_dict {
 						if {$dval eq $i_v || $dkey eq $i_v} {
@@ -236,37 +290,30 @@ namespace eval oodz {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "</div>"
 				} else {
-					set pr_dict [props_2_dict $props $tag $val]
+					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
 					
 					set theads_trns {}
 					set theads {}
-					set srv_qry_data ""
+
 					#------------- START Table Headers
-					if {[dict exists $pr_dict headers_type] != 0 && [dict get $pr_dict headers_type] == "dict"} {
-						set tmp_dict [dict get $pr_dict headers]
-						foreach t [dict keys $tmp_dict] u [dict values $tmp_dict] {
-							lappend theads_trns [::msgcat::mc $u]
-							lappend theads $t
-						}
-					} else {
+					if {[dict exists $pr_dict headers_type] != 0 && [dict get $pr_dict headers_type] == "list"} {
 						foreach t [dict get $pr_dict headers] {
 							lappend theads_trns [::msgcat::mc $t]
 							lappend theads $t
 						}
+					} else {
+						set tmp_dict [dict get $pr_dict headers]
+						dict for {t u} $tmp_dict {
+							lappend theads_trns [::msgcat::mc $u]
+							lappend theads $t
+						}
 					}
 					#------------- STOP Table Headers
-					
-					
-					
-					
+
 					ns_adp_puts "<br>"
 					ns_adp_puts "<div class=\"table-responsive-xl\">"
-					if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
-						ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"etable table-sm table-striped table-hover\" style=\"width:100%\">"
-					} else {
-						ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table table-sm table-striped table-hover\" style=\"width:100%\">"
-					}
+					ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table $class\" style=\"width:100%\">"
 					
 					# THEAD
 					ns_adp_puts "<thead class=\"table-dark\">"
@@ -337,9 +384,6 @@ namespace eval oodz {
 							ns_adp_puts "\],"
 						ns_adp_puts "} );"
 					ns_adp_puts "</script>"
-					
-
-					
 				}
 			################################################# DATE #################################################
 			# NEW DATE TIME RELATED 
@@ -349,7 +393,7 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					set i_v [Check_sdata $var]
+					set i_v [: Check_sdata $var]
 
 					: input $props $tag $val
 				}
@@ -409,7 +453,7 @@ namespace eval oodz {
 		:method input {props tag val} {
 			set pr_dict [: props_2_dict $props $tag $val]
 			dict with pr_dict {}
-			set i_v [Check_sdata $var]
+			set i_v [: Check_sdata $var]
 			if {$i_v eq "" && $value ne ""} {
 				set i_v $value
 			}
@@ -447,9 +491,9 @@ namespace eval oodz {
 				set img_tag "<span class=\"me-2\"><img src=\"[ns_absoluteurl [dict get $pr_dict img] [oodzConf get_global icons_dir]]\"></span>"
 			} else {set img_tag ""}
 
-			puts "CMD: $cmd"
+			# puts "CMD: $cmd"
 			if {$cmd eq "clear_values" || $type eq "reset"} {
-				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}FormHandler.clearForm(event)\">$img_tag $placeholder</button>"
+				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.clearForm(event)\">$img_tag $placeholder</button>"
 			} elseif {[regexp {::\w+::\w+} $cmd] == 1 } {
 				set module [lindex [split $cmd "::"] 2]
 				set val [lindex [split $cmd "::"] 4]
@@ -469,6 +513,20 @@ namespace eval oodz {
 				ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
 			}
 		}
+		
+		:method dbtable_data {tbl cols} {
+			set db [::oodz::db new]
+			set newDict [dict create]
+			set dictList [$db select_all $tbl "$cols"]
+
+			foreach line $dictList {
+				set a [dict values $line]
+				dict set newDict [lindex $a 0] [lindex $a 1]
+			}
+			return $newDict
+			$db destroy
+		}
+		
 		
 		############################################ PROP2DICT ############################################
 
@@ -596,14 +654,6 @@ namespace eval oodz {
 						dict append prop $key [string map {&quot; "\""} $hl]
 					}
 				}
-			} elseif {$tag eq "btable"} {
-				foreach key [dict keys $prop] {
-					if {$key eq "headers"} {
-						set hl [dict get $prop $key]
-						dict unset prop $key
-						dict append prop $key [string map {&quot; "\""} $hl]
-					}
-				}
 			} elseif {$tag eq "dropdown"} {
 				# if {[dict exists $prop search]} {
 					# dict set prop search "data-live-search=\"true\" data-size=\"5\""
@@ -702,34 +752,33 @@ namespace eval oodz {
 				section ""\
 				div ""\
 				banner ""\
-				entry "form-control form-control-sm"\
+				entry "form-control form-control-sm oodz_txt"\
 				group "input-group input-group-sm"\
 				radio "form-check-input"\
 				file "file"\
-				month "form-control form-control-sm"\
-				datetime-local "form-control form-control-sm"\
-				date "form-control form-control-sm"\
-				time "form-control form-control-sm"\
-				clock "form-control form-control-sm"\
+				month "form-control form-control-sm oodz_txt"\
+				datetime-local "form-control form-control-sm oodz_txt"\
+				date "form-control form-control-sm oodz_txt"\
+				time "form-control form-control-sm oodz_txt"\
+				clock "form-control form-control-sm oodz_txt"\
 				button "btn btn-outline-dark btn-sm btn-block"\
 				jsbutton "btn btn-outline-dark btn-sm btn-block"\
 				mod_button "btn btn-outline-dark btn-sm btn-block"\
 				modal ""\
-				text "form-control"\
+				text "form-control oodz_txt"\
 				msg "alert alert-dark"\
 				image ""\
 				qrcode ""\
 				image_upload ""\
 				bool "form-check-input"\
-				dropdown "form-control form-control-sm selectpicker"\
+				dropdown "form-control form-control-sm oodz_select"\
 				geomap ""\
 				spinbox "form-control"\
-				editor ""\
+				editor "oodz_txt"\
 				dz_mod ""\
-				old_table "data-table table table-striped table-sm table-hover"\
-				code_editor ""\
-				heditor ""\
-				table "btable table-sm table-striped table-hover"\
+				table "table-sm table-striped table-hover oodz_tbl"\
+				code_editor "oodz_txt"\
+				heditor "oodz_txt"\
 				calendar ""\
 				video "video-js vjs-fluid vjs-theme-forest"\
 				list "list-group list-group-flush"\
@@ -737,7 +786,11 @@ namespace eval oodz {
 			]
 			return [dict getnull $def_class $tag]
 		}
+		
+		:method Check_sdata {args} {
+			return ""
+		}
 	}
 }
 
-::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf
+::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf -db ::db
