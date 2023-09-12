@@ -59,5 +59,3 @@ namespace eval oodz {
 		}
 	}
 }
-
-::oodz::log create ::oodzLog

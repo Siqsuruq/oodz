@@ -1,6 +1,7 @@
 namespace eval oodz {
 	nx::Class create baseClass -superclass superClass {
 		:property {obj_data ""}
+		:property {obj_dataType ""}
 		
 		:method init {} {
 			if {${:obj_data} ne "" && [dict is_dict ${:obj_data}] == 1} {
@@ -16,12 +17,11 @@ namespace eval oodz {
 		:public method add {args} {
 			set a [lindex $args 0]
 			if {$a ne "" && [dict is_dict $a] == 1} {
-								   
 				set :obj_data [dict merge ${:obj_data} $a]
-		
 			}
 		}
 
+	
 		# Public interface to remove specific keys from object data, accepts list as of keys as parameter
 		:public method remove {args} {
 			set to_remove [lindex $args 0]
@@ -103,8 +103,12 @@ namespace eval oodz {
 		}
 		
 		:public method asJSON {} {
-			if {${:obj_data} ne ""} {
-				return [tcl_dictd2json ${:obj_data}]
+			if {[: is_not_empty]} {
+				::oodz::JsonObj create json_obj
+				json_obj dict2Json ${:obj_data}
+				set jstring [json_obj JsonStr]
+				json_obj destroy
+				return $jstring
 			}
 		}
 		

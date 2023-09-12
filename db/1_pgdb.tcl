@@ -700,8 +700,3 @@ namespace eval oodz {
 		}
 	}
 }
-::oodz::db create ::db
-db copy dbj
-dbj configure -result_format J
-db copy dbl
-dbl configure -result_format L

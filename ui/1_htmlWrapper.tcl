@@ -374,9 +374,12 @@ namespace eval oodz {
 							ns_adp_puts "multiSort: $multiSort,"
 							set a_trns [::msgcat::mc "Show all"]
 							ns_adp_puts "lengthMenu: \[\[ 10, 25, 50, 100, -1 \],\[ '10', '25', '50', '100', \"$a_trns\" \]\],"
-							ns_adp_puts "dom: \"<'row'<'col-sm-4'B><'col-sm-6'f><'col-sm-2'l>>tr<'row'<'col-sm-6'i><'col-sm-6'p>>\" ,"
-
-							ns_adp_puts "buttons: \['copy', 'excel', 'pdf'\],"
+							if {![::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]} {
+								ns_adp_puts "dom: \"<'row'<'col-sm-4'B><'col-sm-6'f><'col-sm-2'l>>tr<'row'<'col-sm-6'i><'col-sm-6'p>>\" ,"
+								ns_adp_puts "buttons: \['copy', 'excel', 'pdf'\],"
+							} else {
+								ns_adp_puts "dom: \"<'row'<'col-sm-8'f><'col-sm-4'l>>tr<'row'<'col-sm-6'i><'col-sm-6'p>>\" ,"
+							}						
 							ns_adp_puts "columns: \["
 								foreach thead $theads thead_trns $theads_trns {
 									ns_adp_puts "{ data: '$thead' , name: '$thead_trns' },"
@@ -407,7 +410,7 @@ namespace eval oodz {
 					ns_adp_puts "<!-- START MODAL -->\n"
 					ns_adp_puts "<div class=\"modal fade\" id=\"$var\" data-bs-backdrop=\"static\" data-bs-keyboard=\"false\" tabindex=\"-1\" aria-labelledby=\"$var\" aria-hidden=\"true\">"
 
-					ns_adp_puts "<div class=\"modal-dialog modal-dialog-centered\">"
+					ns_adp_puts "<div class=\"modal-dialog modal-dialog-centered modal-xl\">"
 					ns_adp_puts "<div class=\"modal-content\">"
 					ns_adp_puts "<div class=\"modal-header\">"
 					ns_adp_puts "<h5 class=\"modal-title fs-5\" id=\"$var\">[::msgcat::mc $val]</h5>"
@@ -571,34 +574,22 @@ namespace eval oodz {
 
 
 			# JavaScript events
-			# if {[dict exists $prop js] == 1} {
-				# set js_str [dict get $prop js]
-				# if {[set js_args [lrange $js_str 2 end]] ne ""} {
-					# set js_event "[lindex $js_str 0]=\"[lindex $js_str 1](this.form.id,this.name,this.value,'[join $js_args "','"]')\""
-				# } else {
-					# set js_event "[lindex $js_str 0]=\"[lindex $js_str 1](this.form.id,this.name,this.value)\""
-				# }
-				# set prop [dict replace $prop js $js_event]
-			# } else {set prop [dict replace $prop js ""]}
-
-
-			# NEW JS TEST
 			if {[dict exists $prop js] == 1} {
 				set js [::htmlparse::mapEscapes [dict get $prop js]]
 				set js_event [dict get $js event]
 				set js_functions [dict get $js func]
-				set js_params [dict get $js param]
-				set js_form [dict getnull $js form]
-				if {$js_form ne ""} {
-					set form "\['[join $js_form "','"]'\],\[this.id\],\[this.name\],\[this.value\],"
-				} else {
-					set form "\[this.form.id\],this.id,this.name,this.value,"
-				}
-				set a ""
-				foreach func_name $js_functions param $js_params {
-					append a [join [list $func_name "($form'[join $param "','"]');"] ""]
-				}
-				set prop [dict replace $prop js "$js_event=\"$a\""]
+				# set js_params [dict getnull $js param]
+				# set js_form [dict getnull $js form]
+				# if {$js_form ne ""} {
+					# set form "\['[join $js_form "','"]'\],\[this.id\],\[this.name\],\[this.value\],"
+				# } else {
+					# set form "\[this.form.id\],this.id,this.name,this.value,"
+				# }
+				# set a ""
+				# foreach func_name $js_functions param $js_params {
+					# append a [join [list $func_name "($form'[join $param "','"]');"] ""]
+				# }
+				set prop [dict replace $prop js "$js_event=\"$js_functions\""]
 			} else {set prop [dict replace $prop js ""]}
 
 			
@@ -793,4 +784,4 @@ namespace eval oodz {
 	}
 }
 
-::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf -db ::db
+

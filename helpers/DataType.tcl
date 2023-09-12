@@ -22,6 +22,15 @@ namespace eval oodz {
 		:public object method is_dict {value} {
 			return [dict is_dict $value]
 		}
+		:public object method is_number {value} {
+			if {[string is integer -strict $value] || [string is double -strict $value] || [string is wideinteger $value]} {
+				return 1
+			} else { return 0 }
+		}
+		
+		:public object method guess_type {value} {
+			if {[: is_number]} { return num } else { return str }
+		}
 	}
 }
 

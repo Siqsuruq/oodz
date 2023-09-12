@@ -206,4 +206,3 @@ namespace eval oodz {
 		}
 	}
 }
-::oodz::dateTime create ::oodzTime -oodzConf ::oodzConf

@@ -1,0 +1,18 @@
+Session:
+File-based Persistence:
+    Pros:
+        Fast for small-scale applications.
+        Doesn't require external systems or database connections.
+    Cons:
+        May not scale well with a large number of concurrent sessions.
+        Could be problematic in distributed server environments.
+        Risk of data loss if the server filesystem gets corrupted.
+
+Database Persistence:
+    Pros:
+        Scales well for applications with many users.
+        Easier to manage in distributed environments.
+        Built-in backup and recovery mechanisms.
+    Cons:
+        Requires a database connection, which might introduce latency.
+        More complex setup than file-based persistence.
