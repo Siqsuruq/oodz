@@ -8,7 +8,7 @@ package require msgcat
 
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 set lib_shared [ns_library shared]
-set oodzFrameworkModules [list base db conf ui rest dateTime helpers]
+set oodzFrameworkModules [list base db conf ui rest dateTime helpers tests session]
 foreach oodzModule $oodzFrameworkModules {
 	puts "OODZ MODULE: $oodzModule"
 	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *.tcl]]
@@ -19,14 +19,16 @@ foreach oodzModule $oodzFrameworkModules {
 }
 
 # Create Startup Objects:
-::oodz::log create ::oodzLog
 ::oodz::db create ::db
 db copy dbj
 dbj configure -result_format J
 db copy dbl
 dbl configure -result_format L
 ::oodz::conf create ::oodzConf -db ::db
-::oodz::Session create ::ns_session
+
+# Creating ::oodzSession Global Object (File)
+sessionFactory createSession -persist_type ::oodz::SessionFile
+
 ::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf -db ::db
 ::oodz::dateTime create ::oodzTime -oodzConf ::oodzConf
 

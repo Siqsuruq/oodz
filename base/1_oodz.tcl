@@ -57,5 +57,7 @@ namespace eval oodz {
 		:method write {args} {
 			ns_asynclogfile write ${:oodzlog} "\[[ns_fmttime [ns_time] "%d/%b/%Y %a %T"]\] | [lindex $args 1]: | [lindex $args 0] \n"
 		}
+		
+		:create ::oodzLog
 	}
 }
