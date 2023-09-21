@@ -682,7 +682,7 @@ namespace eval oodz {
 			}
 			
 			
-			dict append prop sid [ns_session id]
+			dict append prop sid [::oodzSession id]
 			return $prop
 		}
 
