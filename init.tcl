@@ -8,7 +8,7 @@ package require msgcat
 
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 set lib_shared [ns_library shared]
-set oodzFrameworkModules [list base db conf ui rest dateTime helpers tests session]
+set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session]
 foreach oodzModule $oodzFrameworkModules {
 	puts "OODZ MODULE: $oodzModule"
 	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *.tcl]]
