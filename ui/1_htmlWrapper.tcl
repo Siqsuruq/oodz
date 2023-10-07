@@ -13,7 +13,11 @@ namespace eval oodz {
 		}
 		
 		:method add_FormHandler {args} {
-			ns_adp_puts  "<script>let ${:frame}Data = new formData('${:frame}');</script>"
+			ns_adp_puts  "<script type='module'>"
+			ns_adp_puts "import { formData } from '[file join [::oodzConf get data global_js L] formDataClass.js]';"
+			ns_adp_puts "let ${:frame}Data = new formData('${:frame}');"
+			ns_adp_puts "window.${:frame}Data = ${:frame}Data;"
+			ns_adp_puts "</script>"
 		}
 		
 		:public method html_wrapper {args} {

@@ -45,10 +45,12 @@ namespace eval ::oodz {
 		}
 		
 		# method to load and add json object from string
-		:public method addObject {key value} {
+		:public method addObject {value} {
 			set jObj [new_CkJsonObject]
+			CkJsonObject_put_Utf8 $jObj 1
 			CkJsonObject_Load $jObj "$value"
-			CkJsonObject_AddObjectCopyAt ${:json} -1 "$key" $jObj
+			CkJsonArray_AddObjectCopyAt ${:jsonArr} -1 $jObj
+			delete_CkJsonObject $jObj
 		}
 
 		:public method JsonStr {} {
