@@ -7,7 +7,7 @@ namespace eval oodz {
 		:method init {} {
 			next
 			if {[${:db} table_exists ${:obj}] eq 1} {
-				if {${:identifier} ne "" && [is_uuid ${:identifier}] == 1} {
+				if {${:identifier} ne "" && [::oodz::DataType is_uuid ${:identifier}] == 1} {
 					set :obj_data [: read uuid]
 				} elseif {${:identifier} ne "" && [string is entier -strict ${:identifier}] == 1} {
 					set :obj_data [: read id]
