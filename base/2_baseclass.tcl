@@ -60,6 +60,7 @@ namespace eval oodz {
 
 		# Public part to get data from obj_data property
 		:public method get {args} {
+			pust "GET from Base"
 			set params [lindex $args 1]
 			set result_type [lindex $args 2]
 			if {$result_type eq ""} { set result_type "D" } elseif {$result_type ne "" && $result_type ne "L"} { set result_type "D" }
