@@ -456,7 +456,7 @@ namespace eval oodz {
 								if {$nspace != 1} {
 									lappend my_values [ns_dbquotevalue [dict get $data $col]]
 								} else {
-									lappend my_values [ns_dbquotevalue [normalize_spaces [dict get $data $col]]]
+									lappend my_values [ns_dbquotevalue [::oodz::Sanitize normalize_spaces [dict get $data $col]]]
 								}
 							}
 						} else {
@@ -522,7 +522,7 @@ namespace eval oodz {
 							if {$nspace != 1} {
 								lappend my_values $col=[ns_dbquotevalue $val]
 							} else {
-								lappend my_values $col=[ns_dbquotevalue [normalize_spaces $val]]
+								lappend my_values $col=[ns_dbquotevalue [::oodz::Sanitize normalize_spaces $val]]
 							}
 						}
 							
