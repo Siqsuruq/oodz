@@ -310,25 +310,26 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				xml {set content_type "application/xml"}
 				text {set content_type "text/plain"}
 				html {set content_type "text/html"}
+				binary {set content_type "application/octet-stream"}
 				default {set content_type "application/json"}
 			}
 			
+			if {$code == 200 && [dict getnull $response type] eq "binary"} {
+				set data [dict get $response data]
+				: return_file $data
+			} elseif {$code == 200} {
+				ns_return 200 $content_type [dict get $response data]
+			} elseif {$code == 301 || $code == 302 || $code == 303 ||  $code == 307 || $code == 308} {
+				ns_returnredirect [dict getnull $response redirect_url]
+			}
+
 			switch $code {
 				1 {puts "\tAPI CALL OK"}
-				200 {
-					ns_return 200 $content_type [dict get $response data]
-				}
 				201 {
 					ns_return 201 $content_type [dict get $response data]
 				}
 				301 {
 					ns_returnmoved [dict get $response data]
-				}
-				302 {
-					ns_returnredirect [dict getnull $response redirect_url]
-				}
-				303 {
-					ns_returnredirect "https://google.com"
 				}
 				400 {
 					::api::api_error $response
@@ -342,4 +343,11 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			}		
 		}
 	}
+
+	:public method return_file {filepath} {
+		set filename [file tail $filepath]
+		ns_set put [ns_conn outputheaders] Content-Disposition "attachment; filename=\"${filename}\""
+		ns_returnfile 200 [ns_guesstype $filepath] $filepath
+	}
+
 }
