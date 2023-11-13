@@ -111,6 +111,12 @@ namespace eval oodz {
 				return $jstring
 			}
 		}
+
+		:public method asNSSET {key} {
+			if {[: is_not_empty]} {
+				return [ns_set create $key ${:obj_data}]
+			}
+		}
 		
 		:method format_result {result {result_type "D"}} {
 			if {$result_type eq "D"} {

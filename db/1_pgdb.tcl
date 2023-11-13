@@ -431,10 +431,10 @@ namespace eval oodz {
 			}
 		}
 
-
 		# Should always return inserted id and uuid get rid of returning empty, unless defined * ()return everything
 		:public method insert_all {table data {conflict ""} {returning ""} {nspace 1}} {
 			set result ""
+			set code "ok"
 			set tbl_cols [: select_columns_names $table]
 			set my_columns [list]
 			set my_values [list]
@@ -491,9 +491,11 @@ namespace eval oodz {
 				}
 			} trap {} {arr} {
 				oodzLog error "DB ERROR: $arr"
+				set code "error"
+				set result $arr
 			} finally {
 				: release
-				return $result
+				return -code $code $result
 			}
 		}
 		

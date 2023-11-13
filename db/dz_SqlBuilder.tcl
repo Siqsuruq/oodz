@@ -10,11 +10,38 @@ nx::Class create SQLBuilder {
 	:property {offset ""}
 
     # Define the addColumn method
-    :public method addColumn {columns} {
-        foreach column $columns {
-            lappend :columnsList $column
-        }
-    }
+    # :public method addColumn {columns} {
+        # foreach column $columns {
+            # lappend :columnsList $column
+        # }
+    # }
+	:public method addColumn {columns} {
+		foreach column $columns {
+			# Split the column input into parts
+			set parts [split $column " "]
+			set partsCount [llength $parts]
+
+			# Handle different scenarios based on the number of parts
+			switch -- $partsCount {
+				1 {
+					# Single part, no alias
+					lappend :columnsList $column
+				}
+				3 {
+					# Three parts, expected to be 'columnName AS aliasName'
+					if {[lindex $parts 1] eq "AS" || [lindex $parts 1] eq "as"} {
+						lappend :columnsList [join $parts " "]
+					} else {
+						return -code error "Invalid column format: $column. Expected format 'columnName AS aliasName'."
+					}
+				}
+				default {
+					# Unsupported format
+					return -code error "Invalid column format: $column. Expected format 'columnName' or 'columnName AS aliasName'."
+				}
+			}
+		}
+	}
 
     # Define the removeColumn method
     :public method removeColumn {columns} {
@@ -34,6 +61,25 @@ nx::Class create SQLBuilder {
             append :whereClause " AND $condition"
         }
     }
+
+	:public method addComplexCondition {condition {operator ""}} {
+		# Check if an operator is provided
+		if {$operator ne "" && ![string match "AND" $operator] && ![string match "OR" $operator]} {
+			return -code error "Invalid logical operator: $operator. Must be 'AND', 'OR', or empty."
+		}
+
+		if {${:whereClause} eq ""} {
+			# Directly set the condition if the whereClause is empty
+			set :whereClause $condition
+		} else {
+			# Append the condition with the appropriate operator
+			if {$operator eq "" || $operator eq "AND"} {
+				append :whereClause " AND $condition"
+			} elseif {$operator eq "OR"} {
+				append :whereClause " OR $condition"
+			}
+		}
+	}
 
     # Define the addJoin method
     :public method addJoin {joinType table joinCondition} {

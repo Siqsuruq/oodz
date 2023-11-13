@@ -5,6 +5,7 @@ package require csv
 package require textutil
 package require inifile
 package require msgcat
+package require uuid
 
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 set lib_shared [ns_library shared]
@@ -20,6 +21,7 @@ foreach oodzModule $oodzFrameworkModules {
 
 # Create Startup Objects:
 ::oodz::db create ::db
+::oodz::db2 create ::db2
 db copy dbj
 dbj configure -result_format J
 db copy dbl

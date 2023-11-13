@@ -35,7 +35,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			if {$params != 0} {
 				# Execute call and get result list.
 				set result [::${resource}::Api dispatcher ${:reqType} $values $params ${:url}]
-				puts "RESULT: $result"
 				: answer $result
 			}
 		} else {
