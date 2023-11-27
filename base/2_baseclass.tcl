@@ -85,6 +85,28 @@ namespace eval oodz {
 			}
 		}
 		
+		# Basic validation methods
+		:public method validate_keys {args} {
+			set keys_to_check [lindex $args 0]
+			foreach key $keys_to_check {
+				if {![dict exists ${:obj_data} $key]} {
+					return 0
+				}
+			}
+			return 1
+		}
+
+		:public method validate_values_not_empty {args} {
+			set keys_to_check [lindex $args 0]
+			foreach key $keys_to_check {
+				if {![dict exists ${:obj_data} $key] || [dict get ${:obj_data} $key] eq ""} {
+					return 0
+				}
+			}
+			return 1
+		}
+
+		
 		# Return 1 if object data is empty, 0 otherwise
 		:public method is_empty {args} {
 			if {${:obj_data} eq ""} {
