@@ -102,13 +102,19 @@ namespace eval oodz {
 			}
 		}
 		
+		# :public method asJSON {} {
+			# if {[: is_not_empty]} {
+				# ::oodz::JsonObj create json_obj
+				# json_obj dict2Json ${:obj_data}
+				# set jstring [json_obj JsonStr]
+				# json_obj destroy
+				# return $jstring
+			# }
+		# }
+
 		:public method asJSON {} {
 			if {[: is_not_empty]} {
-				::oodz::JsonObj create json_obj
-				json_obj dict2Json ${:obj_data}
-				set jstring [json_obj JsonStr]
-				json_obj destroy
-				return $jstring
+				return [tcl2json ${:obj_data}]
 			}
 		}
 
