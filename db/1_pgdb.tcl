@@ -483,7 +483,7 @@ namespace eval oodz {
 					set query_res [ns_db 0or1row ${:db_handles} $query]
 					if {$query_res ne ""} {
 						foreach ret $returning {
-							lappend result [dict get [dz::ns_set_to_dict $query_res] $ret]
+							lappend result [dict get [ns_set array $query_res] $ret]
 						}
 					} 
 				} else {
