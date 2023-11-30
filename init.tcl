@@ -6,10 +6,12 @@ package require textutil
 package require inifile
 package require msgcat
 package require uuid
+package require fileutil
+package require hrfilesize
 
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 set lib_shared [ns_library shared]
-set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session]
+set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session fileStorage]
 foreach oodzModule $oodzFrameworkModules {
 	puts "OODZ MODULE: $oodzModule"
 	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *.tcl]]
@@ -21,7 +23,6 @@ foreach oodzModule $oodzFrameworkModules {
 
 # Create Startup Objects:
 ::oodz::db create ::db
-::oodz::db2 create ::db2
 db copy dbj
 dbj configure -result_format J
 db copy dbl
