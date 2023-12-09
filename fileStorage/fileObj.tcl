@@ -1,6 +1,6 @@
 namespace eval oodz {
-	# Define the FileStorageObj class
-	nx::Class create FileStorageObj {
+	# Define the fileObj class
+	nx::Class create fileObj {
 		# Class variables (properties)
 		:property fileName:required
 		:property {fileExtension ""}
@@ -9,7 +9,6 @@ namespace eval oodz {
 		
 		# Constructor method
 		:method init {} {
-			set :user_data_dir [file join [::oodzConf get path] [::oodzConf get_global user_data_dir]]
 			:getFileExtension
 		}
 

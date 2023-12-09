@@ -1,5 +1,5 @@
 namespace eval oodz {
-	nx::Class create filestorage -superclass baseClass {
+	nx::Class create fileStorage -superclass baseClass {
 		:property {identifier ""}
 		:property obj:required
 		:property {db:object,required}
