@@ -7,6 +7,4 @@ pipelines:
         clone:
           enabled: false
         script:
-          - git clone --mirror $BITBUCKET_CLONE_DIR temp_dir
-          - cd temp_dir
           - git push --mirror git@github.com:Siqsuruq/oodz.git
