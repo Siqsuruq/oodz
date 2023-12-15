@@ -4,7 +4,9 @@ pipelines:
   default:
     - step:
         name: Sync to GitHub
+        clone:
+          enabled: false
         script:
           - git clone --mirror $BITBUCKET_CLONE_DIR temp_dir
           - cd temp_dir
-          - git push https://$GITHUB_TOKEN@github.com/Siqsuruq/oodz.git
+          - git push --mirror git@github.com:Siqsuruq/oodz.git
