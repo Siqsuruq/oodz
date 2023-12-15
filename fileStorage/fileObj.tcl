@@ -2,13 +2,16 @@ namespace eval oodz {
 	# Define the fileObj class
 	nx::Class create fileObj {
 		# Class variables (properties)
-		:property fileName:required
+		:property {fileName ""}
 		:property {fileExtension ""}
 		:property {fileSize -1}
 		:property {hfileSize ""}
 		
 		# Constructor method
 		:method init {} {
+			if {${:fileName} eq ""} {
+				set :fileName [::fileutil::tempfile]
+			}
 			:getFileExtension
 		}
 
@@ -81,6 +84,7 @@ namespace eval oodz {
 			try {
 				file rename -force ${:fileName} $newPath
 				set :fileName $newPath
+				:getFileExtension
 				set code ok
 				set msg "File moved to $newPath"
 			} on error {emsg} {
@@ -108,10 +112,14 @@ namespace eval oodz {
 				return -code $code $msg
 			}
 		}
+		
+		:public method fileName {} {
+			return ${:fileName}
+		}
 
 		# Additional methods as needed...
 		:public method getFileExtension {} {
-			if {![:isFile]} {
+			if {[:isFile] == 1} {
 				set :fileExtension [file extension ${:fileName}]
 			}
 			return ${:fileExtension}

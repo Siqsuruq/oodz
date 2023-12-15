@@ -14,6 +14,7 @@ namespace eval oodz {
 				set f_name [ns_querygetall $upl_file]
 				if {$f_name ne ""} {
 					set tmp_file [ns_getformfile $upl_file]
+					::oodz::fileStorageObj create fso -db ::db -obj filestorage -fileName ""
 					
 					set type [: ftype $f_name]
 					set fext [file extension $f_name]
@@ -33,6 +34,7 @@ namespace eval oodz {
 			return $save_ids
 		}
 		
+		# Return relative filePath from DB by fileuuid
 		:public method getFilesPath {args} {
 			set result ""
 			foreach fileuuid $args {
@@ -44,6 +46,7 @@ namespace eval oodz {
 			return $result
 		}
 		
+		# Return full filePath from DB by fileuuid
 		:public method getFullFilesPath {args} {
 			set result ""
 			foreach fileuuid $args {
