@@ -7,4 +7,4 @@ pipelines:
         script:
           - git clone --mirror $BITBUCKET_CLONE_DIR temp_dir
           - cd temp_dir
-          - git push $GITHUB_TOKEN@github.com:Siqsuruq/oodz.git
+          - git push https://$GITHUB_TOKEN@github.com/Siqsuruq/oodz.git
