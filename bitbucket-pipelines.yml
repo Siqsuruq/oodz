@@ -5,6 +5,6 @@ pipelines:
     - step:
         name: Sync to GitHub
         clone:
-          enabled: false
+          enabled: true
         script:
           - git push --mirror git@github.com:Siqsuruq/oodz.git
