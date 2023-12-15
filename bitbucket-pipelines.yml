@@ -3,5 +3,8 @@ clone:
 pipelines:
   default:
     - step:
+        name: Sync to GitHub
         script:
-          - git push git@github.com:Siqsuruq/oodz.git
+          - git clone --mirror $BITBUCKET_CLONE_DIR temp_dir
+          - cd temp_dir
+          - git push $GITHUB_TOKEN@github.com:Siqsuruq/oodz.git
