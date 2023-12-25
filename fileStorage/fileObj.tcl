@@ -12,7 +12,7 @@ namespace eval oodz {
 			if {${:fileName} eq ""} {
 				set :fileName [::fileutil::tempfile]
 			}
-			:getFileExtension
+			:fileExtension
 		}
 
 		# Method to read from a file
@@ -118,7 +118,7 @@ namespace eval oodz {
 		}
 
 		# Additional methods as needed...
-		:public method getFileExtension {} {
+		:public method fileExtension {} {
 			if {[:isFile] == 1} {
 				set :fileExtension [file extension ${:fileName}]
 			}

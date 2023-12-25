@@ -14,6 +14,7 @@ namespace eval oodz {
 				}
 			} else {
 				oodzLog error "Cant init object TABLE doesnt exist"
+				return -code error "Cant init object TABLE/VIEW doesnt exist"
 			}
 		}
 
@@ -65,6 +66,12 @@ namespace eval oodz {
 			next
 		}
 		
+		:method update_identifier {} {
+			if {[:is_empty] != 1} {
+				set :identifier [:get uuid]
+			}
+		}
+		
 		:public method load_data {args} {
 			set a [lindex $args 0]
 			if {$a ne "" && [dict is_dict $a] == 1} {
@@ -72,6 +79,7 @@ namespace eval oodz {
 					set :obj_data [lindex [${:db} select_all ${:obj} * ${:obj}.$key=\'[dict get $a $key]\'] 0]
 				}
 			}
+			:update_identifier
 		}
 		
 		# Should always return id and uuid
@@ -90,7 +98,8 @@ namespace eval oodz {
 				set :obj_data [lindex [${:db} select_all ${:obj} * "${:obj}.$a IS TRUE"] 0]
 			} else {
 				set :obj_data [lindex [${:db} select_all ${:obj} * "${:obj}.def IS TRUE"] 0]
-			} 
+			}
+			:update_identifier
 		}
 		
 		:method format_result {result {result_type "D"}} {
