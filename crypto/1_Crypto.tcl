@@ -61,8 +61,43 @@ namespace eval oodz {
 			}
 		}
 
-
-
-
+		:public object method verify_file_signature {fileToCheck fileHash fileSign pubKeyPEMStr} {
+			set pubKey [new_CkPublicKey]
+			set rsa [new_CkRsa]
+			set bdHash [new_CkBinData]
+			set bdSig [new_CkBinData]
+			
+			try {
+				set success [CkPublicKey_LoadFromString $pubKey $pubKeyPEMStr]
+				if {$success == 0} then {
+					puts [CkPublicKey_lastErrorText $pubKey]
+				} else {puts "PEM loaded"}
+				
+				set success [CkRsa_ImportPublicKeyObj $rsa $pubKey]
+				if {$success == 0} then {
+					puts [CkRsa_lastErrorText $rsa]
+				}
+				set success [CkBinData_LoadFile $bdHash $fileHash]
+				if {$success == 0} then {
+					puts "Failed to load SHA256 hash. $fileHash"
+				} else {puts "SHA256 loaded."}
+				set success [CkBinData_LoadFile $bdSig $fileSign]
+				if {$success == 0} then {
+					puts "Failed to load RSA signature."
+				} else {puts "Signature loaded."}
+				set enc "base64"
+				CkRsa_put_EncodingMode $rsa $enc
+				set success [CkRsa_VerifyHashENC $rsa [CkBinData_getEncoded $bdHash $enc] "sha256" [CkBinData_getEncoded $bdSig $enc]]
+				if {$success == 0} then {
+					puts [CkRsa_lastErrorText $rsa]
+					puts "Not Valid"
+				} else {puts "Signature validated."}
+			} finally {
+				delete_CkPublicKey $pubKey
+				delete_CkRsa $rsa
+				delete_CkBinData $bdHash
+				delete_CkBinData $bdSig
+			}
+		}
 	}
 }
