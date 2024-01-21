@@ -99,5 +99,23 @@ namespace eval oodz {
 				delete_CkBinData $bdSig
 			}
 		}
+		
+		:public object method hash_file {file_path} {
+			# Compute the SHA-256 hash of the file
+			set hash [::sha2::sha256 -bin -file $file_path]
+
+			# Create the output file path with .sha256 extension
+			set output_file "${file_path}.sha256"
+
+			# Open the output file in write mode
+			set file_handle [open $output_file "w"]
+
+			# Write the hash to the file
+			puts $file_handle $hash
+
+			# Close the file handle
+			close $file_handle
+		}
+
 	}
 }
