@@ -499,7 +499,7 @@ namespace eval oodz {
 			} else {set img_tag ""}
 
 			# puts "CMD: $cmd"
-			if {$cmd eq "clear_values" || $type eq "reset"} {
+			if {$cmd eq "reset_values" || $type eq "reset"} {
 				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.clearForm(event)\">$img_tag $placeholder</button>"
 			} elseif {[regexp {::\w+::\w+} $cmd] == 1 } {
 				set module [lindex [split $cmd "::"] 2]
