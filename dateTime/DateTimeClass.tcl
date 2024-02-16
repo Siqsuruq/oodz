@@ -204,5 +204,31 @@ namespace eval oodz {
 				return ""
 			}
 		}
+		
+		:public method seconds_to_human {seconds} {
+			# Handle months differently, assuming 30.44 days per month for calculation
+			# Given the small number, it's more practical to start from days for readability
+			set days [expr {$seconds / (86400)}]
+			set hours [expr {($seconds % 86400) / 3600}]
+			set minutes [expr {($seconds % 3600) / 60}]
+			set secs [expr {$seconds % 60}]
+
+			# Building the readable format string
+			set readable ""
+
+			if {$days > 0} {
+				append readable "${days} days "
+			}
+			if {$hours > 0} {
+				append readable "${hours} hours "
+			}
+			if {$minutes > 0} {
+				append readable "${minutes} minutes "
+			}
+			append readable "${secs} seconds"
+
+			return [string trim $readable]
+		}
+
 	}
 }
