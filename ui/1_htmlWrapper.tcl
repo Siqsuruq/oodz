@@ -602,7 +602,7 @@ namespace eval oodz {
 				if {[set action [dict getnull $prop action]] ne ""} {
 					dict set prop action $action
 				} else {
-					dict set prop action "/process_form"
+					dict set prop action "/handle_form"
 				}
 			} elseif {$tag eq "date" || $tag eq "datetime-local"} {
 				if {[dict exists $prop default] == 1} {

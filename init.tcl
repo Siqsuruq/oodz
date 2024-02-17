@@ -11,8 +11,8 @@ package require hrfilesize
 
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 set lib_shared [ns_library shared]
-# set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session fileStorage]
-set oodzFrameworkModules [list base db conf rest dateTime helpers crypto session fileStorage]
+set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session fileStorage]
+# set oodzFrameworkModules [list base db conf rest dateTime helpers crypto session fileStorage]
 foreach oodzModule $oodzFrameworkModules {
 	puts "OODZ MODULE: $oodzModule"
 	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *.tcl]]
@@ -33,7 +33,7 @@ dbl configure -result_format L
 # Creating ::oodzSession Global Object (File)
 sessionFactory createSession -persist_type ::oodz::SessionFile
 
-# ::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf -db ::db
+::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf -db ::db
 ::oodz::dateTime create ::oodzTime -oodzConf ::oodzConf
 
 
@@ -52,36 +52,36 @@ foreach method {GET POST PUT DELETE} {
 	ns_register_proc $method api/$api_version apiincall $api_version
 }
 
-ns_register_proc GET /process_form process_form GET
-ns_register_proc POST /process_form process_form POST
+ns_register_proc GET /handle_form handle_form GET
+ns_register_proc POST /handle_form handle_form POST
 
 
 
-proc load_dz_procs {args} {
-	set folders [glob -nocomplain -directory [file join [ns_pagepath] [::oodzConf get_global mod_dir]] *]
-	foreach f $folders {
-		set ::f $f
-		namespace eval [file tail $f] {
-			if {[catch {set files [glob -directory [file join $::f] *.tcl]} errmsg]} {
-				puts "$errmsg"
-			} else {
-				set files [glob -directory [file join $::f] *.tcl]
-				foreach file $files {
-					if {[regexp {Class.tcl} $file] == 1} {
-						load_oodz_class $file
-					} else {
-						source $file
-					}
-				}
-			}
-		}
-	}
-}
+# proc load_dz_procs {args} {
+	# set folders [glob -nocomplain -directory [file join [ns_pagepath] [::oodzConf get_global mod_dir]] *]
+	# foreach f $folders {
+		# set ::f $f
+		# namespace eval [file tail $f] {
+			# if {[catch {set files [glob -directory [file join $::f] *.tcl]} errmsg]} {
+				# puts "$errmsg"
+			# } else {
+				# set files [glob -directory [file join $::f] *.tcl]
+				# foreach file $files {
+					# if {[regexp {Class.tcl} $file] == 1} {
+						# load_oodz_class $file
+					# } else {
+						# source $file
+					# }
+				# }
+			# }
+		# }
+	# }
+# }
 
-# If filename ends with *Class.tcl loads in global namespace
-proc load_oodz_class {args} {
-	source [lindex $args 0]
-}
+# # If filename ends with *Class.tcl loads in global namespace
+# proc load_oodz_class {args} {
+	# source [lindex $args 0]
+# }
 
 ns_runonce {
 	load_dz_procs
