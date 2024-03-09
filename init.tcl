@@ -9,15 +9,28 @@ package require uuid
 package require fileutil
 package require hrfilesize
 
+
+::nx::Slot eval {
+	:method type=uuid {name value} {
+		set pattern {^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$}
+		if {![regexp $pattern $value]} {
+			error "Value '$value' of parameter $name is not UUID"
+		}
+		return $value
+	}
+}
+::Serializer exportMethods {
+    ::nx::Slot method type=uuid
+}
+
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 set lib_shared [ns_library shared]
 set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session fileStorage]
 # set oodzFrameworkModules [list base db conf rest dateTime helpers crypto session fileStorage]
 foreach oodzModule $oodzFrameworkModules {
-	puts "OODZ MODULE: $oodzModule"
+	
 	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *.tcl]]
 	foreach sourceFile $sourceFiles {
-		puts "SOURCE >>>>>>>> $sourceFile"
 		source $sourceFile
 	}
 }
@@ -57,31 +70,33 @@ ns_register_proc POST /handle_form handle_form POST
 
 
 
-# proc load_dz_procs {args} {
-	# set folders [glob -nocomplain -directory [file join [ns_pagepath] [::oodzConf get_global mod_dir]] *]
-	# foreach f $folders {
-		# set ::f $f
-		# namespace eval [file tail $f] {
-			# if {[catch {set files [glob -directory [file join $::f] *.tcl]} errmsg]} {
-				# puts "$errmsg"
-			# } else {
-				# set files [glob -directory [file join $::f] *.tcl]
-				# foreach file $files {
-					# if {[regexp {Class.tcl} $file] == 1} {
-						# load_oodz_class $file
-					# } else {
-						# source $file
-					# }
-				# }
-			# }
-		# }
-	# }
-# }
+proc load_dz_procs {args} {
+	set folders [glob -nocomplain -directory [file join [ns_pagepath] [::oodzConf get_global mod_dir]] *]
+	foreach f $folders {
+		set ::f $f
+		namespace eval [file tail $f] {
+			if {[catch {set files [glob -directory [file join $::f] *.tcl]} errmsg]} {
+				puts "$errmsg"
+			} else {
+				set files [glob -directory [file join $::f] *.tcl]
+				foreach file $files {
+					if {[regexp {Class.tcl} $file] == 1} {
+						load_oodz_class $file
+					} else {
+						puts "CURRENT NAMESPACE [namespace current] --> $file"
+						source $file
+					}
+				}
+			}
+		}
+	}
+}
 
-# # If filename ends with *Class.tcl loads in global namespace
-# proc load_oodz_class {args} {
-	# source [lindex $args 0]
-# }
+# If filename ends with *Class.tcl loads in global namespace
+proc load_oodz_class {args} {
+	puts "CURRENT NAMESPACE [namespace current] --> [lindex $args 0]"
+	source [lindex $args 0]
+}
 
 ns_runonce {
 	load_dz_procs
