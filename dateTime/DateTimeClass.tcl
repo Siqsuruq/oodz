@@ -229,6 +229,14 @@ namespace eval oodz {
 
 			return [string trim $readable]
 		}
-
+		
+		:public method extract {ISO_date what} {
+			if {$ISO_date ne "" } {
+				if {$what eq "year" || $what eq "y"} {
+					return [clock format $ISO_date -format %Y]
+				}
+			}
+		}
 	}
 }
+
