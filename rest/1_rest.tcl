@@ -28,7 +28,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 
 		#Check if resource folder exists and if it has API proc
 		if {[file isdirectory [file join ${:path} [oodzConf get_global mod_dir] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
-			oodzLog notice "API Controler exists"
 			set values [lrange $surl 4 end]
 			set params [: get_body]
 			puts "REQUEST: ${:reqType} VALUES: $values PARAMS: $params"
@@ -66,64 +65,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		}
 	}
 	
-	# # Accepted: none, json, form-data, x-www-form-urlencoded, raw, binary
-	# # this method will convert body data to Tcl dict
-	# # Notice not only body but url also
-	# :method get_body {} {
-		# set params ""
-		# set content_type [: get_header content_type]
-		# set content_length [: get_header content_length]
-		# # API can accept GET requests with non empty body, only multipart/form-data and application/x-www-form-urlencoded
-		# if {${:reqType} in {GET DELETE}} {
-			# try { set params [ns_set array [ns_getform]] } on error {} {
-				# oodzLog error "Error getting URL/Multipart form data."
-				# : answer_error [dict create code 400 detail "Form payload is malformed."]
-				# set params 0
-			# } finally { return $params } 
-		# } elseif {${:reqType} in {POST PUT}} {
-			# if {$content_type eq "application/json"} {
-				# try { set params [json::json2dict [ns_getcontent -as_file false -binary false]] } on error {} {
-					# oodzLog error "JSON payload is malformed."
-					# : answer_error [dict create code 400 detail "JSON payload is malformed."]
-					# set params 0
-				# } finally { return $params } 
-			# } elseif {$content_type eq "application/x-www-form-urlencoded" || $content_type eq "multipart/form-data"} {
-				# try { set params [ns_set array [ns_getform]] } on error {} {
-					# oodzLog error "It is not possible to handle form payload."
-					# : answer_error [dict create code 400 detail "It is not possible to handle form payload."]
-					# set params 0
-				# } finally { return $params }
-			# } elseif {$content_type eq "text/html" || $content_type eq "text/plain"} {
-				# try { set params [ns_getcontent -as_file false -binary false] } on error {} {
-					# oodzLog error "Unable to process text file sent."
-					# : answer_error [dict create code 400 detail "Unable to process text file sent."]
-					# set params 0
-				# } finally { return $params }
-			# } elseif {$content_type eq "application/xml"} {
-				# try { set params [ns_getcontent -as_file false -binary false] } on error {} {
-					# oodzLog error "Unable to process XML file sent."
-					# : answer_error [dict create code 400 detail "Unable to process XML file sent."]
-					# set params 0
-				# } finally { return $params }
-			# } elseif {$content_length ne 0} {
-				# try { set params [ns_getcontent -as_file true -binary true] } on error {} {
-					# oodzLog error "Unable to process binary file sent."
-					# : answer_error [dict create code 400 detail "Unable to process binary file sent."]
-					# set params 0
-				# } finally { return $params }
-			# } else {
-				# # Normally we need body but for some weird reason we allow empty requests :)
-				# oodzLog warning "Empty payload."
-				# return $params
-			# }
-		# } else {
-			# oodzLog error "Request to an unallowed method."
-			# : answer_error [dict create code 405 detail "Method not allowed."]
-			# set params 0
-			# return $params
-		# } 
-	# }
-
 	:method get_body {} {
 		set params ""
 		set content_type [: get_header content_type]
@@ -152,83 +93,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			return $params
 		}
 	}
-
-	# :method get_body {} {
-		# set params ""
-		# set content_type [: get_header content_type]
-		# set content_length [: get_header content_length]
-
-		# # Define a mapping of content types to handler methods
-		# set content_handlers {
-			# "application/json"                 handle_json_body
-			# "application/x-www-form-urlencoded" handle_form_body
-			# "multipart/form-data"              handle_form_body
-			# "text/html"                        handle_text_body
-			# "text/plain"                       handle_text_body
-			# "application/xml"                  handle_text_body
-		# }
-
-		# if {${:reqType} in {GET DELETE} && ($content_type eq "multipart/form-data" || $content_type eq "application/x-www-form-urlencoded")} {
-			# return [: handle_form_body]
-		# } elseif {${:reqType} in {POST PUT}} {
-			# # Check if the content type has an associated handler method
-			# if {[dict exists $content_handlers $content_type]} {
-				# return [: [dict get $content_handlers $content_type]]
-			# } elseif {$content_length ne 0} {
-				# return [: handle_binary_body]
-			# } else {
-				# oodzLog warning "Empty payload."
-				# return $params
-			# }
-		# } else {
-			# oodzLog error "Request to an unallowed method."
-			# : answer_error [dict create code 405 detail "Method not allowed."]
-			# return 0
-		# }
-	# }
-
-	# :method get_body {} {
-		# set params ""
-		# set content_type [: get_header content_type]
-		# set content_length [: get_header content_length]
-
-		# # Define a mapping of content types to handler methods
-		# set content_handlers {
-			# "application/json"                 handle_json_body
-			# "application/x-www-form-urlencoded" handle_form_body
-			# "multipart/form-data"              handle_form_body
-			# "text/html"                        handle_text_body
-			# "text/plain"                       handle_text_body
-			# "application/xml"                  handle_text_body
-		# }
-
-		# if {${:reqType} in {GET DELETE}} {
-			# if {$content_type eq "multipart/form-data" || $content_type eq "application/x-www-form-urlencoded"} {
-				# return [: handle_form_body]
-			# } elseif {$content_type eq "application/json"} {
-				# oodzLog warning "GET/DELETE with JSON content type is unusual. Handling as text."
-				# return [: handle_text_body]
-			# } else {
-				# oodzLog error "Unsupported content type for ${:reqType} request."
-				# : answer_error [dict create code 415 detail "Unsupported Media Type."]
-				# return 0
-			# }
-		# } elseif {${:reqType} in {POST PUT}} {
-			# # Check if the content type has an associated handler method
-			# if {[dict exists $content_handlers $content_type]} {
-				# return [: [dict get $content_handlers $content_type]]
-			# } elseif {$content_length ne 0} {
-				# return [: handle_binary_body]
-			# } else {
-				# oodzLog warning "Empty payload."
-				# return $params
-			# }
-		# } else {
-			# oodzLog error "Request to an unallowed method."
-			# : answer_error [dict create code 405 detail "Method not allowed."]
-			# return 0
-		# }
-	# }
 
 	:method handle_json_body {} {
 		try {
@@ -270,13 +134,10 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		}
 	}
 
-
-
 	:method answer_error {args} {
 		set json_head [lindex $args 0]
 		set json [new_CkJsonObject]
 		CkJsonObject_put_Utf8 $json 1
-		
 		CkJsonObject_AddStringAt $json -1 "version" "${:api_version}"
 		CkJsonObject_AddStringAt $json -1 "currentTime" [clock format [clock seconds] -format "%y-%m-%d %H:%M:%S"]
 		CkJsonObject_AddStringAt $json -1 "status" "ERROR"
@@ -294,10 +155,10 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		CkJsonObject_put_EmitCompact $json 0
 		ns_return $numcode ${:obj_answer_content_type} [CkJsonObject_emit $json]
 		delete_CkJsonObject $json
+		:destroy
 	}
 	
 	:method answer {args} {
-		# puts "$args"
 		set response [lindex $args 0]
 		set code [dict getnull $response code]
 		# Check if its an error code
@@ -318,26 +179,33 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				: return_file $data
 			} elseif {$code == 200} {
 				ns_return 200 $content_type [dict get $response data]
+				:destroy
 			} elseif {$code == 301 || $code == 302 || $code == 303 ||  $code == 307 || $code == 308} {
 				ns_returnredirect [dict getnull $response redirect_url]
+				:destroy
 			}
 
 			switch $code {
 				1 {puts "\tAPI CALL OK"}
 				201 {
 					ns_return 201 $content_type [dict get $response data]
+					:destroy
 				}
 				301 {
 					ns_returnmoved [dict get $response data]
+					:destroy
 				}
 				400 {
 					::api::api_error $response
+					:destroy
 				}
 				404 {
 					ns_returnnotfound
+					:destroy
 				}
 				405 {
 					::api::api_error [dict create code 404 method $method request $url]
+					:destroy
 				}
 			}		
 		}
@@ -347,6 +215,11 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		set filename [file tail $filepath]
 		ns_set put [ns_conn outputheaders] Content-Disposition "attachment; filename=\"${filename}\""
 		ns_returnfile 200 [ns_guesstype $filepath] $filepath
+		:destroy
 	}
-
+	
+	:method destroy {} {
+		puts "Destroying [self]"
+		next; # physical destruction
+	}
 }

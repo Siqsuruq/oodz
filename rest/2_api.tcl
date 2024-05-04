@@ -23,7 +23,8 @@ namespace eval oodz {
 					return $result
 				}
 			} else {
-				return [dict create code 404 method ${req_method} request ${url}]
+				oodzLog notice "Request using not allowed method: ${req_method}:${url}"
+				return [dict create code 405 method ${req_method} request ${url}]
 			}	
 		}
 	}
