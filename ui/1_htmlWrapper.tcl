@@ -377,12 +377,12 @@ namespace eval oodz {
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
 							ns_adp_puts "multiSort: $multiSort,"
 							set a_trns [::msgcat::mc "Show all"]
-							ns_adp_puts "lengthMenu: \[\[ 10, 25, 50, 100, -1 \],\[ '10', '25', '50', '100', \"$a_trns\" \]\],"
+							ns_adp_puts "lengthMenu: \[\[ 15,20,25,50,100,-1 \],\['15','20','25','50','100', \"$a_trns\" \]\],"
 							if {![::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]} {
-								ns_adp_puts "dom: \"<'row'<'col-sm-4'B><'col-sm-6'f><'col-sm-2'l>>tr<'row'<'col-sm-6'i><'col-sm-6'p>>\" ,"
 								ns_adp_puts "buttons: \['copy', 'excel', 'pdf'\],"
+								ns_adp_puts "layout: {topStart: 'buttons', topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
 							} else {
-								ns_adp_puts "dom: \"<'row'<'col-sm-8'f><'col-sm-4'l>>tr<'row'<'col-sm-6'i><'col-sm-6'p>>\" ,"
+								ns_adp_puts "layout: {topStart: null, topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
 							}						
 							ns_adp_puts "columns: \["
 								foreach thead $theads thead_trns $theads_trns {

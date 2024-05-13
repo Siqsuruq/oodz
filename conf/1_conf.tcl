@@ -24,6 +24,7 @@ namespace eval oodz {
 		# Load config options from database
 		:public method read_dz_conf {args} {
 			foreach line [${:db} select_all dz_conf *] {
+				puts $line
 				[self] add [dict create [dict get $line var] [dict get $line val]]
 			}
 		}
@@ -55,7 +56,7 @@ namespace eval oodz {
 			}
 		}
 		
-		:public method relaod {args} {
+		:public method reload {args} {
 			: read_dz_conf
 			: load_trns
 		}
