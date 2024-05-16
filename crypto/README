@@ -15,7 +15,7 @@ Below are some of the common methods that might be included in a general-purpose
 
     Hashing:
         hash(data): Generate a hash of the provided data.
-        hash_file(file_path): Generate a hash of the file content at the given path.
+        hash_file(file_path algorithm): Generate a hash of the file content at the given path.
 
     Signing and Verification (for asymmetric encryption):
         sign(data, private_key): Generate a digital signature for the given data using a private key.

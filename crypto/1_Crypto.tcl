@@ -100,22 +100,36 @@ namespace eval oodz {
 			}
 		}
 		
-		:public object method hash_file {file_path} {
-			# Compute the SHA-256 hash of the file
-			set hash [::sha2::sha256 -bin -file $file_path]
-
-			# Create the output file path with .sha256 extension
-			set output_file "${file_path}.sha256"
-
-			# Open the output file in write mode
-			set file_handle [open $output_file "w"]
-
-			# Write the hash to the file
-			puts $file_handle $hash
-
-			# Close the file handle
-			close $file_handle
+		:public object method hash_file {file_path {algorithm "sha256"}} {
+			try {
+			# Select the hashing algorithm
+				switch $algorithm {
+					"sha256" {
+						set hash [::sha2::sha256 -bin -file $file_path]
+						set extension "sha256"
+					}
+					"md5" {
+						set hash [::md5::md5 -file $file_path]
+						set extension "md5"
+					}
+					default {
+						set hash [::sha2::sha256 -bin -file $file_path]
+						set extension "sha256"
+					}
+				}
+				# Compute the SHA-256 hash of the file and save it to the file with .sha256 extension
+				set output_file "${file_path}.${extension}"
+				set file_handle [open $output_file "wb"]
+				puts $file_handle $hash
+				return -code ok $output_file
+			} on error {errMsg} {
+				return -code error "Error occurred: $errMsg"
+			} finally {
+				# Ensure file handle is closed in case of an error during writing
+				if {[info exists file_handle]} {
+					close $file_handle
+				}
+			}
 		}
-
 	}
 }
