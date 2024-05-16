@@ -100,20 +100,32 @@ namespace eval oodz {
 			}
 		}
 		
-		:public object method hash_file {file_path {algorithm "sha256"}} {
+		:public object method hash_file {file_path {algorithm "sha256"} {enc "binary"}} {
 			try {
 			# Select the hashing algorithm
 				switch $algorithm {
 					"sha256" {
-						set hash [::sha2::sha256 -bin -file $file_path]
+						set hash [ns_md file -digest sha256 -encoding ${enc} $file_path]
 						set extension "sha256"
 					}
+					"sha512" {
+						set hash [ns_md file -digest sha512 -encoding ${enc} $file_path]
+						set extension "sha512"
+					}
+					"sha3-256" {
+						set hash [ns_md file -digest "sha3-256" -encoding ${enc} $file_path]
+						set extension "sha3-256"
+					}
+					"sha3-512" {
+						set hash [ns_md file -digest "sha3-512" -encoding ${enc} $file_path]
+						set extension "sha3-512"
+					}
 					"md5" {
-						set hash [::md5::md5 -file $file_path]
+						set hash [ns_md file -digest "md5" -encoding ${enc} $file_path]
 						set extension "md5"
 					}
 					default {
-						set hash [::sha2::sha256 -bin -file $file_path]
+						set hash [ns_md file -digest sha256 -encoding ${enc} $file_path]
 						set extension "sha256"
 					}
 				}
