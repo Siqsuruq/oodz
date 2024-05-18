@@ -21,6 +21,20 @@ namespace eval ::oodz {
 			return $sessionId
 		}
 		
+		:public method check_logged_in {} {
+			set sessionId [:id]
+			if {$sessionId == 0} {
+				return 0
+			} else {
+				set session_data [:get "username"]
+				if {$session_data eq ""} {
+					return 0
+				} else {
+					return 1
+				}
+			}
+		}
+		
 		:method unknown {called_method args} {
 			set msg "Unknown method '$called_method' in [[self] info name] called"
 			oodzLog warning $msg
@@ -117,7 +131,7 @@ namespace eval ::oodz {
 		
 		
 		
-		SessionClass create dbs -superclasses ISession
+	SessionClass create dbs -superclasses ISession
 	
 	nx::Class create SessionFactory {
 		:public method createSession {-persist_type:class,type=SessionClass} {

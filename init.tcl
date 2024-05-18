@@ -1,13 +1,5 @@
-package require nx
-package require nsf
-package require dicttool
-package require csv
-package require textutil
-package require inifile
-package require msgcat
-package require uuid
-package require fileutil
-package require hrfilesize
+source [file join [ns_serverpath] lib/chilkat/chilkat.tcl]
+source [file join [ns_library shared] oodz/packages.tcl]
 
 
 ::nx::Slot eval {
@@ -24,12 +16,12 @@ package require hrfilesize
 }
 
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
-set lib_shared [ns_library shared]
+
 set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session fileStorage]
 # set oodzFrameworkModules [list base db conf rest dateTime helpers crypto session fileStorage]
 foreach oodzModule $oodzFrameworkModules {
 	
-	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join $lib_shared oodz/${oodzModule}] *.tcl]]
+	set sourceFiles	[lsort -dictionary [glob -nocomplain -directory [file join [ns_library shared] oodz/${oodzModule}] *.tcl]]
 	foreach sourceFile $sourceFiles {
 		source $sourceFile
 	}

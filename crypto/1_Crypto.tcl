@@ -61,37 +61,42 @@ namespace eval oodz {
 			}
 		}
 
-		:public object method verify_file_signature {fileToCheck fileHash fileSign pubKeyPEMStr} {
+		:public object method generate_apikey {} {
+			set prefix "[:generate_random 7]."
+			set uuid [ns_uuid]
+			set api_keyb64 [ns_base64encode $uuid]
+			set api_key "$prefix$api_keyb64"
+			return $api_key
+		}
+
+		:public object method verify_file_signature {fileToCheck fileSign pubKeyPEM} {
 			set pubKey [new_CkPublicKey]
 			set rsa [new_CkRsa]
 			set bdHash [new_CkBinData]
 			set bdSig [new_CkBinData]
 			
 			try {
-				set success [CkPublicKey_LoadFromString $pubKey $pubKeyPEMStr]
-				if {$success == 0} then {
-					puts [CkPublicKey_lastErrorText $pubKey]
-				} else {puts "PEM loaded"}
-				
-				set success [CkRsa_ImportPublicKeyObj $rsa $pubKey]
-				if {$success == 0} then {
-					puts [CkRsa_lastErrorText $rsa]
-				}
-				set success [CkBinData_LoadFile $bdHash $fileHash]
-				if {$success == 0} then {
-					puts "Failed to load SHA256 hash. $fileHash"
-				} else {puts "SHA256 loaded."}
-				set success [CkBinData_LoadFile $bdSig $fileSign]
-				if {$success == 0} then {
-					puts "Failed to load RSA signature."
-				} else {puts "Signature loaded."}
+				# Load Public key PEM string
+				# CkPublicKey_LoadFromString $pubKey $pubKeyPEMStr
+				CkPublicKey_LoadFromFile $pubKey $pubKeyPEM
+				CkRsa_ImportPublicKeyObj $rsa $pubKey
 				set enc "base64"
+				set algorithm "sha256"
+				# Create sha256 hash and laod it  
+				CkBinData_LoadFile $bdHash [:hash_file ${fileToCheck} $algorithm $enc]
+				
+				# Load signature file
+				CkBinData_LoadFile $bdSig $fileSign
+				
 				CkRsa_put_EncodingMode $rsa $enc
-				set success [CkRsa_VerifyHashENC $rsa [CkBinData_getEncoded $bdHash $enc] "sha256" [CkBinData_getEncoded $bdSig $enc]]
+				set success [CkRsa_VerifyHashENC $rsa [CkBinData_getEncoded $bdHash $enc] $algorithm [CkBinData_getEncoded $bdSig $enc]]
 				if {$success == 0} then {
-					puts [CkRsa_lastErrorText $rsa]
-					puts "Not Valid"
-				} else {puts "Signature validated."}
+					return -code error "Not Valid: [CkRsa_lastErrorText $rsa]"
+				} else {
+					return -code ok "Signature validated."
+				}
+			} on error {errMsg} {
+				return -code error "Error occurred: $errMsg"
 			} finally {
 				delete_CkPublicKey $pubKey
 				delete_CkRsa $rsa
