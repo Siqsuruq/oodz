@@ -52,6 +52,9 @@ namespace eval oodz {
 		# Method to copy a file to a new location, if file exists it will be overwritten
 		:public method copyFile {newPath} {
 			try {
+				if {[file isdirectory $newPath] == 1} {
+					set newPath [file join $newPath [file tail [:fileName]]]
+				}
 				file copy -force ${:fileName} $newPath
 				set code ok
 				set msg "File copied to $newPath"
