@@ -82,9 +82,12 @@ namespace eval oodz {
 		# Method to move a file
 		:public method moveFile {newPath} {
 			try {
+				if {[file isdirectory $newPath] == 1} {
+					set newPath [file join $newPath [file tail [:fileName]]]
+				}
 				file rename -force ${:fileName} $newPath
 				set :fileName $newPath
-				:getFileExtension
+				:fileExtension
 				set code ok
 				set msg "File moved to $newPath"
 			} on error {emsg} {
