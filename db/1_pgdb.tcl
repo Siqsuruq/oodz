@@ -588,7 +588,7 @@ namespace eval oodz {
 			}
 			set hst_data [string trimright $hst_data ,]
 			
-			if {[is_uuid ${id}] == 1} {
+			if {[::oodz::DataType is_uuid ${id}] == 1} {
 				if {$uuid_col eq ""} {
 					set uuid_col uuid_${table}
 				}
@@ -612,7 +612,7 @@ namespace eval oodz {
 		
 		:public method delete_hstore {table id key_2_del {col "extra"} {uuid_col ""}} {
 			set result ""
-			if {[is_uuid ${id}] == 1} {
+			if {[::oodz::DataType is_uuid ${id}] == 1} {
 				if {$uuid_col eq ""} {
 					set uuid_col uuid_${table}
 				}
@@ -634,7 +634,7 @@ namespace eval oodz {
 		
 		:public method get_hstore_dict {table id {col "extra"} {uuid_col ""}} {
 			set result ""
-			if {[is_uuid ${id}] == 1} {
+			if {[::oodz::DataType is_uuid ${id}] == 1} {
 				if {$uuid_col eq ""} {
 					set uuid_col uuid_${table}
 				}

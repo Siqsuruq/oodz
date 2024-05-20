@@ -505,7 +505,7 @@ namespace eval oodz {
 				set module [lindex [split $cmd "::"] 2]
 				set val [lindex [split $cmd "::"] 4]
 				if {[file extension $val] eq ".xml"} {
-					if {[chk_mod_acc $module] == 1} {
+					if {[::dz_access::chk_mod_acc $module] == 1} {
 						lappend link "?mod=$module&xml=$val"
 						ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"$link\" role=\"button\">$img_tag $placeholder</a>"
 					}
