@@ -1,11 +1,9 @@
 namespace eval mop {
 	nx::Class create baseObj -superclass baseClass {
-        :property -accessor public {identifier ""}
-        :property -accessor public {obj:required}
-        # :property -accessor public {db:required ${::db}}
-
+		:property {identifier ""}
+		:property obj:required
+		
 		:method init {args} {
-            next
 			if {[::db table_exists ${:obj}] eq 1} {
 			 	if {${:identifier} ne "" && [::oodz::DataType is_uuid ${:identifier}] == 1} {
 			 		:add [: read uuid]
@@ -24,13 +22,34 @@ namespace eval mop {
 			}
 		}
 
-        :method read {args} {
-		 	set idType [lindex $args 0]
+        :method read {idType} {
 		 	if {$idType eq "uuid"} {
 		 		return [lindex [::db select_all ${:obj} * uuid_${:obj}=\'${:identifier}\'] 0]
 		 	} elseif {$idType eq "id"} {
 		 		return [lindex [::db select_all ${:obj} * ${:obj}.id=\'${:identifier}\'] 0]
 		 	}
+		}
+		
+		public method load_data {key val} {
+			if {$key ne "" && $val ne ""} {
+				try {
+					set result [lindex [${:db} select_all ${:obj} * ${:obj}.$key=\'$val\'] 0]
+					if {[llength $result] > 0} {
+						:add $result
+						:update_identifier
+					} else {
+						return -code error "No data found for key: $key and value: $val"
+					}
+				} on error {errMsg} {
+					return -code error $errMsg
+				}
+			} else {
+				return -code error "Key and value must not be empty"
+			}
+		}
+		
+		:public object method create {args} {
+			error "Cannot instantiate abstract class [self]"
 		}
 	}
 }
