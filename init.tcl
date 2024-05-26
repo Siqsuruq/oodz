@@ -17,7 +17,7 @@ source [file join [ns_library shared] oodz/packages.tcl]
 
 # Load OODZ Framework source files, sources from specific folder in alphabetical order. Do not change Modules order!!!
 
-set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session fileStorage]
+set oodzFrameworkModules [list base db conf ui rest dateTime helpers crypto session fileStorage mop]
 # set oodzFrameworkModules [list base db conf rest dateTime helpers crypto session fileStorage]
 foreach oodzModule $oodzFrameworkModules {
 	

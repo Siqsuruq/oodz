@@ -240,6 +240,53 @@ namespace eval oodz {
 				return $result
 			}
 		}
+
+		:public method get_columns_names {table} {
+			set result ""
+			set :db_handles [ns_db gethandle]
+			# set query "SELECT column_name FROM information_schema.columns WHERE table_name = '$table' AND table_schema='public' ORDER BY ordinal_position ASC"
+			set query "SELECT 
+				c.column_name, 
+				c.data_type,
+				CASE 
+					WHEN tc.constraint_type = 'FOREIGN KEY' THEN 'YES'
+					ELSE 'NO'
+				END AS is_foreign_key,
+				CASE 
+					WHEN tc.constraint_type = 'PRIMARY KEY' THEN 'YES'
+					ELSE 'NO'
+				END AS is_primary_key,
+				CASE 
+					WHEN c.column_default LIKE 'nextval%' THEN 'YES'
+					ELSE 'NO'
+				END AS is_auto_increment
+			FROM 
+				information_schema.columns c
+			LEFT JOIN information_schema.key_column_usage kcu
+				ON c.table_name = kcu.table_name
+				AND c.column_name = kcu.column_name
+				AND c.table_schema = kcu.table_schema
+			LEFT JOIN information_schema.table_constraints tc
+				ON kcu.constraint_name = tc.constraint_name
+				AND kcu.table_schema = tc.table_schema
+				AND (tc.constraint_type = 'FOREIGN KEY' OR tc.constraint_type = 'PRIMARY KEY')
+			WHERE 
+				c.table_name = '$table'
+				AND c.table_schema = 'public';"
+			try {
+				set rows [ns_db select ${:db_handles} $query]
+				set rows [ns_db select ${:db_handles} $query]
+				# oodzLog notice "QUERY: $query"
+				while {[ns_db getrow ${:db_handles} $rows]} {
+					lappend result [ns_set array $rows]
+				}
+			} trap {} {arr} {
+				oodzLog error "DB ERROR: $arr"
+			} finally {
+				: release
+				return $result
+			}
+		}
 		
 		:method my_columns {table columns} {
 			set my_columns [list]

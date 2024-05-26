@@ -130,7 +130,7 @@ namespace eval ::oodz {
 		
 		
 		
-		
+	# To implement session from DataBase
 	SessionClass create dbs -superclasses ISession
 	
 	nx::Class create SessionFactory {
