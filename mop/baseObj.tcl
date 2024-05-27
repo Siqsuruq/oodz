@@ -1,7 +1,7 @@
 namespace eval mop {
 	nx::Class create baseObj -superclass baseClass {
-		:property {identifier ""}
-		:property obj:required
+		:property -accessor public {identifier ""}
+		:property -accessor public obj:required
 		
 		:method init {args} {
 			if {[::db table_exists ${:obj}] eq 1} {
@@ -30,10 +30,10 @@ namespace eval mop {
 		 	}
 		}
 		
-		public method load_data {key val} {
+		:public method load_data {key val} {
 			if {$key ne "" && $val ne ""} {
 				try {
-					set result [lindex [${:db} select_all ${:obj} * ${:obj}.$key=\'$val\'] 0]
+					set result [lindex [::db select_all ${:obj} * ${:obj}.$key=\'$val\'] 0]
 					if {[llength $result] > 0} {
 						:add $result
 						:update_identifier
@@ -46,6 +46,10 @@ namespace eval mop {
 			} else {
 				return -code error "Key and value must not be empty"
 			}
+		}
+		
+		:method update_identifier {} {
+			set :identifier [dict getnull [:get uuid_${:obj}] identifier]
 		}
 		
 		:public object method create {args} {
