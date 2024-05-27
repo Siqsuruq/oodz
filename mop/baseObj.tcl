@@ -48,6 +48,25 @@ namespace eval mop {
 			}
 		}
 		
+		:public method load_default {args} {
+			set a [lindex $args 0]
+			try {
+				if {$a ne ""} {
+					set result [lindex [::db select_all ${:obj} * "${:obj}.$a IS TRUE"] 0]
+				} else {
+					set result [lindex [::db select_all ${:obj} * "${:obj}.def IS TRUE"] 0]
+				}
+				if {[llength $result] > 0} {
+					:add $result
+					:update_identifier
+				} else {
+					return -code error "No default data found."
+				}
+			} on error {errMsg} {
+				return -code error $errMsg
+			}
+		}
+
 		:method update_identifier {} {
 			set :identifier [dict getnull [:get uuid_${:obj}] identifier]
 		}
