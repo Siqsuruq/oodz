@@ -67,6 +67,27 @@ namespace eval mop {
 			}
 		}
 
+		:public method save2db {args} {
+			try {
+				set obj_data [:prepare_data]
+				set res [::db insert_all ${:obj} $obj_data "" [list uuid_${:obj}]]
+				: load_data uuid_${:obj} [lindex $res 0]
+				return -code ok [lindex $res 0]
+			} on error {errMsg} {
+				return -code error $errMsg
+			}
+		}
+
+		:method prepare_data {} {
+			set obj_data [:get]
+			set obj_data [dict unset obj_data id]
+			set obj_data [dict unset obj_data uuid_${:obj}]
+			set obj_data [dict unset obj_data extra]
+			set obj_data [dict unset obj_data obj]
+			set obj_data [dict unset obj_data identifier]
+			return $obj_data
+		}
+
 		:method update_identifier {} {
 			set :identifier [dict getnull [:get uuid_${:obj}] identifier]
 		}
