@@ -160,6 +160,10 @@ nx::Class create apiin -superclass ::oodz::superClass {
 	
 	:method answer {args} {
 		set response [lindex $args 0]
+
+		puts  "------------------------------------------"
+		puts $response
+		puts  "------------------------------------------"
 		set code [dict getnull $response code]
 		# Check if its an error code
 		if {[dict exists ${:error_codes} $code] == 1} {
