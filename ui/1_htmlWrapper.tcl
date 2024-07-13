@@ -3,6 +3,7 @@ namespace eval oodz {
 		:property {conf:object,required}
 		:property {frame "main"}
 		:property {db:object}
+		:property {data ""}
 
 		:public method parse {module xmlFile} {
 			set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xmlFile]
@@ -13,8 +14,8 @@ namespace eval oodz {
 		}
 		
 		:method add_FormHandler {args} {
-			ns_adp_puts  "<script type='module'>"
-			ns_adp_puts "import { formData } from '[file join [::oodzConf get data global_js L] formDataClass.js]';"
+			ns_adp_puts "<script type='module'>"
+			ns_adp_puts "import { formData } from '[file join [::oodzConf get global_js L] formDataClass.js]';"
 			ns_adp_puts "let ${:frame}Data = new formData('${:frame}');"
 			ns_adp_puts "window.${:frame}Data = ${:frame}Data;"
 			ns_adp_puts "</script>"

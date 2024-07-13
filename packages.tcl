@@ -1,0 +1,37 @@
+package require nx
+package require nsf
+package require dicttool
+package require csv
+package require textutil
+package require inifile
+package require msgcat
+package require uuid
+package require fileutil
+package require hrfilesize
+package require struct::list
+package require tdom
+package require htmlparse
+package require md5
+package require Pgtcl
+package require money
+package require mimext
+package require smtp
+package require mime
+package require http
+package require tls
+package require json
+package require json::write
+package require uri
+package require tzint
+package require struct
+package require zipfile::mkzip
+package require doctools
+package require fileutil::magic::filetype
+package require sha256  
+package require valtype::common
+package require valtype::luhn
+package require TclCurl
+package require vfs
+package require ooxml
+
+# package require Hpdf

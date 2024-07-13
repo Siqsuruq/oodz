@@ -1,4 +1,4 @@
-namespace eval mop {
+namespace eval oodz {
 	nx::Class create baseObj -superclass baseClass {
 		:property -accessor public {identifier ""}
 		:property -accessor public obj:required
@@ -70,9 +70,9 @@ namespace eval mop {
 		:public method save2db {args} {
 			try {
 				set obj_data [:prepare_data]
-				set res [::db insert_all ${:obj} $obj_data "" [list uuid_${:obj}]]
+				set res [::db insert_all ${:obj} $obj_data "" [list uuid_${:obj} id]]
 				: load_data uuid_${:obj} [lindex $res 0]
-				return -code ok [lindex $res 0]
+				return -code ok $res
 			} on error {errMsg} {
 				return -code error $errMsg
 			}
@@ -89,7 +89,8 @@ namespace eval mop {
 		}
 
 		:method update_identifier {} {
-			set :identifier [dict getnull [:get uuid_${:obj}] identifier]
+			set idstr [string cat uuid_ [:get obj L]]
+			set :identifier [:get $idstr L]
 		}
 		
 		:public object method create {args} {

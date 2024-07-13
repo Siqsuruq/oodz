@@ -31,8 +31,8 @@ namespace eval oodz {
 		
 		# Load Global Translations
 		:public method load_trns {args} {
-			msgcat::mclocale [[self] get data language L]
-			set lang_path [file join ${:path} [[self] get data lang_dir L]]
+			msgcat::mclocale [: get_global language]
+			set lang_path [file join [ns_pagepath] "data/lang/"]
 			msgcat::mcload $lang_path
 		}
 		

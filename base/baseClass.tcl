@@ -1,4 +1,4 @@
-namespace eval mop {
+namespace eval oodz {
 	nx::Class create baseClass {
 		:method init {args} {
 		}

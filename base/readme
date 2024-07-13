@@ -1,0 +1,33 @@
+In addition to the methods you've mentioned (e.g., adding objects, getting objects, and removing objects), collections typically provide several other commonly used methods to interact with the elements in the collection. Some of the common methods you might find in collections include:
+
+    Length/Size: As you mentioned, a method to determine the number of elements in the collection (often named length or size).
+
+    Iteration: Methods for iterating over the elements in the collection, such as foreach or map, which allow you to perform actions on each element.
+
+    Access by Index: Methods to access elements by their index in the collection, like get_element(index).
+
+    Search and Retrieval: Methods to search for elements based on specific criteria and retrieve them. For example, find(predicate) to find elements that meet a certain condition.
+
+    Sorting: Methods to sort the elements in the collection based on a specified criterion, such as sort(comparator).
+
+    Filtering: Methods to filter elements based on a specified condition, like filter(predicate).
+
+    Conversion: Methods to convert the collection into different formats, such as arrays, lists, or dictionaries, like to_array() or to_dict().
+
+    Clearing: A method to clear all elements from the collection.
+
+    Checking for Existence: Methods to check if a specific element exists in the collection, like contains(element).
+
+    Merging: Methods to merge one collection with another, often preserving or overwriting elements as needed.
+
+    Copying and Cloning: Methods to create a copy or clone of the collection.
+
+    Slicing: Methods to extract a portion or sub-collection of elements based on a range.
+
+    Transformation: Methods to transform elements in the collection, such as applying a function to each element and replacing them with the result.
+
+    Grouping and Aggregation: Methods to group elements by a specific criterion and perform aggregation operations like sum, average, or count on groups.
+
+    Comparison: Methods to compare two collections for equality or other comparison criteria.
+
+The specific methods you implement in your collection class will depend on the requirements of your application. You can tailor the methods to provide the functionality that best suits your needs.

@@ -1,11 +1,8 @@
 namespace eval oodz {
 	nx::Class create fileStorage -superclass baseClass {
-		:property {identifier ""}
-		:property obj:required
-		:property {db:object,required}
+		:property {obj "filestorage"}
 		
 		:method init {} {
-			set :user_data_dir [file join [::oodzConf get path] [::oodzConf get_global user_data_dir]]
 		}
 		
 		:public method uploadFile {} {
@@ -38,7 +35,7 @@ namespace eval oodz {
 		:public method getFilesPath {args} {
 			set result ""
 			foreach fileuuid $args {
-				set fpath [dict getnull [lindex [${:db} select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
+				set fpath [dict getnull [lindex [::db select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
 				if {$fpath ne ""} {
 					lappend result [file join [::oodzConf get_global user_data_dir] $fpath]
 				}
@@ -50,14 +47,25 @@ namespace eval oodz {
 		:public method getFullFilesPath {args} {
 			set result ""
 			foreach fileuuid $args {
-				set fpath [dict getnull [lindex [${:db} select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
+				set fpath [dict getnull [lindex [::db select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
 				if {$fpath ne ""} {
-					lappend result [file join ${:user_data_dir} $fpath]
+					lappend result [file join [::oodzConf get path] [::oodzConf get_global user_data_dir] $fpath]
 				}
 			}
 			return $result
 		}
 		
+		:public method getFileURL {args} {
+			set result ""
+			foreach fileuuid $args {
+				set fpath [dict getnull [lindex [::db select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
+				if {$fpath ne ""} {
+					lappend result [file join [::oodzConf get srvaddress L] [::oodzConf get_global user_data_dir] $fpath]
+				}
+			}
+			return $result
+		}
+
 		:public method getFilesAPIUrl {args} {
 			set result ""
 			foreach fileuuid $args {

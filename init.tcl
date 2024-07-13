@@ -40,7 +40,7 @@ sessionFactory createSession -persist_type ::oodz::SessionFile
 
 ::oodz::htmlWrapper create ::oodzhtmlWrapper -conf ::oodzConf -db ::db
 ::oodz::dateTime create ::oodzTime -oodzConf ::oodzConf
-
+::oodz::fileStorage create ::fileStorage
 
 # Get API Version from configuration, if there is no such ns_param set it to "v1"
 set api_version [ns_config ns/server/[ns_info server]/module/oodz api_version ""]
