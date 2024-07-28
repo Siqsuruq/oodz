@@ -148,5 +148,18 @@ namespace eval oodz {
 				}
 			}
 		}
+	
+		:public object method hash_password {password} {
+			set salt [:generate_random_salt]
+			set hash [::ns_crypto::scrypt -secret "$password" -salt "$salt" -n 1024 -r 8 -p 16 -encoding base64]
+			return [join [list $salt $hash] "."]
+		}
+
+		:public object method verify_hash_password {password hash} {
+			set salt [lindex [split $hash "."] 0]
+			set hash [lindex [split $hash "."] 1]
+			set newHash [::ns_crypto::scrypt -secret "$password" -salt "$salt" -n 1024 -r 8 -p 16 -encoding base64]
+			return [expr {$newHash eq $hash}]
+		}
 	}
 }

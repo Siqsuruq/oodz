@@ -85,6 +85,8 @@ namespace eval oodz {
 			set obj_data [dict unset obj_data extra]
 			set obj_data [dict unset obj_data obj]
 			set obj_data [dict unset obj_data identifier]
+			set obj_data [dict unset obj_data created_at]
+			set obj_data [dict unset obj_data updated_at]
 			return $obj_data
 		}
 
