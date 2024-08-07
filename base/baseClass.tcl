@@ -43,14 +43,14 @@ namespace eval oodz {
 			# Iterate over the properties and gather their values 
 			foreach prop $what {
 				if {$result_type eq "L"} {
-					if {[:datatype [: cget -${prop}]] == 1} {
+					if {[:prop_isobj [: cget -${prop}]] == 1} {
 						set a [[: cget -${prop}] get]
 						lappend result $a
 					} else {
 						lappend result [: cget -${prop}]
 					}
 				} else {
-					if {[:datatype [: cget -${prop}]] == 1} {
+					if {[:prop_isobj [: cget -${prop}]] == 1} {
 						set a [[: cget -${prop}] get]
 						dict set result $prop $a
 					} else {
@@ -61,7 +61,7 @@ namespace eval oodz {
 			return $result
 		}
 
-		:method datatype {varName} {
+		:method prop_isobj {varName} {
 			# Check if the variable is an object by attempting to get its class info
 			if { [catch {${varName} info class}] } {
 				return 0
@@ -91,6 +91,32 @@ namespace eval oodz {
 			}
 		}
 
+		# Public interface to erase all data or some specific keys, make them empty string. If args are not provided will erase all data.
+		:public method clear {args} {
+			try {
+				if {[llength $args] == 0} {
+					set objprops [: info vars]
+					foreach prop $objprops {
+						if {[:prop_isobj [: cget -${prop}]] == 1} {
+							[: cget -${prop}] clear
+						} else {
+							: configure -${prop} ""
+						}
+					}
+				} else {
+					foreach param $args {
+						if {[:prop_isobj [: cget -${prop}]] == 1} {
+							[: cget -${prop}] clear
+						} else {
+							: configure -${prop} ""
+						}
+					}
+				}
+			} on error {errMsg} {
+				return -code error $errMsg
+			}
+		}
+
 		# Return 1 if object has no properties or all properties are empty, 0 otherwise
 		:public method is_empty {} {
 			set objprops [: info vars]
@@ -98,7 +124,7 @@ namespace eval oodz {
 				return 1
 			} else {
 				foreach prop $objprops {
-					if {[:$prop get] ne ""} {
+					if {[: cget -${prop}] ne ""} {
 						return 0
 					}
 				}
@@ -113,7 +139,7 @@ namespace eval oodz {
 				return 0
 			} else {
 				foreach prop $objprops {
-					if {[:$prop get] ne ""} {
+					if {[: cget ${prop}] ne ""} {
 						return 1
 					}
 				}
