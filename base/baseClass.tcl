@@ -150,5 +150,10 @@ namespace eval oodz {
 		:public method asJSON {} {
 			return [tcl2json [: get]]
 		}
+
+		:public method destroy {} {
+			puts "Destroying object"
+			next
+		}
 	}
 }

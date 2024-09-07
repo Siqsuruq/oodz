@@ -19,9 +19,11 @@ namespace eval oodz {
 			set pattern {^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$}
 			return [regexp $pattern $value]
 		}
+
 		:public object method is_dict {value} {
 			return [dict is_dict $value]
 		}
+		
 		:public object method is_number {value} {
 			if {[string is integer -strict $value] || [string is double -strict $value] || [string is wideinteger $value]} {
 				return 1
@@ -31,5 +33,10 @@ namespace eval oodz {
 		:public object method guess_type {value} {
 			if {[: is_number]} { return num } else { return str }
 		}
+
+		:public object method is_email {value} {
+            set pattern {^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$}
+            return [regexp $pattern $value]
+        }
 	}
 }

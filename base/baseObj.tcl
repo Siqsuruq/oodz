@@ -1,7 +1,7 @@
 namespace eval oodz {
 	nx::Class create baseObj -superclass baseClass {
-		:property -accessor public {identifier ""}
-		:property -accessor public obj:required
+		:property {identifier ""}
+		:property {obj:required}
 		
 		:method init {args} {
 			if {[::db table_exists ${:obj}] eq 1} {
@@ -61,6 +61,35 @@ namespace eval oodz {
 					:update_identifier
 				} else {
 					return -code error "No default data found."
+				}
+			} on error {errMsg} {
+				return -code error $errMsg
+			}
+		}
+
+		:public method clear {args} {
+			try {
+				if {[llength $args] == 0} {
+					set objprops [: info vars]
+					foreach prop $objprops {
+						if {$prop ne "obj"} {
+							if {[:prop_isobj [: cget -${prop}]] == 1} {
+								[: cget -${prop}] clear
+							} else {
+								: configure -${prop} ""
+							}
+						}
+					}
+				} else {
+					foreach param $args {
+						if {$prop ne "obj"} {
+							if {[:prop_isobj [: cget -${prop}]] == 1} {
+								[: cget -${prop}] clear
+							} else {
+								: configure -${prop} ""
+							}
+						}
+					}
 				}
 			} on error {errMsg} {
 				return -code error $errMsg

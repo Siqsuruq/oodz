@@ -167,7 +167,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		set code [dict getnull $response code]
 		# Check if its an error code
 		if {[dict exists ${:error_codes} $code] == 1} {
-			: answer_error [dict create code $code detail [dict getnull $response detail]]
+			: answer_error [dict create code $code details [dict getnull $response details]]
 		} else {
 			switch [dict getnull $response type] {
 				json {set content_type "application/json"}
