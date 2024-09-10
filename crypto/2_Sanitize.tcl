@@ -39,5 +39,30 @@ namespace eval oodz {
 			}
 			return $normalizedData
 		}
+
+		:public object method check_password_strength {password} {
+            set min_length 8
+            set has_digit 0
+            set has_upper 0
+            set has_lower 0
+            set has_special 0
+
+            if {[string length $password] >= $min_length} {
+                foreach char [split $password ""] {
+                    if {[string is digit $char]} {
+                        set has_digit 1
+                    } elseif {[string is upper $char]} {
+                        set has_upper 1
+                    } elseif {[string is lower $char]} {
+                        set has_lower 1
+                    } elseif {[regexp {[^a-zA-Z0-9]} $char]} {
+                        set has_special 1
+                    }
+                }
+            }
+
+            set strength_score [expr {$has_digit + $has_upper + $has_lower + $has_special}]
+            return [expr {$strength_score >= 3}]
+        }
 	}
 }
