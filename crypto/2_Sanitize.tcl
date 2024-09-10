@@ -15,25 +15,19 @@ namespace eval oodz {
 			return [string map {& &amp; > &gt; < &lt; \" &#34; ' &#39; \{ &#123; \} &#125;} $html]
 		}
 		
-		:public object method normalize_spaces {originalString {type "str"}} {
-			if {$type eq "str"} {
-				return [string trim [regsub -all {[\s]+} $originalString " "]]
-			} elseif {$type eq "dict"} {
+		:public object method normalize_spaces_dict {datadict} {
+			if {[dict is_dict $datadict] != 0} {
 				set result [dict create]
-				dict for {dkey val} $originalString {
+				dict for {dkey val} $datadict {
 					dict set result $dkey [string trim [regsub -all {[\s]+} $val " "]]
 				}
 				return $result
+				
+			} else {
+				return []:normalize_spaces $datadict]
 			}
 		}
-		:public object method normalize_list_spaces {listString} {
-			set normalizedList [list]
-			foreach element $listString {
-				lappend normalizedList [string trim [regsub -all {[\s]+} $element " "]]
-			}
-			return $normalizedList
-		}
-		
+
 		:public object method normalize_spaces {data} {
 			set normalizedData [list]
 			foreach item $data {
@@ -45,7 +39,5 @@ namespace eval oodz {
 			}
 			return $normalizedData
 		}
-
-
 	}
 }
