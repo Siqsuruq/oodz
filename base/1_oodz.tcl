@@ -24,34 +24,43 @@ namespace eval oodz {
 		:public method notice {args} {
 			: write [lindex $args 0] Notice 
 			# Put to system log too
-			puts [lindex $args 0]
+			ns_log Notice [lindex $args 0]
 		}
 		
 		:public method warning {args} {
 			: write [lindex $args 0] Warning 
+			# Put to system log too
+			ns_log Warning [lindex $args 0]
 		}
 
 		:public method error {args} {
 			: write [lindex $args 0] Error
 			# Put to system log too
-			puts [lindex $args 0]
-
+			ns_log Error [lindex $args 0]
 		}
 
 		:public method fatal {args} {
-			: write [lindex $args 0] Fatal 
+			: write [lindex $args 0] Fatal
+			# Put to system log too
+			ns_log Fatal [lindex $args 0]
 		}
 		
 		:public method bug {args} {
-			: write [lindex $args 0] Bug 
+			: write [lindex $args 0] Bug
+			# Put to system log too
+			ns_log Bug [lindex $args 0]
 		}
 		
 		:public method debug {args} {
-			: write [lindex $args 0] Debug 
+			: write [lindex $args 0] Debug
+			# Put to system log too
+			ns_log Debug [lindex $args 0]
 		}
 		
 		:public method dev {args} {
-			: write [lindex $args 0] Dev 
+			: write [lindex $args 0] Dev
+			# Put to system log too
+			ns_log Dev [lindex $args 0]
 		}
 		
 		:method write {args} {
