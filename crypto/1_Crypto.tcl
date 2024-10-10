@@ -72,20 +72,40 @@ namespace eval oodz {
 		:public object method verify_file_signature {fileToCheck fileSign pubKeyPEM} {
 			set pubKey [new_CkPublicKey]
 			set rsa [new_CkRsa]
+
+			# Create a CkCrypt2 object for hashing.
+			set crypt [new_CkCrypt2]
+
+			# Set the algorithm to SHA256.
+			CkCrypt2_put_HashAlgorithm $crypt "sha256"
+
 			set bdHash [new_CkBinData]
 			set bdSig [new_CkBinData]
 			
 			try {
 				# Load Public key PEM string
-				# CkPublicKey_LoadFromString $pubKey $pubKeyPEMStr
-				CkPublicKey_LoadFromFile $pubKey $pubKeyPEM
-				CkRsa_ImportPublicKeyObj $rsa $pubKey
-				set enc "base64"
-				set algorithm "sha256"
-				# Create sha256 hash and laod it  
-				CkBinData_LoadFile $bdHash [:hash_file ${fileToCheck} $algorithm $enc]
+				if {[CkPublicKey_LoadFromString $pubKey $pubKeyPEM] == 0} {
+					return -code error "Error loading public key from string: [CkPublicKey_lastErrorText $pubKey]"
+				}
+
+				if {[CkRsa_ImportPublicKeyObj $rsa $pubKey] == 0} {
+					return -code error "Error importing public key: [CkRsa_lastErrorText $rsa]"
+				}
+
+				if {[CkBinData_LoadFile $bdHash ${fileToCheck}] == 0} {
+					return -code error "Error loading file to hash: [CkBinData_lastErrorText $bdHash]"
+				}
 				
+				# Calculate the SHA256 hash.
+				if {[set sha256Hash [CkCrypt2_hashBdENC $crypt $bdHash]] == ""} {
+					return -code error "Error hashing file: [CkCrypt2_lastErrorText $crypt]"
+				} else {
+					puts "SHA256 Hash: $sha256Hash"
+				}
+
 				# Load signature file
+				set enc "hex"
+				set algorithm "sha256"
 				CkBinData_LoadFile $bdSig $fileSign
 				
 				CkRsa_put_EncodingMode $rsa $enc
@@ -100,47 +120,22 @@ namespace eval oodz {
 			} finally {
 				delete_CkPublicKey $pubKey
 				delete_CkRsa $rsa
+				delete_CkCrypt2 $crypt
 				delete_CkBinData $bdHash
 				delete_CkBinData $bdSig
 			}
 		}
 		
-		:public object method hash_file {file_path {algorithm "sha256"} {enc "binary"}} {
+		:public object method write_hash_file {file_path {algorithm "sha256"} {enc "binary"}} {
 			try {
-			# Select the hashing algorithm
-				switch $algorithm {
-					"sha256" {
-						set hash [ns_md file -digest sha256 -encoding ${enc} $file_path]
-						set extension "sha256"
-					}
-					"sha512" {
-						set hash [ns_md file -digest sha512 -encoding ${enc} $file_path]
-						set extension "sha512"
-					}
-					"sha3-256" {
-						set hash [ns_md file -digest "sha3-256" -encoding ${enc} $file_path]
-						set extension "sha3-256"
-					}
-					"sha3-512" {
-						set hash [ns_md file -digest "sha3-512" -encoding ${enc} $file_path]
-						set extension "sha3-512"
-					}
-					"md5" {
-						set hash [ns_md file -digest "md5" -encoding ${enc} $file_path]
-						set extension "md5"
-					}
-					default {
-						set hash [ns_md file -digest sha256 -encoding ${enc} $file_path]
-						set extension "sha256"
-					}
-				}
-				# Compute the SHA-256 hash of the file and save it to the file with .sha256 extension
+				set hash [:hash_file $file_path $algorithm $enc]
+				set extension [string tolower $algorithm]
 				set output_file "${file_path}.${extension}"
 				set file_handle [open $output_file "wb"]
 				puts $file_handle $hash
 				return -code ok $output_file
 			} on error {errMsg} {
-				return -code error "Error occurred: $errMsg"
+				return -code error "Error in method write_hash_file: $errMsg"
 			} finally {
 				# Ensure file handle is closed in case of an error during writing
 				if {[info exists file_handle]} {
@@ -149,6 +144,35 @@ namespace eval oodz {
 			}
 		}
 	
+		:public object method hash_file {file_path {algorithm "sha256"} {enc "binary"}} {
+			try {
+				# Select the hashing algorithm
+				switch $algorithm {
+					"sha256" {
+						set hash [ns_md file -digest sha256 -encoding ${enc} $file_path]
+					}
+					"sha512" {
+						set hash [ns_md file -digest sha512 -encoding ${enc} $file_path]
+					}
+					"sha3-256" {
+						set hash [ns_md file -digest "sha3-256" -encoding ${enc} $file_path]
+					}
+					"sha3-512" {
+						set hash [ns_md file -digest "sha3-512" -encoding ${enc} $file_path]
+					}
+					"md5" {
+						set hash [ns_md file -digest "md5" -encoding ${enc} $file_path]
+					}
+					default {
+						set hash [ns_md file -digest sha256 -encoding ${enc} $file_path]
+					}
+				}
+				return -code ok $hash
+			} on error {errMsg} {
+				return -code error "Error in method hash_file: $errMsg"
+			}
+		}
+
 		:public object method hash_password {password} {
 			set salt [:generate_random_salt]
 			set hash [::ns_crypto::scrypt -secret "$password" -salt "$salt" -n 1024 -r 8 -p 16]
