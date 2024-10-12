@@ -72,48 +72,44 @@ namespace eval oodz {
 		:public object method verify_file_signature {fileToCheck fileSign pubKeyPEM} {
 			set pubKey [new_CkPublicKey]
 			set rsa [new_CkRsa]
+			set enc "hex"
+			CkRsa_put_EncodingMode $rsa $enc
 
-			# Create a CkCrypt2 object for hashing.
+			# Create a CkCrypt2 object for hashing and set the algorithm to SHA256.
 			set crypt [new_CkCrypt2]
-
-			# Set the algorithm to SHA256.
 			CkCrypt2_put_HashAlgorithm $crypt "sha256"
-
-			set bdHash [new_CkBinData]
-			set bdSig [new_CkBinData]
+			set hashBytes [new_CkByteData]
+			set bdSig [new_CkByteData]
 			
 			try {
 				# Load Public key PEM string
 				if {[CkPublicKey_LoadFromString $pubKey $pubKeyPEM] == 0} {
-					return -code error "Error loading public key from string: [CkPublicKey_lastErrorText $pubKey]"
+					::oodzLog error "Error loading public key from string: [CkPublicKey_lastErrorText $pubKey]"
+					return -code error "Error loading public key from string."
 				}
-
 				if {[CkRsa_ImportPublicKeyObj $rsa $pubKey] == 0} {
-					return -code error "Error importing public key: [CkRsa_lastErrorText $rsa]"
+					::oodzLog error "Error importing public key: [CkRsa_lastErrorText $rsa]"
+					return -code error "Error importing public key."
 				}
-
-				if {[CkBinData_LoadFile $bdHash ${fileToCheck}] == 0} {
-					return -code error "Error loading file to hash: [CkBinData_lastErrorText $bdHash]"
+		
+				# Hash the file contents using SHA256
+        		if {[CkCrypt2_HashFile $crypt $fileToCheck $hashBytes] == 0} {
+					::oodzLog error "Error hashing original file: [CkCrypt2_lastErrorText $crypt]"
+					return -code error "Error hashing original file"
 				}
 				
-				# Calculate the SHA256 hash.
-				if {[set sha256Hash [CkCrypt2_hashBdENC $crypt $bdHash]] == ""} {
-					return -code error "Error hashing file: [CkCrypt2_lastErrorText $crypt]"
-				} else {
-					puts "SHA256 Hash: $sha256Hash"
+				# Load the signature file
+				if {[CkByteData_loadFile $bdSig ${fileSign}] == 0} {
+					::oodzLog error "Error loading signature file: [CkByteData_lastErrorText $bdSig]"
+					return -code error "Error loading signature file."
 				}
 
-				# Load signature file
-				set enc "hex"
-				set algorithm "sha256"
-				CkBinData_LoadFile $bdSig $fileSign
-				
-				CkRsa_put_EncodingMode $rsa $enc
-				set success [CkRsa_VerifyHashENC $rsa [CkBinData_getEncoded $bdHash $enc] $algorithm [CkBinData_getEncoded $bdSig $enc]]
-				if {$success == 0} then {
-					return -code error "Not Valid: [CkRsa_lastErrorText $rsa]"
+				# Verify the hash against the signature
+				if {[CkRsa_VerifyHash $rsa $hashBytes "sha256" $bdSig] == 0} {
+					::oodzLog error "Signature not valid: [CkRsa_lastErrorText $rsa]"
+					return -code error "Signature not valid."
 				} else {
-					return -code ok "Signature validated."
+					return -code ok "Signature is valid."
 				}
 			} on error {errMsg} {
 				return -code error "Error occurred: $errMsg"
@@ -121,8 +117,8 @@ namespace eval oodz {
 				delete_CkPublicKey $pubKey
 				delete_CkRsa $rsa
 				delete_CkCrypt2 $crypt
-				delete_CkBinData $bdHash
-				delete_CkBinData $bdSig
+				delete_CkByteData $hashBytes
+				delete_CkByteData $bdSig
 			}
 		}
 		
