@@ -70,5 +70,21 @@ namespace eval oodz {
 			}
 			return $result
 		}
+
+		:public method deleteFile {args} {
+			try {
+				foreach fileuuid $args {
+					set fpath [:getFullFilesPath $fileuuid]
+					if {$fpath ne ""} {
+						file delete -force $fpath
+						::db delete_rows filestorage $fileuuid
+					}
+				}
+				return -code ok "File deleted"
+			} on error {errMsg} {
+				oodzLog error "Error in deleteFile method: $errMsg"
+				return -code error $errMsg
+			}
+		}
 	}
 }
