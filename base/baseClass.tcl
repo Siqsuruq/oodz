@@ -151,9 +151,41 @@ namespace eval oodz {
 			return [tcl2json [: get]]
 		}
 
+		
+
 		:public method destroy {} {
-			puts "Destroying object"
+			puts "Destroying object: [current object] of [[current object] info class] class."
 			next
+		}
+
+		# This methods to be implemented
+		# Return object data as a ns_set object
+
+		:public method asNSSET {$key} {
+			#if {[: is_not_empty]} {
+			#	return [ns_set create $key ${:obj_data}]
+			#}
+		}
+
+		# Basic validation methods
+		:public method validate_keys {args} {
+			set keys_to_check [lindex $args 0]
+			foreach key $keys_to_check {
+				if {![dict exists ${:obj_data} $key]} {
+					return 0
+				}
+			}
+			return 1
+		}
+
+		:public method validate_values_not_empty {args} {
+			set keys_to_check [lindex $args 0]
+			foreach key $keys_to_check {
+				if {![dict exists ${:obj_data} $key] || [dict get ${:obj_data} $key] eq ""} {
+					return 0
+				}
+			}
+			return 1
 		}
 	}
 }
