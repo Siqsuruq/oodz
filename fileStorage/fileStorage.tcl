@@ -86,5 +86,19 @@ namespace eval oodz {
 				return -code error $errMsg
 			}
 		}
+
+		:public method getFileById {fileuuid} {
+			try {
+				set fpath [:getFullFilesPath $fileuuid]
+				if {$fpath ne ""} {
+					return [::oodz::fileObj new -fileName $fpath]
+				} else {
+					return -code error "File not found"
+				}
+			} on error {errMsg} {
+				oodzLog error "Error in getFileById method: $errMsg"
+				return -code error $errMsg
+			}
+		}
 	}
 }
