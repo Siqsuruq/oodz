@@ -373,6 +373,7 @@ namespace eval oodz {
 								ns_adp_puts "serverSide: $serverSide,"
 								ns_adp_puts "ajax: '$val',"
 								ns_adp_puts "type: 'POST',"
+								ns_adp_puts "dataSrc: 'data',"
 							}
 							
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }

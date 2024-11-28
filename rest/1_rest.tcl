@@ -9,7 +9,8 @@ nx::Class create apiin -superclass ::oodz::superClass {
 	:property ssl:required
 	:property api_version:required
 	:variable error_codes [dict create 400 "Bad request" 401 "Unauthorized" 403 "Forbidden" 404 "Resource not found" 405 "Method not allowed" 413 "Request Entity Too Large" 418 "I'm a teapot" 500 "Internal server error"]
-		
+	:variable redirect_codes [dict create 301 "Moved Permanently" 302 "Moved temporarily" 303 "See Other" 304 "Not Modified" 307 "Temporary Redirect" 308 "Permanent Redirect"]
+
 	:method init {} {
 		set :obj_answer_content_type "application/json"
 		
@@ -99,7 +100,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			return [json::json2dict [ns_getcontent -as_file false -binary false]]
 		} on error {} {
 			oodzLog error "JSON payload is malformed."
-			: answer_error [dict create code 400 detail "JSON payload is malformed."]
+			: answer_error [dict create code 400 details "JSON payload is malformed."]
 			return 0
 		}
 	}
@@ -109,7 +110,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			return [ns_set array [ns_getform]]
 		} on error {} {
 			oodzLog error "Error getting form data."
-			: answer_error [dict create code 400 detail "Form payload is malformed."]
+			: answer_error [dict create code 400 details "Form payload is malformed."]
 			return 0
 		}
 	}
@@ -119,7 +120,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			return [ns_getcontent -as_file false -binary false]
 		} on error {} {
 			oodzLog error "Unable to process text content."
-			: answer_error [dict create code 400 detail "Unable to process text content."]
+			: answer_error [dict create code 400 details "Unable to process text content."]
 			return 0
 		}
 	}
@@ -129,29 +130,86 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			return [ns_getcontent -as_file true -binary true]
 		} on error {} {
 			oodzLog error "Unable to process binary content."
-			: answer_error [dict create code 400 detail "Unable to process binary content."]
+			: answer_error [dict create code 400 details "Unable to process binary content."]
 			return 0
 		}
 	}
+	
+	############################################################################################################
+	# Target HTTP
+	############################################################################################################
 
+	############################################################################################################
+	# Target API
+	############################################################################################################
 	:method answer_error {args} {
 		set json_head [lindex $args 0]
+		set content_type [lindex $args 1]
+		set status [lindex $args 2]
+
 		set json [new_CkJsonObject]
 		CkJsonObject_put_Utf8 $json 1
 		CkJsonObject_AddStringAt $json -1 "version" "${:api_version}"
 		CkJsonObject_AddStringAt $json -1 "currentTime" [clock format [clock seconds] -format "%y-%m-%d %H:%M:%S"]
-		CkJsonObject_AddStringAt $json -1 "status" "ERROR"
+		CkJsonObject_AddStringAt $json -1 "method" "${:reqType}"
+		CkJsonObject_AddStringAt $json -1 "request" "${:url}"
+		if {$status eq ""} {
+			CkJsonObject_AddStringAt $json -1 "status" "ERROR"
+		} else {
+			CkJsonObject_AddStringAt $json -1 "status" "[string toupper $status]"
+		}
 		dict for {key val} $json_head {
 			if {$key eq "code"} {
 				CkJsonObject_AddNumberAt $json -1 "$key" $val
-				CkJsonObject_AddStringAt $json -1 "text" [dict getnull ${:error_codes} $val]
+				CkJsonObject_AddStringAt $json -1 "errorMessage" [dict getnull ${:error_codes} $val]
 			} else {
 				CkJsonObject_AddStringAt $json -1 "$key" "$val"
 			}
 		}
 		set numcode [dict get $json_head code]
+		CkJsonObject_put_EmitCompact $json 0
+		ns_return $numcode ${:obj_answer_content_type} [CkJsonObject_emit $json]
+		delete_CkJsonObject $json
+		:destroy
+	}
+
+	:method answer_good {args} {
+		set json_head [lindex $args 0]
+		set content_type [lindex $args 1]
+		set status [lindex $args 2]
+		set redirect_url [lindex $args 3]
+
+		set json [new_CkJsonObject]
+		CkJsonObject_put_Utf8 $json 1
+		CkJsonObject_AddStringAt $json -1 "version" "${:api_version}"
+		CkJsonObject_AddStringAt $json -1 "currentTime" [clock format [clock seconds] -format "%y-%m-%d %H:%M:%S"]
 		CkJsonObject_AddStringAt $json -1 "method" "${:reqType}"
 		CkJsonObject_AddStringAt $json -1 "request" "${:url}"
+		if {$status eq ""} {
+			CkJsonObject_AddStringAt $json -1 "status" "SUCCESS"
+		} else {
+			CkJsonObject_AddStringAt $json -1 "status" "[string toupper $status]"
+		}
+		dict for {key val} $json_head {
+			if {$key eq "code"} {
+				CkJsonObject_AddNumberAt $json -1 "$key" $val
+			} elseif {$key eq "data"} {
+				if {$content_type eq "application/json"} {
+					set tmpJsonObj [new_CkJsonObject]
+					CkJsonObject_Load $tmpJsonObj $val
+					CkJsonObject_AddObjectCopyAt $json -1 "$key" $tmpJsonObj
+					delete_CkJsonObject $tmpJsonObj
+				} else {
+					CkJsonObject_AddStringAt $json -1 "$key" $val
+				}
+			} else {
+				# Add as a string
+				CkJsonObject_AddStringAt $json -1 "$key" "$val"
+			}
+		}
+
+		set numcode [dict get $json_head code]
+
 		CkJsonObject_put_EmitCompact $json 0
 		ns_return $numcode ${:obj_answer_content_type} [CkJsonObject_emit $json]
 		delete_CkJsonObject $json
@@ -160,58 +218,39 @@ nx::Class create apiin -superclass ::oodz::superClass {
 	
 	:method answer {args} {
 		set response [lindex $args 0]
-
 		puts  "------------------------------------------"
 		puts $response
 		puts  "------------------------------------------"
+		switch [dict getnull $response type] {
+			json {set content_type "application/json"}
+			xml {set content_type "application/xml"}
+			text {set content_type "text/plain"}
+			html {set content_type "text/html"}
+			binary {set content_type "application/octet-stream"}
+			default {set content_type "application/json"}
+		}
 		set code [dict getnull $response code]
+		set data [dict getnull $response data]
+		set status [dict getnull $response status]
+		set redirect_url [dict getnull $response redirect_url]
+		set only_data [dict getnull $response only_data]
+
 		# Check if its an error code
 		if {[dict exists ${:error_codes} $code] == 1} {
-			: answer_error [dict create code $code details [dict getnull $response details]]
+			: answer_error [dict create code $code details [dict getnull $response details]] $content_type $status
+		} elseif {[dict exists ${:redirect_codes} $code] == 1} {
+			ns_returnredirect $redirect_url
+			:destroy
 		} else {
-			switch [dict getnull $response type] {
-				json {set content_type "application/json"}
-				xml {set content_type "application/xml"}
-				text {set content_type "text/plain"}
-				html {set content_type "text/html"}
-				binary {set content_type "application/octet-stream"}
-				default {set content_type "application/json"}
-			}
-			
 			if {$code == 200 && [dict getnull $response type] eq "binary"} {
-				set data [dict get $response data]
 				: return_file $data
 			} elseif {$code == 200} {
-				ns_return 200 $content_type [dict get $response data]
-				:destroy
-			} elseif {$code == 301 || $code == 302 || $code == 303 ||  $code == 307 || $code == 308} {
-				ns_returnredirect [dict getnull $response redirect_url]
-				:destroy
+				if {$only_data eq 1} {
+					ns_return $code $content_type $data
+				} else {
+					: answer_good [dict create code $code details [dict getnull $response details] data $data redirect_url $redirect_url] $content_type $status
+				}
 			}
-
-			switch $code {
-				1 {puts "\tAPI CALL OK"}
-				201 {
-					ns_return 201 $content_type [dict get $response data]
-					:destroy
-				}
-				301 {
-					ns_returnmoved [dict get $response data]
-					:destroy
-				}
-				400 {
-					::api::api_error $response
-					:destroy
-				}
-				404 {
-					ns_returnnotfound
-					:destroy
-				}
-				405 {
-					::api::api_error [dict create code 404 method $method request $url]
-					:destroy
-				}
-			}		
 		}
 	}
 
