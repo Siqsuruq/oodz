@@ -38,46 +38,53 @@ export class formData {
 
 		try {
             this.#getAllData(ids);
-            showToast(`Sending data to: ${apiUrl} with IDs: ${ids.length > 0 ? ids.join(', ') : 'all'}`, 'info');
+            // showToast(`Sending data to: ${apiUrl} with IDs: ${ids.length > 0 ? ids.join(', ') : 'all'}`, 'info');
 
             // Send the data to the server
             const result = await this.#sendDataToServer(apiUrl);
-            
-            if (isSuccess(result.statusCode)) {
+            console.log("-----------------");
+            console.log("Response:", result);
+            console.log("-----------------");
+            if (isSuccess(result.code)) {
                 console.log("Success:", result.data);
-            } else if (isClientError(result.statusCode)) {
-                console.warn("Client error:", result.error || "Something went wrong with your request.");
-            } else if (isServerError(result.statusCode)) {
-                showToast(error.message, 'error');
-                console.error("Server error:", result.error || "The server encountered an issue.");
+                console.log("Redirect: ", result.redirect_url);
+                if (result.redirect_url) {
+                    console.log("Redirecting to:", result.redirect_url);
+                    window.location.href = result.redirect_url; // Perform the redirect
+                }
+
+                updateFormValues(result.data);
+
+                // Handle file downloads
+                if (result.isFile) {
+                    const fileUrl = URL.createObjectURL(result.data);
+                    const a = document.createElement('a');
+                    a.href = fileUrl;
+
+                    // Extract the filename from Content-Disposition
+                    const contentDisposition = result.headers.get('Content-Disposition');
+                    const fileName = contentDisposition
+                        ? contentDisposition.split('filename=')[1].split(';')[0].replace(/"/g, '')
+                        : 'downloaded_file';
+
+                    a.download = fileName;
+                    a.click();
+                    URL.revokeObjectURL(fileUrl); // Clean up the URL object
+
+                    console.log(`File "${fileName}" downloaded successfully.`);
+                }
+            } else if (isClientError(result.code)) {
+                showToast(result.details, 'error');
+            } else if (isServerError(result.code)) {
+                showToast(result.details, 'error');
             } else {
-                showToast(error.message, 'error');
+                showToast(result.details, 'error');
                 console.error("Unexpected response:", result);
             }
             if (result.redirect_url) {
                 console.log("Redirecting to:", result.redirect_url);
                 window.location.href = result.redirect_url; // Perform the redirect
             }
-            
-            // Handle file downloads
-            if (result.isFile) {
-                const fileUrl = URL.createObjectURL(result.data);
-                const a = document.createElement('a');
-                a.href = fileUrl;
-
-                // Extract the filename from Content-Disposition
-                const contentDisposition = result.headers.get('Content-Disposition');
-                const fileName = contentDisposition
-                    ? contentDisposition.split('filename=')[1].split(';')[0].replace(/"/g, '')
-                    : 'downloaded_file';
-
-                a.download = fileName;
-                a.click();
-                URL.revokeObjectURL(fileUrl); // Clean up the URL object
-
-                console.log(`File "${fileName}" downloaded successfully.`);
-            }
-            updateFormValues(result.data.data);
 		} catch (error) {
             showToast(error.message, 'error');
         } finally {
@@ -100,13 +107,13 @@ export class formData {
             return parsedResponse;
         } catch (error) {
             console.error("Network or server error occurred:", error);
-            return {
+            /* return {
                 statusCode: null,
                 data: null,
                 error: error.message,
                 headers: {},
                 redirect_url: null,
-            };
+            }; */
         }
     }
 
@@ -142,7 +149,7 @@ export class formData {
     }
 
     // Initialize modal events
-    #initModalEvents() {
+/*     #initModalEvents() {
         // Handle the delete confirmation
         document.getElementById('confirmDeleteButton').addEventListener('click', () => {
             // Perform deletion
@@ -155,8 +162,32 @@ export class formData {
             // Hide the modal after confirmation
             $('#deleteConfirmationModal').modal('hide');
         });
+    } */
+
+    // Initialize modal events
+    #initModalEvents() {
+        // Check if the modal and table elements exist
+        const deleteModal = document.getElementById('deleteConfirmationModal');
+        const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+
+        if (!deleteModal || !confirmDeleteButton || !this.tableIds || this.tableIds.length === 0) {
+            console.warn('Modal or tables are not present, skipping modal event initialization.');
+            return;
+        }
+
+        // Handle the delete confirmation
+        confirmDeleteButton.addEventListener('click', () => {
+            // Perform deletion
+            const result = deleteSelectedRows(this.tableIds);
+            if (result.includes("successfully")) {
+                showToast(result, 'success'); // Show success toast
+            } else {
+                showToast(result, 'error'); // Show error toast
+            }
+            // Hide the modal after confirmation
+            $('#deleteConfirmationModal').modal('hide');
+        });
     }
-    
 
     
 }
