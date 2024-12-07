@@ -15,7 +15,7 @@ namespace eval oodz {
 		
 		:method add_FormHandler {args} {
 			ns_adp_puts "<script type='module'>"
-			ns_adp_puts "import { formData } from '[file join [::oodzConf get global_js L] formDataClass.js]';"
+			ns_adp_puts "import { formData } from '[file join [::oodzConf get oodz_js L] formDataClass.js]';"
 			ns_adp_puts "let ${:frame}Data = new formData('${:frame}');"
 			ns_adp_puts "window.${:frame}Data = ${:frame}Data;"
 			ns_adp_puts "</script>"
@@ -211,7 +211,7 @@ namespace eval oodz {
 					set option_dict [dict create]
 					
 					if {[dict get $pr_dict vtype] eq "list"} {
-						set values [unquotehtml [dict get $pr_dict values]]
+						set values [ns_unquotehtml [dict get $pr_dict values]]
 						foreach val $values {dict append option_dict $val $val}
 					} elseif {[dict get $pr_dict vtype] eq "table"} {
 						set values [: dbtable_data [lindex [dict get $pr_dict values] 0] [lrange [dict get $pr_dict values] 1 end]]

@@ -22,7 +22,27 @@ export class formData {
         this.isSubmitting = false;
         this.dataContainer = new dataContainer();
         this.#initModalEvents();
+        // Handle toast after redirect
+        this.#checkForToastMessage();
 	}
+
+    #checkForToastMessage() {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.#showStoredToastMessage();
+        });
+    }
+    
+    // New method to show the toast immediately
+    #showStoredToastMessage() {
+        const toastMessage = sessionStorage.getItem('toastMessage');
+        const toastStatus = sessionStorage.getItem('toastStatus');
+        if (toastMessage && toastStatus) {
+            showToast(toastMessage, toastStatus);
+            // Clear the stored message after displaying
+            sessionStorage.removeItem('toastMessage');
+            sessionStorage.removeItem('toastStatus');
+        }
+    }
 
 	async sendAllData(apiUrl = this.apiUrl, ids = [], useCaptcha = false) {
         if (this.isSubmitting) {
@@ -73,6 +93,7 @@ export class formData {
 
                     console.log(`File "${fileName}" downloaded successfully.`);
                 }
+                
             } else if (isClientError(result.code)) {
                 showToast(result.details, 'error');
             } else if (isServerError(result.code)) {
@@ -90,6 +111,7 @@ export class formData {
         } finally {
             // Unlock the submission after the operation
             this.isSubmitting = false;
+            this.#showStoredToastMessage();
         }
 	}
 

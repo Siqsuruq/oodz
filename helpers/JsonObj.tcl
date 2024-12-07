@@ -7,7 +7,7 @@ namespace eval ::oodz {
 		}
 
 		# method to convert flat Tcl Dict values to JSON
-		:public method dict2Json {dictval} {
+		:public method addDict {dictval} {
 			dict for {key val} $dictval {
 				if {$val eq "null" || $val eq ""} {
 					:addNull $key
@@ -62,7 +62,7 @@ namespace eval ::oodz {
 			delete_CkJsonArray $jArr
 		}
 
-		:public method JsonStr {} {
+		:public method asJSON {} {
 			CkJsonObject_put_EmitCompact ${:json} 0
 			set res [CkJsonObject_emit ${:json}]
 			return $res
