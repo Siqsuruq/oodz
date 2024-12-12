@@ -25,6 +25,7 @@ namespace eval ::oodz {
 
 		# method for different datatypes values
 		:public method addNull {key} {
+
 			CkJsonObject_AddNullAt ${:json} -1 "$key"
 		}
 		
@@ -48,9 +49,15 @@ namespace eval ::oodz {
 		:public method addObject {key value} {
 			set jObj [new_CkJsonObject]
 			CkJsonObject_put_Utf8 $jObj 1
-			CkJsonObject_Load $jObj "$value"
-			CkJsonObject_AddObjectCopyAt ${:json} -1 "$key" $jObj
-			delete_CkJsonObject $jObj
+			try {
+				CkJsonObject_Load $jObj $value
+				CkJsonObject_AddObjectCopyAt ${:json} -1 "$key" $jObj
+				return -code ok
+			} on error {err} {
+				return -code error "Error loading JSON object: $err"
+			} finally {
+				delete_CkJsonObject $jObj
+			}
 		}
 
 		# method to load and add json array from string

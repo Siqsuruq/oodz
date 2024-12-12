@@ -196,6 +196,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 			} elseif {$key eq "data"} {
 				if {$content_type eq "application/json"} {
 					set tmpJsonObj [new_CkJsonObject]
+					CkJsonObject_put_Utf8 $tmpJsonObj 1
 					CkJsonObject_Load $tmpJsonObj $val
 					CkJsonObject_AddObjectCopyAt $json -1 "$key" $tmpJsonObj
 					delete_CkJsonObject $tmpJsonObj
