@@ -60,9 +60,15 @@ export async function parseServerResponse(response) {
                 if (result.details) {
                     sessionStorage.setItem('toastMessage', result.details);
                     sessionStorage.setItem('toastStatus', result.status.toLowerCase());
+                    if (result.redirect_url) {
+                        sessionStorage.setItem('showafterredirect', true);
+                    } else {
+                        sessionStorage.setItem('showafterredirect', false);
+                    }
                 } else {
                     sessionStorage.removeItem('toastMessage'); 
                     sessionStorage.removeItem('toastStatus');
+                    sessionStorage.removeItem('showafterredirect');
                 }
             }
         } catch (jsonError) {

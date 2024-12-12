@@ -1,8 +1,9 @@
 import { dataContainer } from './dataContainerClass.js';
 import { getSelectedRowsData, getAllRowsData, deleteSelectedRows, clearTables } from './datatableMethods.js';
-import { isRequiredFieldFilled, convertDataContainerToFormData, isSuccess, isClientError, isServerError } from './helperMethods.js';
+import { isRequiredFieldFilled, convertDataContainerToFormData, isSuccess, isClientError, isServerError, getBooleanFromStorage } from './helperMethods.js';
 import { getFormData,clearForm,updateFormValues } from './formMethods.js';
 import { parseServerResponse } from './responseParser.js';
+import { visibilityMethods } from './visibility.js';
 
 export class formData {
 	constructor(formId) {
@@ -19,6 +20,13 @@ export class formData {
             return this.id;
         }).get();
 
+        // this.hideElements = (selector) => visibilityMethods.hideElements(selector, this.form);
+		// this.unhideElements = (selector) => visibilityMethods.unhideElements(selector, this.form);
+		// this.disableElements = (selector) => visibilityMethods.disableElements(selector, this.form);
+		// this.enableElements = (selector) => visibilityMethods.enableElements(selector, this.form); 
+		// this.readonlyElements = (selector) => visibilityMethods.readonlyElements(selector, this.form);
+		// this.notreadonlyElements = (selector) => visibilityMethods.notreadonlyElements(selector, this.form); 
+
         this.isSubmitting = false;
         this.dataContainer = new dataContainer();
         this.#initModalEvents();
@@ -28,19 +36,23 @@ export class formData {
 
     #checkForToastMessage() {
         document.addEventListener('DOMContentLoaded', () => {
-            this.#showStoredToastMessage();
+            this.#showStoredToastMessage(true);
         });
     }
     
     // New method to show the toast immediately
-    #showStoredToastMessage() {
+    #showStoredToastMessage(redirect = false) {
         const toastMessage = sessionStorage.getItem('toastMessage');
         const toastStatus = sessionStorage.getItem('toastStatus');
-        if (toastMessage && toastStatus) {
-            showToast(toastMessage, toastStatus);
-            // Clear the stored message after displaying
-            sessionStorage.removeItem('toastMessage');
-            sessionStorage.removeItem('toastStatus');
+        const showAfterRedirect = getBooleanFromStorage('showafterredirect');
+        if (showAfterRedirect === redirect) {
+            if (toastMessage && toastStatus) {
+                showToast(toastMessage, toastStatus);
+                // Clear the stored message after displaying
+                sessionStorage.removeItem('toastMessage');
+                sessionStorage.removeItem('toastStatus');
+                sessionStorage.removeItem('showafterredirect');
+            }
         }
     }
 
@@ -58,23 +70,16 @@ export class formData {
 
 		try {
             this.#getAllData(ids);
-            // showToast(`Sending data to: ${apiUrl} with IDs: ${ids.length > 0 ? ids.join(', ') : 'all'}`, 'info');
+            showToast(`Sending data to: ${apiUrl} with IDs: ${ids.length > 0 ? ids.join(', ') : 'all'}`, 'info');
 
             // Send the data to the server
             const result = await this.#sendDataToServer(apiUrl);
-            console.log("-----------------");
-            console.log("Response:", result);
-            console.log("-----------------");
+            if (result.redirect_url) {
+                console.log("Redirecting to:", result.redirect_url);
+                window.location.href = result.redirect_url; // Perform the redirect
+            }
             if (isSuccess(result.code)) {
-                console.log("Success:", result.data);
-                console.log("Redirect: ", result.redirect_url);
-                if (result.redirect_url) {
-                    console.log("Redirecting to:", result.redirect_url);
-                    window.location.href = result.redirect_url; // Perform the redirect
-                }
-
                 updateFormValues(result.data);
-
                 // Handle file downloads
                 if (result.isFile) {
                     const fileUrl = URL.createObjectURL(result.data);
@@ -93,7 +98,6 @@ export class formData {
 
                     console.log(`File "${fileName}" downloaded successfully.`);
                 }
-                
             } else if (isClientError(result.code)) {
                 showToast(result.details, 'error');
             } else if (isServerError(result.code)) {
@@ -101,10 +105,6 @@ export class formData {
             } else {
                 showToast(result.details, 'error');
                 console.error("Unexpected response:", result);
-            }
-            if (result.redirect_url) {
-                console.log("Redirecting to:", result.redirect_url);
-                window.location.href = result.redirect_url; // Perform the redirect
             }
 		} catch (error) {
             showToast(error.message, 'error');
@@ -141,19 +141,17 @@ export class formData {
 
     #getAllData(ids = []) {
         try {
-            if (ids.length === 0) {
-                getFormData(this.form, ids, this.dataContainer);
-                getAllRowsData(this.tableIds, this.dataContainer);
-                getSelectedRowsData(this.tableIds, this.dataContainer);
-            } else {
-
-            }
+            console.log("No ids");
+            getFormData(this.form, ids, this.dataContainer);
+            getAllRowsData(this.tableIds, this.dataContainer);
+            getSelectedRowsData(this.tableIds, this.dataContainer);
         } catch (error) {
             throw error;
         }
     }
 
     clearForm(event) {
+        this.isSubmitting = false;
         clearForm(this.form, event);
     }
 
@@ -171,29 +169,13 @@ export class formData {
     }
 
     // Initialize modal events
-/*     #initModalEvents() {
-        // Handle the delete confirmation
-        document.getElementById('confirmDeleteButton').addEventListener('click', () => {
-            // Perform deletion
-            const result = deleteSelectedRows(this.tableIds);
-            if (result.includes("successfully")) {
-                showToast(result, 'success'); // Show success toast
-            } else {
-                showToast(result, 'error'); // Show error toast
-            }
-            // Hide the modal after confirmation
-            $('#deleteConfirmationModal').modal('hide');
-        });
-    } */
-
-    // Initialize modal events
     #initModalEvents() {
         // Check if the modal and table elements exist
         const deleteModal = document.getElementById('deleteConfirmationModal');
         const confirmDeleteButton = document.getElementById('confirmDeleteButton');
 
         if (!deleteModal || !confirmDeleteButton || !this.tableIds || this.tableIds.length === 0) {
-            console.warn('Modal or tables are not present, skipping modal event initialization.');
+            //console.warn('Modal or tables are not present, skipping modal event initialization.');
             return;
         }
 
@@ -213,7 +195,8 @@ export class formData {
 
     
 }
-//Test cache
+
+
 /* Toastify helper function */
 function showToast(message, type) {
 	Toastify({

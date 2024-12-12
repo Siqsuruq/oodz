@@ -69,17 +69,17 @@ export function updateFormValues(data) {
 
 export function updateElement(elmnt, value) {
     console.log(`Updating element with ID: ${elmnt.id}, Type: ${elmnt.type}, Tag: ${elmnt.tagName}, Value: ${value}`);
-    
+    console.log(value);
     if (elmnt.type === "checkbox" || elmnt.type === "radio") {
         // elmnt.checked = value ? true : false;
         elmnt.checked = !!value;
     } else if (["text", "password", "textarea", "date", "month", "week", "time", "datetime-local", "number", "range", "search", "tel", "url", "email", "color", "hidden"].includes(elmnt.type)) {
         elmnt.value = value;
     } else if (elmnt.classList.contains('oodz_select')) {
-        value.forEach(opt => {
-            $("#" + elmnt.id).append(new Option(opt.text, opt.id));
-            /* console.log(`Added option with text: "${opt.text}" and value: "${opt.id}"`); */
-        });		
+        // Convert the object to an array of key-value pairs
+        Object.entries(value).forEach(([key, text]) => {
+            $("#" + elmnt.id).append(new Option(text, key));
+        });	
         $("#" + elmnt.id).trigger('change.select2');
     } else if (elmnt.classList.contains('oodz_tbl')) {
         var table = $("#" + elmnt.id).DataTable();
@@ -96,4 +96,42 @@ export function updateElement(elmnt, value) {
     }  else if (elmnt.type !== "hidden") {
         elmnt.value = value;
     }
+}
+
+export function resetForm(form, ids = []) {
+    // Get the form element if a form ID is provided
+    const formElement = typeof form === 'string' ? document.getElementById(form) : form;
+
+    if (!formElement) {
+        console.error('Form not found:', form);
+        return;
+    }
+
+    ids.forEach(id => {
+        const element = formElement.querySelector(`#${id}`);
+        if (element) {
+            switch (element.tagName.toLowerCase()) {
+                case 'input':
+                    if (element.type === 'checkbox' || element.type === 'radio') {
+                        element.checked = false;
+                    } else {
+                        element.value = '';
+                    }
+                    break;
+                case 'select':
+                    element.selectedIndex = 0; // Reset to the first option
+                    $(element).trigger('change.select2'); // Trigger Select2 change if applicable
+                    break;
+                case 'textarea':
+                    element.value = '';
+                    break;
+                default:
+                    console.warn(`Unsupported element type: ${element.tagName} for ID: ${id}`);
+            }
+        } else {
+            console.warn(`Element with ID "${id}" not found in the specified form.`);
+        }
+    });
+
+    console.log('Form elements reset in form:', formElement.id, ids);
 }

@@ -58,3 +58,7 @@ export function isClientError(statusCode) {
 export function isServerError(statusCode) {
     return statusCode >= 500 && statusCode < 600;
 }
+
+export function getBooleanFromStorage(key) {
+    return sessionStorage.getItem(key) === 'true';
+}
