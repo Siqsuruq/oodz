@@ -39,23 +39,7 @@ export function getFormData(form, ids, dataContainerInstance) {
     }
 }
 
-export function clearForm(form, event) {
-    if (event) {
-        event.preventDefault();
-    }
-    // Reset the form
-    form.reset();
-    // Find all tables within the form and deselect all rows, clear search and redraw
-    $(form).find('table').each(function() {
-        var table = $(this).DataTable();
-        table.rows().deselect();
-        table.search('').draw();
-    });
-    // Clear all oodz_select widgets within the form
-    $(form).find('.oodz_select').each(function() {
-        $(this).val('default').trigger('change.select2');
-    });
-}
+
 
 export function updateFormValues(data) {
     console.log("DATA TO UPDATE: " + JSON.stringify(data));
@@ -98,7 +82,8 @@ export function updateElement(elmnt, value) {
     }
 }
 
-export function resetForm(form, ids = []) {
+// Clear form method, will clear all values, defaults, dropdowns and tables
+export function clearForm(form, ids = []) {
     // Get the form element if a form ID is provided
     const formElement = typeof form === 'string' ? document.getElementById(form) : form;
 
@@ -107,20 +92,21 @@ export function resetForm(form, ids = []) {
         return;
     }
 
+    // If no IDs are provided, get all form elements
+    if (ids.length === 0) {
+        ids = Array.from(formElement.elements).map(el => el.id).filter(id => id);
+    }
+
     ids.forEach(id => {
         const element = formElement.querySelector(`#${id}`);
         if (element) {
             switch (element.tagName.toLowerCase()) {
                 case 'input':
-                    if (element.type === 'checkbox' || element.type === 'radio') {
-                        element.checked = false;
-                    } else {
-                        element.value = '';
-                    }
+                    clearInputElement(element);
                     break;
                 case 'select':
-                    element.selectedIndex = 0; // Reset to the first option
-                    $(element).trigger('change.select2'); // Trigger Select2 change if applicable
+                    $(element).val(null).trigger('change');
+                    $(element).empty().trigger('change');
                     break;
                 case 'textarea':
                     element.value = '';
@@ -132,6 +118,46 @@ export function resetForm(form, ids = []) {
             console.warn(`Element with ID "${id}" not found in the specified form.`);
         }
     });
+}
 
-    console.log('Form elements reset in form:', formElement.id, ids);
+// Helper function to clear different types of input elements
+function clearInputElement(element) {
+    switch (element.type) {
+        case 'checkbox':
+        case 'radio':
+            element.checked = false;
+            break;
+        case 'date':
+        case 'time':
+        case 'number':
+        case 'text':
+        case 'email':
+        case 'password':
+        case 'tel':
+        case 'url':
+            element.value = '';
+            break;
+        default:
+            console.warn(`Unsupported input type: ${element.type} for element with ID: ${element.id}`);
+    }
+}
+
+
+export function resetForm(form, event) {
+    console.log('Resetting form:', form);
+    if (event) {
+        event.preventDefault();
+    }
+    // Reset the form
+    form.reset();
+    // Find all tables within the form and deselect all rows, clear search and redraw
+    $(form).find('table').each(function() {
+        var table = $(this).DataTable();
+        table.rows().deselect();
+        table.search('').draw();
+    });
+    // Clear all oodz_select widgets within the form
+    $(form).find('.oodz_select').each(function() {
+        $(this).val('default').trigger('change.select2');
+    });
 }

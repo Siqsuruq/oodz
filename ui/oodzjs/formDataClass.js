@@ -1,7 +1,7 @@
 import { dataContainer } from './dataContainerClass.js';
 import { getSelectedRowsData, getAllRowsData, deleteSelectedRows, clearTables } from './datatableMethods.js';
 import { isRequiredFieldFilled, convertDataContainerToFormData, isSuccess, isClientError, isServerError, getBooleanFromStorage } from './helperMethods.js';
-import { getFormData,clearForm,updateFormValues } from './formMethods.js';
+import { getFormData,clearForm,updateFormValues,resetForm } from './formMethods.js';
 import { parseServerResponse } from './responseParser.js';
 import { visibilityMethods } from './visibility.js';
 
@@ -150,9 +150,13 @@ export class formData {
         }
     }
 
-    clearForm(event) {
+    resetForm(event) {
         this.isSubmitting = false;
-        clearForm(this.form, event);
+        resetForm(this.form, event);
+    }
+
+    clearForm(ids =[], form = this.form) {
+        clearForm(form, ids);
     }
 
     // DataTables methods
