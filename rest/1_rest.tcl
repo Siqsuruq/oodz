@@ -17,7 +17,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		set :obj_header [ns_conn headers]
 		oodzLog notice "************ V2 API CALL ******************"
 		oodzLog notice "METHOD: ${:reqType} - URL: ${:url}"
-		oodzLog notice "HEADER: [ns_set array ${:obj_header}]"
+		#oodzLog notice "HEADER: [ns_set array ${:obj_header}]"
 	}
 	
 	:public method answer_request {args} {
@@ -31,7 +31,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		if {[file isdirectory [file join ${:path} [oodzConf get_global mod_dir] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
 			set values [lrange $surl 4 end]
 			set params [: get_body]
-			puts "REQUEST: ${:reqType} VALUES: $values PARAMS: $params"
+			# puts "REQUEST: ${:reqType} VALUES: $values PARAMS: $params"
 			if {$params != 0} {
 				# Execute call and get result list.
 				set result [::${resource}::Api dispatcher ${:reqType} $values $params ${:url}]
@@ -84,10 +84,10 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		if {$content_type eq "" && ${:reqType} in {GET DELETE}} {
 			return [: handle_form_body]
 		} elseif {[dict exists $content_handlers $content_type]} {
-			puts "EXECUTING : [dict get $content_handlers $content_type]"
+			# puts "EXECUTING : [dict get $content_handlers $content_type]"
 			return [: [dict get $content_handlers $content_type]]
 		} elseif {$content_length ne 0} {
-					puts "EXECUTING BIN : $content_length"
+			# puts "EXECUTING BIN : $content_length"
 			return [: handle_binary_body]
 		} else {
 			oodzLog warning "Empty payload."
@@ -107,10 +107,13 @@ nx::Class create apiin -superclass ::oodz::superClass {
 
 	:method handle_form_body {} {
 		try {
-			return [ns_set array [ns_getform]]
-		} on error {} {
+			set f [ns_getform]
+			set req [::oodz::requestPayload new -request $f]
+			#return [ns_set array [ns_getform]]
+			return $req
+		} on error {e} {
 			oodzLog error "Error getting form data."
-			: answer_error [dict create code 400 details "Form payload is malformed."]
+			: answer_error [dict create code 400 details "Form payload is malformed. $e"]
 			return 0
 		}
 	}
@@ -219,9 +222,9 @@ nx::Class create apiin -superclass ::oodz::superClass {
 	
 	:method answer {args} {
 		set response [lindex $args 0]
-		puts  "------------------------------------------"
-		puts $response
-		puts  "------------------------------------------"
+		#puts  "------------------------------------------"
+		#puts $response
+		#puts  "------------------------------------------"
 		switch [dict getnull $response type] {
 			json {set content_type "application/json"}
 			xml {set content_type "application/xml"}

@@ -251,7 +251,7 @@ namespace eval oodz {
 					}
 
 					ns_adp_puts "<select name=\"$var\" id=\"$var\" class=\"$class\" $js data-placeholder=\"$placeholder\" $mandatory $state>"
-					ns_adp_puts "<option value=\"\" selected> </option>"
+					ns_adp_puts "<option value=\"\" selected></option>"
 
 					dict for {dkey dval} $option_dict {
 						if {$dval eq $i_v || $dkey eq $i_v} {
@@ -502,7 +502,9 @@ namespace eval oodz {
 
 			# puts "CMD: $cmd"
 			if {$cmd eq "reset_values" || $type eq "reset"} {
-				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.clearForm(event)\">$img_tag $placeholder</button>"
+				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.resetForm(event)\">$img_tag $placeholder</button>"
+			} elseif {$cmd eq "clear_values" || $type eq "clear"} {
+				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.clearForm()\">$img_tag $placeholder</button>"
 			} elseif {[regexp {::\w+::\w+} $cmd] == 1 } {
 				set module [lindex [split $cmd "::"] 2]
 				set val [lindex [split $cmd "::"] 4]

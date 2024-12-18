@@ -70,7 +70,7 @@ export class formData {
 
 		try {
             this.#getAllData(ids);
-            showToast(`Sending data to: ${apiUrl} with IDs: ${ids.length > 0 ? ids.join(', ') : 'all'}`, 'info');
+            //showToast(`Sending data to: ${apiUrl} with IDs: ${ids.length > 0 ? ids.join(', ') : 'all'}`, 'info');
 
             // Send the data to the server
             const result = await this.#sendDataToServer(apiUrl);
@@ -79,7 +79,7 @@ export class formData {
                 window.location.href = result.redirect_url; // Perform the redirect
             }
             if (isSuccess(result.code)) {
-                updateFormValues(result.data);
+                updateFormValues(result.data, this.form);
                 // Handle file downloads
                 if (result.isFile) {
                     const fileUrl = URL.createObjectURL(result.data);
@@ -141,7 +141,6 @@ export class formData {
 
     #getAllData(ids = []) {
         try {
-            console.log("No ids");
             getFormData(this.form, ids, this.dataContainer);
             getAllRowsData(this.tableIds, this.dataContainer);
             getSelectedRowsData(this.tableIds, this.dataContainer);

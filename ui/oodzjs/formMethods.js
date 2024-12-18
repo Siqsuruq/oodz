@@ -41,8 +41,17 @@ export function getFormData(form, ids, dataContainerInstance) {
 
 
 
-export function updateFormValues(data) {
-    console.log("DATA TO UPDATE: " + JSON.stringify(data));
+// Function to update form values and optionally clear specific components
+export function updateFormValues(data, form) {
+    // Check if 'componentsToClear' exists in the data and call 'clearForm'
+    if (data.componentsToClear && Array.isArray(data.componentsToClear)) {
+        // console.log('Clearing components:', data.componentsToClear);
+        clearForm(form, data.componentsToClear);
+        // Optionally, remove 'componentsToClear' from the data to avoid processing it as a key
+        delete data.componentsToClear;
+    }
+
+    // Iterate over the remaining keys to update elements
     Object.keys(data).forEach(key => {
         const elmnt = document.getElementById(key);
         if (elmnt) {
@@ -52,8 +61,7 @@ export function updateFormValues(data) {
 }
 
 export function updateElement(elmnt, value) {
-    console.log(`Updating element with ID: ${elmnt.id}, Type: ${elmnt.type}, Tag: ${elmnt.tagName}, Value: ${value}`);
-    console.log(value);
+    // console.log(`Updating element with ID: ${elmnt.id}, Type: ${elmnt.type}, Tag: ${elmnt.tagName}, Value: ${value}`);
     if (elmnt.type === "checkbox" || elmnt.type === "radio") {
         // elmnt.checked = value ? true : false;
         elmnt.checked = !!value;
@@ -63,7 +71,8 @@ export function updateElement(elmnt, value) {
         // Convert the object to an array of key-value pairs
         Object.entries(value).forEach(([key, text]) => {
             $("#" + elmnt.id).append(new Option(text, key));
-        });	
+        });
+        $("#" + elmnt.id).val('-1');
         $("#" + elmnt.id).trigger('change.select2');
     } else if (elmnt.classList.contains('oodz_tbl')) {
         var table = $("#" + elmnt.id).DataTable();
@@ -98,8 +107,14 @@ export function clearForm(form, ids = []) {
     }
 
     ids.forEach(id => {
-        const element = formElement.querySelector(`#${id}`);
+        // console.log(`Clearing element with ID: ${id}`);
+        const element = document.getElementById(id);
+
         if (element) {
+            // Check if the element is a modal and close it
+            if (element.classList.contains('modal')) {
+                $(element).modal('hide');
+            }
             switch (element.tagName.toLowerCase()) {
                 case 'input':
                     clearInputElement(element);
@@ -158,6 +173,6 @@ export function resetForm(form, event) {
     });
     // Clear all oodz_select widgets within the form
     $(form).find('.oodz_select').each(function() {
-        $(this).val('default').trigger('change.select2');
+        $(this).val('-1').trigger('change.select2');
     });
 }
