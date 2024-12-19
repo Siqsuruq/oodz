@@ -151,7 +151,20 @@ namespace eval oodz {
 			return [tcl2json [: get]]
 		}
 
-		
+		:public method toCache {args} {
+			set cache_name [lindex $args 0]
+			if {$cache_name ne ""} {
+				if {[ns_cache_exists $cache_name] == 0} {
+					ns_cache_create $cache_name 10MB
+				} else {
+					ns_cache_flush $cache_name
+				}
+				set dd [:get]
+				foreach key [dict keys $dd] {
+					ns_cache_append $cache_name $key [dict get $dd $key]
+				}
+			}
+		}
 
 		:public method destroy {} {
 			puts "Destroying object: [current object] of [[current object] info class] class."

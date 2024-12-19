@@ -787,7 +787,16 @@ namespace eval oodz {
 		}
 		
 		:method Check_sdata {args} {
-			return ""
+			try {
+				set key [lindex $args 0]
+				set cache_name [::oodzSession id].sdata
+				set result [ns_cache_get $cache_name $key]
+				ns_cache_flush $cache_name $key
+				return $result
+			} on error {e} {
+				puts "Error : $e"
+				return ""
+			}
 		}
 	}
 }
