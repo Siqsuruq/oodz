@@ -366,8 +366,22 @@ namespace eval oodz {
 						ns_adp_puts "\$('\#$var').DataTable( {"
 							ns_adp_puts "processing: true,"
 							ns_adp_puts "order: \[\[ 0, 'desc' \]\],"
-							if {[::oodz::DataType is_bool [dict getnull $pr_dict select]]} { ns_adp_puts "select: 'os', blurable: true," } else { ns_adp_puts "select: false," }
-							
+							if {[dict exists $pr_dict select]} {
+								set select [dict get $pr_dict select]
+								switch $select {
+									"single" {
+										ns_adp_puts "select: {style: 'single', blurable: true},"
+									}
+									"multi" {
+										ns_adp_puts "select: {style: 'os', blurable: true},"
+									}
+									default {
+										ns_adp_puts "select: {style: 'os', blurable: true},"
+									}
+								}
+							} else {
+								ns_adp_puts "select: false,"
+							}
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
 							if {[dict get $pr_dict type] ne "empty"} {
 								ns_adp_puts "serverSide: $serverSide,"

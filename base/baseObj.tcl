@@ -99,8 +99,13 @@ namespace eval oodz {
 		:public method save2db {args} {
 			try {
 				set obj_data [:prepare_data]
-				set res [::db insert_all ${:obj} $obj_data "" [list uuid_${:obj} id]]
-				: load_data uuid_${:obj} [lindex $res 0]
+				puts "OBJ DATA: $obj_data"
+				if {[dict exists $obj_data id] || [dict exists $obj_data uuid_${:obj}]} {
+					set res [::db update_all ${:obj} $obj_data]
+				} else {
+					set res [::db insert_all ${:obj} $obj_data "" [list uuid_${:obj} id]]
+					: load_data uuid_${:obj} [lindex $res 0]
+				}
 				return -code ok $res
 			} on error {errMsg} {
 				return -code error $errMsg
@@ -109,8 +114,12 @@ namespace eval oodz {
 
 		:method prepare_data {} {
 			set obj_data [:get]
-			set obj_data [dict unset obj_data id]
-			set obj_data [dict unset obj_data uuid_${:obj}]
+			if {![::oodz::DataType is_dbid [dict getnull $obj_data id]]} {
+				set obj_data [dict unset obj_data id]
+			}
+			if {![::oodz::DataType is_dbid [dict getnull $obj_data uuid_${:obj}]]} {
+				set obj_data [dict unset obj_data uuid_${:obj}]
+			}
 			set obj_data [dict unset obj_data extra]
 			set obj_data [dict unset obj_data obj]
 			set obj_data [dict unset obj_data identifier]

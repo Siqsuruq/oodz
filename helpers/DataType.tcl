@@ -30,6 +30,12 @@ namespace eval oodz {
 			} else { return 0 }
 		}
 		
+		:public object method is_dbid {value} {
+			if {[string is integer -strict $value] && $value > 0 || [:is_uuid $value]} {
+				return 1
+			} else { return 0 }
+		}
+
 		:public object method guess_type {value} {
 			if {[: is_number]} { return num } else { return str }
 		}

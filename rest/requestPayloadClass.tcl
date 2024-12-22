@@ -37,5 +37,19 @@ namespace eval oodz {
 				return -code error "$e"
 			}
 		}
+
+		:public method clear_request_data {args} {
+			puts "Clearing request data"
+			set result ""
+			set code "ok"
+			try {
+				: remove [list allTableRows selectedRows additionalData message redirectLink request]
+			} on error {e} {
+				set code "error"
+				set result "$e"
+			} finally {
+				return -code $code $result
+			}
+		}
 	}
 }

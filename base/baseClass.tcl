@@ -72,9 +72,18 @@ namespace eval oodz {
 
 		# Public interface to remove specific keys from object data, accepts list as of keys as parameter
 		:public method remove {args} {
-			set to_remove [lindex $args 0]
-			foreach key $to_remove {
-				: ${key} unset
+			set result ""
+			set code "ok"
+			try {
+				set to_remove [lindex $args 0]
+				foreach key $to_remove {
+					: ${key} unset
+				}
+			} on error {errMsg} {
+				set code "error"
+				set result $errMsg
+			} finally {
+				return -code $code $result
 			}
 		}
 

@@ -93,6 +93,9 @@ nx::Class create SQLBuilder {
 
     # Define the addOrderBy method
     :public method addOrderBy {columnOrders} {
+        if {[expr {[llength $columnOrders] % 2}] != 0} {
+            return -code error "Invalid input: columnOrders must contain pairs of column and order."
+        }
         foreach {column order} $columnOrders {
 			set order [string toupper $order]
 			if {($order ne "ASC") && ($order ne "DESC")} {
@@ -186,7 +189,6 @@ nx::Class create SQLBuilder {
         }
 
         if {[llength ${:orderByList}] > 0} {
-			puts ${:orderByList}
 			set orderBy [join ${:orderByList} ", "]
 			append query " ORDER BY $orderBy NULLS LAST"
         }
