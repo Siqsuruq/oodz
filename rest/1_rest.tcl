@@ -107,9 +107,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 
 	:method handle_form_body {} {
 		try {
-			set f [ns_getform]
-			set req [::oodz::requestPayload new -request $f]
-			#return [ns_set array [ns_getform]]
+			set req [::oodz::requestPayload new]
 			return $req
 		} on error {e} {
 			oodzLog error "Error getting form data."

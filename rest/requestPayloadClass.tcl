@@ -1,16 +1,15 @@
 namespace eval oodz {
 	nx::Class create requestPayload -superclass baseClass {
-		:property {request:required}
-
 		:method init {} {
 			try {
-			foreach {key value} [ns_set array ${:request}] {
-				if {$key eq "allTableRows" || $key eq "selectedRows"} {
-					:convertJsonToDict $key $value
-				} else {
-					:add [dict create $key $value]
+				set requestData [ns_set array [ns_getform]]
+				foreach {key value} $requestData {
+					if {$key eq "allTableRows" || $key eq "selectedRows"} {
+						:convertJsonToDict $key $value
+					} else {
+						:add [dict create $key $value]
+					}
 				}
-			}
 			} on error {e} {
 				return -code error "$e"
 			}
@@ -39,11 +38,10 @@ namespace eval oodz {
 		}
 
 		:public method clear_request_data {args} {
-			puts "Clearing request data"
 			set result ""
 			set code "ok"
 			try {
-				: remove [list allTableRows selectedRows additionalData message redirectLink request]
+				: remove [list allTableRows selectedRows additionalData message redirectLink]
 			} on error {e} {
 				set code "error"
 				set result "$e"
