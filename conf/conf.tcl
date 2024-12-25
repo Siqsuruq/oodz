@@ -31,9 +31,14 @@ namespace eval oodz {
 		
 		# Load Global Translations
 		:public method load_trns {args} {
-			msgcat::mclocale [[self] get language L]
-			set lang_path [file join ${:path} [[self] get lang_dir L]]
-			msgcat::mcload $lang_path
+			try {
+				set lang_path [file join ${:path} [[self] get lang_dir L]]
+				set lang [[self] get language L]
+				load_trns_file $lang $lang_path
+				return -code ok
+			} on error {msg} {
+				return -code error "Error loading translations: $msg"
+			}
 		}
 		
 		# Method to retrieve config option value

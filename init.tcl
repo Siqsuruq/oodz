@@ -1,6 +1,12 @@
 source [file join [ns_serverpath] lib/chilkat/chilkat.tcl]
 source [file join [ns_library shared] oodz/packages.tcl]
 
+proc load_trns_file {args} {
+	set lang [lindex $args 0]
+	set lang_path [lindex $args 1]
+	::msgcat::mclocale $lang
+	::msgcat::mcload $lang_path
+} 
 
 ::nx::Slot eval {
 	:method type=uuid {name value} {
@@ -93,4 +99,3 @@ proc load_oodz_class {args} {
 ns_runonce {
 	load_dz_procs
 }
-
