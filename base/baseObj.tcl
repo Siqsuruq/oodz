@@ -99,7 +99,6 @@ namespace eval oodz {
 		:public method save2db {args} {
 			try {
 				set obj_data [:prepare_data]
-				puts "OBJ DATA: $obj_data"
 				if {[dict exists $obj_data id] || [dict exists $obj_data uuid_${:obj}]} {
 					set res [::db update_all ${:obj} $obj_data]
 				} else {
@@ -107,6 +106,20 @@ namespace eval oodz {
 					: load_data uuid_${:obj} [lindex $res 0]
 				}
 				return -code ok $res
+			} on error {errMsg} {
+				return -code error $errMsg
+			}
+		}
+
+		:public method delete {args} {
+			try {
+				if {[dict exists [:get] id] || [dict exists [:get] uuid_${:obj}]} {
+					set res [::db delete_row ${:obj} [:get id]]
+					: clear
+					return -code ok $res
+				} else {
+					return -code error "No id or uuid_${:obj} found"
+				}
 			} on error {errMsg} {
 				return -code error $errMsg
 			}
