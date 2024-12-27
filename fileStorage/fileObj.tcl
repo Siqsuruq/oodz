@@ -1,6 +1,6 @@
 namespace eval oodz {
-	# Define the fileObj class
-	nx::Class create fileObj {
+	# Define the fileClass class
+	nx::Class create fileClass {
 		# Class variables (properties)
 		:property {fileName ""}
 		:property {fileExtension ""}
