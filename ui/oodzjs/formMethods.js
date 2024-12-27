@@ -23,6 +23,10 @@ export function getFormData(form, ids, dataContainerInstance) {
 
         // Populate valid fields into FormData
         inputElements.forEach(inputElement => {
+            if (!inputElement.name) {
+                // Skip fields without a name attribute (e.g., Bootstrap caption input)
+                return;
+            }
             if (inputElement.type === 'file' && inputElement.files.length > 0) {
                 filteredData.append(inputElement.name, inputElement.files[0]);
             } else if (inputElement.type === 'checkbox' && inputElement.checked) {

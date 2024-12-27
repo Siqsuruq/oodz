@@ -121,6 +121,9 @@ export class formData {
         const defaultConfig = {
             method: 'POST',
             body: formData,
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('apikey')}`, // Retrieve the API key
+            },
         };
     
         try {
@@ -129,13 +132,7 @@ export class formData {
             return parsedResponse;
         } catch (error) {
             console.error("Network or server error occurred:", error);
-            /* return {
-                statusCode: null,
-                data: null,
-                error: error.message,
-                headers: {},
-                redirect_url: null,
-            }; */
+            throw error; 
         }
     }
 
