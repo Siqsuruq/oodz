@@ -14,15 +14,33 @@ namespace eval oodz {
 						:object property -accessor public [list ${key} ${value}]
 					}
 				}
+				:props
 			} else {
 				return -code error "Invalid argument: expected a dictionary"
 			}
 		}
 
+		:public method props {} {
+			set result [list]
+			lmap sl [: info lookup variables] {
+				if {[$sl cget -configurable]} {
+					lappend result [: info variable name $sl]
+				} else {
+					continue
+				}
+			}
+			return $result
+		}
+
 		:public method prop_exists {key} {
 			try {
-				set result [: ${key} exists]
-			} trap {} {} {
+				set props_list [:props]
+				if {[lsearch -exact $props_list ${key}] != -1} {
+					set result 1
+				} else {
+					set result 0
+				}
+			} on error {errMsg} {
 				set result 0
 			} finally {
 				return $result
@@ -36,29 +54,34 @@ namespace eval oodz {
 			} else {
 				set result [dict create]
 			}
-			# If no properties are specified, get all variable names
-			if {[llength $what] == 0} {
-				set what [: info vars]
-			}
-			# Iterate over the properties and gather their values 
-			foreach prop $what {
-				if {$result_type eq "L"} {
-					if {[:prop_isobj [: cget -${prop}]] == 1} {
-						set a [[: cget -${prop}] get]
-						lappend result $a
+			try {
+				# If no properties are specified, get all variable names
+				if {[llength $what] == 0} {
+					set what [: props]
+				}
+				# Iterate over the properties and gather their values 
+				foreach prop $what {
+					if {$result_type eq "L"} {
+						if {[:prop_isobj [: cget -${prop}]] == 1} {
+							set a [[: cget -${prop}] get]
+							lappend result $a
+						} else {
+							lappend result [: ${prop} get]
+						}
 					} else {
-						lappend result [: cget -${prop}]
-					}
-				} else {
-					if {[:prop_isobj [: cget -${prop}]] == 1} {
-						set a [[: cget -${prop}] get]
-						dict set result $prop $a
-					} else {
-						dict set result $prop [: cget -${prop}]
+						if {[:prop_isobj [: cget -${prop}]] == 1} {
+							set a [[: cget -${prop}] get]
+							dict set result $prop $a
+						} else {
+							dict set result $prop [: ${prop} get]
+						}
 					}
 				}
+			} on error {errMsg} {
+				return -code error $errMsg
+			} finally {
+				return $result
 			}
-			return $result
 		}
 
 		:method prop_isobj {varName} {
