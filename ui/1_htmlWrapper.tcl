@@ -469,6 +469,24 @@ namespace eval oodz {
 					dict with pr_dict {}
 					ns_adp_puts "<li class=\"$class\">"
 				}
+			} elseif {$tag eq "calendar"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "</div>"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "<div class=\"$class\" id=\"$var\">"
+					ns_adp_puts "<script>"
+					ns_adp_puts "let ec = new EventCalendar(document.getElementById('$var'), {"
+    				ns_adp_puts "view: 'timeGridWeek',"
+					ns_adp_puts "height: '650px',"
+					ns_adp_puts "selectable: true,"
+    				ns_adp_puts "events: \["
+        			ns_adp_puts "// your list of events"
+    				ns_adp_puts "\]"
+					ns_adp_puts "});"
+					ns_adp_puts "</script>"
+				}
 			}
 			
 		}

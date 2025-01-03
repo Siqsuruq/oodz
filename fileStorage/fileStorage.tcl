@@ -6,32 +6,45 @@ namespace eval oodz {
 		:method init {} {
 			next
 		}
-		
+
+		:method getMimeDiscreteType {file} {
+			try {
+				set ext [file extension $file]
+				set mime [::mimext get_mime $ext]
+				set discrete_type [::mimext get_discrete_type $mime]
+				return -code ok $discrete_type
+			} on error {errMsg} {
+				oodzLog error "Error in getMimeType method: $errMsg"
+				return -code ok "unknown"
+			}
+		}
+
 		:public method uploadFile {} {
 			set fs_uuids [dict create]
 			try {
+				set result ""
+				puts "UPLOADING FILE ---------------------------"
 				foreach uploaded_file [ns_conn files] {
-					set f_name [ns_querygetall $uploaded_file]
-					if {[catch {set mimeType [mimext get_mime [file extension $f_name]]}]} {
-						set user_data_dir [file join [::oodzConf get_global user_data_dir] "unknown"]
-						set full_path_user_data_dir [file join [ns_pagepath] $user_data_dir]
-					} else {
-						set user_data_dir [file join [::oodzConf get_global user_data_dir] $mimeType]
-						set full_path_user_data_dir [file join [ns_pagepath] $user_data_dir]
-					}
-					if {$f_name ne ""} {
+					puts "Uploaded file: $uploaded_file"
+					set original_fname [ns_querygetall $uploaded_file]
+					puts "File name: $original_fname"
+					set file_ext [file extension $original_fname]
+
+					set discrete_type [:getMimeDiscreteType $original_fname]
+					set fs_dir [file join ${:user_data_dir} $discrete_type]	
+					if {$original_fname ne ""} {
 						set tmp_file [ns_getformfile $uploaded_file]
-						set f [::oodz::fileClass create f -fileName $tmp_file]
-
-						set oodz_tempfile "[::oodz::Crypto generate_random 20][file extension $f_name]"
-						$f moveFile [file join $full_path_user_data_dir $oodz_tempfile]
-
-						set fs_uuid [::db insert_all filestorage [dict create path [file join $user_data_dir $oodz_tempfile] ext [file extension $f_name] original_name $f_name uuid_user [::oodzSession get uuid_user]] "" uuid_filestorage]
-						dict set fs_uuids $uploaded_file $fs_uuid
+						set f [::oodz::fileClass new -fileName $tmp_file]
+						set fs_filename [::uuid::uuid generate]${file_ext}
+						$f moveFile [file join $fs_dir $fs_filename]
 						$f destroy
+						
+						:add [dict create path [file join $discrete_type $fs_filename] ext $file_ext original_name $original_fname dz_user [::oodzSession get uuid_daidze_user]]
+						set res [:save2db]
+						lappend result [lindex $res 0]
 					}
 				}
-				return -code ok $fs_uuids
+				return -code ok $result
 			} on error {errMsg} {
 				oodzLog error "Error in uploadFile method: $errMsg"
 				return -code error $errMsg
@@ -78,7 +91,8 @@ namespace eval oodz {
 				foreach fileuuid $args {
 					set fpath [dict getnull [lindex [::db select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
 					if {$fpath ne ""} {
-						lappend result [file join [::oodzConf get srvaddress L] [::oodzConf get_global user_data_dir] $fpath]
+						lappend result [ns_absoluteurl [file join [::oodzConf get_global user_data_dir] $fpath] [::oodzConf get srvaddress L]]
+						# lappend result [file join "[::oodzConf get srvaddress L]" [::oodzConf get_global user_data_dir] $fpath]
 					}
 				}
 				return $result	
@@ -116,6 +130,11 @@ namespace eval oodz {
 				oodzLog error "Error in getFileById method: $errMsg"
 				return -code error $errMsg
 			}
+		}
+
+		:public method save2db {args} {
+			:remove [list ts]
+			next
 		}
 	}
 }
