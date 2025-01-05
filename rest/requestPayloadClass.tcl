@@ -3,7 +3,6 @@ namespace eval oodz {
 		:method init {} {
 			try {
 				set requestData [ns_set array [ns_getform]]
-				puts "REQUESTDATA: $requestData"
 				foreach {key value} $requestData {
 					if {$key eq "allTableRows" || $key eq "selectedRows"} {
 						:convertJsonToDict $key $value

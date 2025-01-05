@@ -1,5 +1,5 @@
 namespace eval oodz {
-	nx::Class create baseClass {
+	nx::Class create baseClass -superclass superClass {
 		:method init {args} {
 		}
 	################################################################
