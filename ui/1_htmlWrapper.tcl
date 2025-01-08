@@ -21,6 +21,11 @@ namespace eval oodz {
 			ns_adp_puts "</script>"
 		}
 		
+		# Helper procedure to translate values
+		:method translate {val} {
+			return [::msgcat::mc $val]
+		}
+
 		:public method html_wrapper {args} {
 			foreach a $args {
 				lappend ar_l [string trim $a]
@@ -92,6 +97,13 @@ namespace eval oodz {
 
 					ns_adp_puts "<div id=\"$var\" class=\"accordion-collapse collapse $collapse\" aria-labelledby=\"heading_$var\" data-bs-parent=\"#accordion_$var\">"
 					ns_adp_puts "<div class=\"accordion-body\">"				
+				}
+			################################################# TAB #################################################
+			# NEW DATE TIME RELATED 
+			} elseif {$tag eq "tab"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "<br>"
+				} else {
 				}
 			################################################# HTML Tags and Typography #################################################
 			} elseif {$tag eq "h1"} {
@@ -207,40 +219,69 @@ namespace eval oodz {
 					ns_adp_puts "<br>\n"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
+					set trns 1
 					dict with pr_dict {}
+					# Main logic to create option_dict
 					set option_dict [dict create]
-					
-					if {[dict get $pr_dict vtype] eq "list"} {
-						set values [ns_unquotehtml [dict get $pr_dict values]]
-						foreach val $values {dict append option_dict $val $val}
-					} elseif {[dict get $pr_dict vtype] eq "table"} {
-						set values [: dbtable_data [lindex [dict get $pr_dict values] 0] [lrange [dict get $pr_dict values] 1 end]]
-						dict for {key val} $values {
-							if {$val eq ""} {set val $key}
-							dict append option_dict $key $val
+					set vtype [dict get $pr_dict vtype]
+
+					switch -- $vtype {
+						"list" {
+							# Handle a list of values
+							set values [ns_unquotehtml [dict get $pr_dict values]]
+							foreach val $values {
+								if {$trns == 1} {
+									dict append option_dict $val [: translate $val]
+								} else {
+									dict append option_dict $val $val
+								}
+							}
 						}
-					} elseif {[dict get $pr_dict vtype] eq "func"} {
-						set func [lindex [dict get $pr_dict values] 0]
-						set values [lsort -dictionary [$func]]
-						foreach val $values {dict append option_dict $val $val}
-					} elseif {[dict get $pr_dict vtype] eq "func_dict"} {
-						set func [lindex [dict get $pr_dict values] 0]
-						set option_dict [$func]
-					} elseif {[dict get $pr_dict vtype] eq "func_trns"} {
-						set func [lindex [dict get $pr_dict values] 0]
-						set l_2_trns [$func]
-						set trns_dict ""
-						foreach lval $l_2_trns {
-							dict append trns_dict $lval "[::msgcat::mc $lval]"
+						"table" {
+							# Handle a table of values
+							set values [: dbtable_data [lindex [dict get $pr_dict values] 0] [lrange [dict get $pr_dict values] 1 end]]
+							dict for {key val} $values {
+								if {$val eq ""} { set val $key }
+								dict append option_dict $key $val
+							}
 						}
-						set option_dict [lsort -dictionary -stride 2 -index 1 $trns_dict]
-					} elseif {[dict get $pr_dict vtype] eq "dict"} {
-						set values [unquotehtml [dict get $pr_dict values]]
-						dict for {k v} $values {
-							dict append option_dict $k "[::msgcat::mc "$v"]"
+						"dict" {
+							# Handle a dictionary of values
+							set values [ns_unquotehtml [dict get $pr_dict values]]
+							dict for {key val} $values {
+								if {$trns == 1} {
+									dict append option_dict $key [: translate $val]
+								} else {
+									dict append option_dict $key $val
+								}
+							}
+						}
+						"func_list" {
+							# Handle function that returns a list
+							set func [lindex [dict get $pr_dict values] 0]
+							set values [lsort -dictionary [$func]]
+							foreach val $values {
+								if {$trns == 1} {
+									dict append option_dict $val [: translate $val]
+								} else {
+									dict append option_dict $val $val
+								}
+							}
+						}
+						"func_dict" {
+							# Handle function that directly returns a dictionary
+							set func [lindex [dict get $pr_dict values] 0]
+							set values [$func]
+							dict for {key val} $values {
+								if {$trns == 1} {
+									dict append option_dict $key [: translate $val]
+								} else {
+									dict append option_dict $key $val
+								}
+							}
 						}
 					}
-					
+
 					set i_v [: Check_sdata $var]
 					ns_adp_puts "<div class=\"form-group\">"
 					if {[dict exists $pr_dict but_cmd]} {
