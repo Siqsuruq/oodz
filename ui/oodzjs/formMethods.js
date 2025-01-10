@@ -23,6 +23,7 @@ export function getFormData(form, ids, dataContainerInstance) {
 
         // Populate valid fields into FormData
         inputElements.forEach(inputElement => {
+            // console.log("element: " + inputElement.id);
             if (!inputElement.name) {
                 // Skip fields without a name attribute (e.g., Bootstrap caption input)
                 return;
@@ -39,6 +40,7 @@ export function getFormData(form, ids, dataContainerInstance) {
         // Update the data container with the filtered data
         dataContainerInstance.setFormData(filteredData);
     } catch (error) {
+        console.error(error);
         throw error;
     }
 }

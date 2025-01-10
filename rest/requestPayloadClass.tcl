@@ -40,6 +40,7 @@ namespace eval oodz {
 		:public method clear_request_data {args} {
 			set result ""
 			set code "ok"
+			puts "PROPERTIES: [: props]"
 			try {
 				: remove [list allTableRows selectedRows additionalData message redirectLink]
 			} on error {e} {

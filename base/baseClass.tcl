@@ -99,8 +99,11 @@ namespace eval oodz {
 			set code "ok"
 			try {
 				set to_remove [lindex $args 0]
+				puts "TO REMOVE: $to_remove"
 				foreach key $to_remove {
+					puts "REMOVING: ${key}"
 					: ${key} unset
+					puts "OBJ AFTER REMOVING: [: props]"
 				}
 			} on error {errMsg} {
 				set code "error"
