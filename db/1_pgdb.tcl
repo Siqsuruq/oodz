@@ -575,7 +575,8 @@ namespace eval oodz {
 			set code "ok"
 			set where [list]
 			set my_values [list]
-			
+			set column_names [: select_columns_names $table]
+
 			# Ensuring id key is the first in the columns list
 			if {[dict exists $data id] == 1} {
 				lappend where id='[dict get $data id]'
@@ -586,22 +587,24 @@ namespace eval oodz {
 			}
 			
 			foreach col [dict keys $data] val [dict values $data] {
-				if {[string match fk_* $col] == 1} {
-					lappend my_values $col=[ns_dbquotevalue [: select_id_by_name [::textutil::trim::trim $col fk_] $val]]
-				} else {
-					if {$val != ""} {
-						if {[: get_columns_types $table $col] eq "bytea"} {
-							lappend my_values $col='[pg_escape_bytea $val]'
-						} else {
-							if {$nspace != 1} {
-								lappend my_values $col=[ns_dbquotevalue $val]
-							} else {
-								lappend my_values $col=[ns_dbquotevalue [::oodz::Sanitize normalize_spaces $val]]
-							}
-						}
-							
+				if {[lsearch -exact $column_names $col] != -1} {
+					if {[string match fk_* $col] == 1} {
+						lappend my_values $col=[ns_dbquotevalue [: select_id_by_name [::textutil::trim::trim $col fk_] $val]]
 					} else {
-						lappend my_values $col=NULL
+						if {$val != ""} {
+							if {[: get_columns_types $table $col] eq "bytea"} {
+								lappend my_values $col='[pg_escape_bytea $val]'
+							} else {
+								if {$nspace != 1} {
+									lappend my_values $col=[ns_dbquotevalue $val]
+								} else {
+									lappend my_values $col=[ns_dbquotevalue [::oodz::Sanitize normalize_spaces $val]]
+								}
+							}
+								
+						} else {
+							lappend my_values $col=NULL
+						}
 					}
 				}
 			}
