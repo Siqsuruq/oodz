@@ -470,8 +470,10 @@ namespace eval oodz {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
 					set i_v [: Check_sdata $var]
-
-					: input $props $tag $val
+					if {$i_v eq "" && $value ne ""} {
+						set i_v $value
+					}
+					ns_adp_puts "<input id=\"$var\" name=\"$var\" type=\"color\" class=\"$class\" value=\"$i_v\">"
 				}
 			################################################# MODAL ################################################# 
 			} elseif {$tag eq "modal"} {
@@ -563,7 +565,7 @@ namespace eval oodz {
 				set i_v $value
 			}
 			
-			if {$tag eq "date" || $tag eq "time" || $tag eq "month" || $tag eq "datetime-local" || $tag eq "color"} { set type $tag }
+			if {$tag eq "date" || $tag eq "time" || $tag eq "month" || $tag eq "datetime-local"} { set type $tag }
 
 			if {$tag eq "text"} {
 				ns_adp_puts "<div class=\"[: def_class group]\">"
