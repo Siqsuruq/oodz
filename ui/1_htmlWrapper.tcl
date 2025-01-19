@@ -461,6 +461,18 @@ namespace eval oodz {
 
 					: input $props $tag $val
 				}
+			################################################# COLOR #################################################
+			# NEW DATE TIME RELATED 
+			} elseif {$tag eq "color"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "<br>"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					set i_v [: Check_sdata $var]
+
+					: input $props $tag $val
+				}
 			################################################# MODAL ################################################# 
 			} elseif {$tag eq "modal"} {
 				if {$tagsgn eq "/"} {
@@ -520,16 +532,27 @@ namespace eval oodz {
 					ns_adp_puts "<script>"
 					ns_adp_puts "let ec = new EventCalendar(document.getElementById('$var'), {"
     				ns_adp_puts "view: 'timeGridWeek',"
+					ns_adp_puts "firstDay: 1,"
 					ns_adp_puts "height: '650px',"
 					ns_adp_puts "selectable: true,"
-    				ns_adp_puts "events: \["
-        			ns_adp_puts "// your list of events"
-    				ns_adp_puts "\]"
+					ns_adp_puts "eventSources: \["
+					ns_adp_puts "{"
+					ns_adp_puts "url: \"$action\","
+					ns_adp_puts "method: 'POST',"
+					ns_adp_puts "contentType: 'application/x-www-form-urlencoded',"
+					ns_adp_puts "}"
+					ns_adp_puts "\],"
+					ns_adp_puts "eventClick: function(info) {"
+					ns_adp_puts "document.getElementById('uuid_planer').value = info.event.id || 'No Title';"
+					ns_adp_puts "document.getElementById('event_summary').value = info.event.title || 'No Title';"
+					#ns_adp_puts "alert('Event ID: ' + info.event.id);"
+					ns_adp_puts "const eventModal = new bootstrap.Modal(document.getElementById('event_info'));"
+					ns_adp_puts "eventModal.show();"
+					ns_adp_puts "}"
 					ns_adp_puts "});"
 					ns_adp_puts "</script>"
 				}
 			}
-			
 		}
 		
 		:method input {props tag val} {
@@ -540,7 +563,7 @@ namespace eval oodz {
 				set i_v $value
 			}
 			
-			if {$tag eq "date" || $tag eq "time" || $tag eq "month" || $tag eq "datetime-local"} { set type $tag }
+			if {$tag eq "date" || $tag eq "time" || $tag eq "month" || $tag eq "datetime-local" || $tag eq "color"} { set type $tag }
 
 			if {$tag eq "text"} {
 				ns_adp_puts "<div class=\"[: def_class group]\">"

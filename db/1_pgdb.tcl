@@ -349,6 +349,29 @@ namespace eval oodz {
 			return [list $my_columns $my_tables $fklist]
 		}
 		
+		:public method select_all2 {table {columns "*"}} {
+			set result ""
+			set code "ok"
+			set sb [::SQLBuilder new -tableName $table]
+			
+			try {
+				if {$columns == "*"} {
+					set columns [: select_columns_names $table]
+				}
+				set :db_handles [ns_db gethandle]
+				puts "COLUMNS: $columns"
+				set result [$sb buildSelectQuery]
+			} on error {e} {
+				oodzLog error "DB ERROR: $e"
+				set code "error"
+				set result $e
+			} finally {
+				$sb destroy
+				: release
+				return -code $code $result
+			}
+		}
+
 		:public method select_all {table {columns "*"} {extra "none"} args} {
 			set result ""
 			set code "ok"

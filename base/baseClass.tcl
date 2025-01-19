@@ -11,7 +11,8 @@ namespace eval oodz {
 					if {[: prop_exists ${key}]} {
 						: ${key} set ${value}
 					} else {
-						:object property -accessor public [list ${key} ${value}]
+						: object property -accessor public ${key}
+						: ${key} set ${value}
 					}
 				}
 				:props
