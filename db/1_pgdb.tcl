@@ -199,13 +199,14 @@ namespace eval oodz {
 			set col_type [dict create]
 			set :db_handles [ns_db gethandle]
 			set query "SELECT * FROM information_schema.columns WHERE table_name = '$table'"
+			puts "QUERY: $query"
 			try {
 				set rows [ns_db select ${:db_handles} $query]
 				while {[ns_db getrow ${:db_handles} $rows]} {
 					dict append col_type [dict get [ns_set array $rows] column_name] [dict get [ns_set array $rows] data_type]
 				}
 				if {$columns eq "*"} {
-					set result [dict values $col_type]
+					set result $col_type
 				} else {
 					foreach col $columns {
 						lappend result [dict getnull $col_type $col]
@@ -529,12 +530,12 @@ namespace eval oodz {
 		:public method insert_all {table data {conflict ""} {returning ""} {nspace 1}} {
 			set result ""
 			set code "ok"
-			set tbl_cols [: select_columns_names $table]
+			set tbl_cols [: get_columns_types $table]
 			set my_columns [list]
 			set my_values [list]
 			foreach col [dict keys $data] {
 				# Checking if column exists, if not ignore it and save log
-				if {[lsearch -exact $tbl_cols $col] != -1} {
+				if {[lsearch -exact [dict keys $tbl_cols] $col] != -1} {
 					lappend my_columns \"$col\"
 					if {[string match fk_* $col] == 1} {
 						if {[dict get $data $col] != ""} {
@@ -544,8 +545,16 @@ namespace eval oodz {
 						}
 					} else {
 						if {[dict get $data $col] != ""} {
-							if {[: get_columns_types $table $col] eq "bytea"} {
+							if {[dict get $tbl_cols $col] eq "bytea"} {
 								lappend my_values '[pg_escape_bytea [dict get $data $col]]'
+							} elseif {[dict get $tbl_cols $col] eq "ARRAY"} {
+								set values_list ""
+								set orig_values_list [dict get $data $col]
+								foreach value $orig_values_list {
+									lappend values_list [ns_dbquotevalue $value]
+								}
+								set arr "ARRAY\[[join $values_list ,]\]"
+								lappend my_values $arr
 							} else {
 								if {$nspace != 1} {
 									lappend my_values [ns_dbquotevalue [dict get $data $col]]
@@ -571,6 +580,7 @@ namespace eval oodz {
 				}
 			}
 			oodzLog notice "QUERY: $query"
+			puts "QUERY: $query"
 			try {
 				set :db_handles [ns_db gethandle]
 				if {$returning ne ""} {
