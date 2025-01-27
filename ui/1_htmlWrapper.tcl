@@ -462,7 +462,6 @@ namespace eval oodz {
 					: input $props $tag $val
 				}
 			################################################# COLOR #################################################
-			# NEW DATE TIME RELATED 
 			} elseif {$tag eq "color"} {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "<br>"
@@ -524,6 +523,7 @@ namespace eval oodz {
 					dict with pr_dict {}
 					ns_adp_puts "<li class=\"$class\">"
 				}
+			################################################# CALENDAR #################################################
 			} elseif {$tag eq "calendar"} {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "</div>"
@@ -545,12 +545,16 @@ namespace eval oodz {
 					ns_adp_puts "}"
 					ns_adp_puts "\],"
 					ns_adp_puts "eventClick: function(info) {"
-					ns_adp_puts "document.getElementById('uuid_planer').value = info.event.id || 'No Title';"
+					ns_adp_puts "document.getElementById('uuid_planer').value = info.event.id || 'No UUID';"
 					ns_adp_puts "document.getElementById('event_summary').value = info.event.title || 'No Title';"
-					#ns_adp_puts "alert('Event ID: ' + info.event.id);"
 					ns_adp_puts "const eventModal = new bootstrap.Modal(document.getElementById('event_info'));"
 					ns_adp_puts "eventModal.show();"
+					ns_adp_puts "},"
+
+					ns_adp_puts "eventDrop: function(info) {"
+					ns_adp_puts "postData(\"$update_action\", info).then(data => console.log('Response:', data)).catch(error => console.error('Error:', error.message));"
 					ns_adp_puts "}"
+
 					ns_adp_puts "});"
 					ns_adp_puts "</script>"
 				}

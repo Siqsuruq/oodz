@@ -199,7 +199,6 @@ namespace eval oodz {
 			set col_type [dict create]
 			set :db_handles [ns_db gethandle]
 			set query "SELECT * FROM information_schema.columns WHERE table_name = '$table'"
-			puts "QUERY: $query"
 			try {
 				set rows [ns_db select ${:db_handles} $query]
 				while {[ns_db getrow ${:db_handles} $rows]} {
@@ -360,7 +359,6 @@ namespace eval oodz {
 					set columns [: select_columns_names $table]
 				}
 				set :db_handles [ns_db gethandle]
-				puts "COLUMNS: $columns"
 				set result [$sb buildSelectQuery]
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
@@ -506,7 +504,6 @@ namespace eval oodz {
 					# oodzLog notice "QUERY: $query"
 					while {[ns_db getrow ${:db_handles} $rows]} {
 						set row [ns_set array $rows]
-						puts $row
 						lappend result [dict values $row]
 					}
 				} else {
@@ -580,7 +577,6 @@ namespace eval oodz {
 				}
 			}
 			oodzLog notice "QUERY: $query"
-			puts "QUERY: $query"
 			try {
 				set :db_handles [ns_db gethandle]
 				if {$returning ne ""} {
