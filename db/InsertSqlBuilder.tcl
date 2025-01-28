@@ -3,7 +3,8 @@ package require nx
 nx::Class create InsertBuilder {
     # Define the class properties
     :property tableName:required  ;# Name of the table to insert into (required)
-    :property rowsList ""         ;# List of dictionaries (rows) to insert
+    :property {rowsList ""}         ;# List of dictionaries (rows) to insert
+    :property {returningColumns ""}
 
     # Method to add a single row (as a dictionary)
     :public method addRow {rowDict} {
@@ -13,6 +14,11 @@ nx::Class create InsertBuilder {
     # Method to clear all rows
     :public method clear {} {
         set :rowsList ""
+    }
+
+    # Method to set returning columns
+    :public method setReturningColumns {columns} {
+        set :returningColumns $columns
     }
 
     # Helper method to format a value for SQL using ns_dbquotevalue
@@ -50,6 +56,10 @@ nx::Class create InsertBuilder {
 
         # Construct the INSERT query
         set query "INSERT INTO ${:tableName} ([join $columns ", "]) VALUES $valuesStr"
+        # Add RETURNING clause if returningColumns is set
+        if {[llength ${:returningColumns}] > 0} {
+            append query " RETURNING [join ${:returningColumns} ", "]"
+        }
         return $query
     }
 }

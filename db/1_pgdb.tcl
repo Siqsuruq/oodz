@@ -21,6 +21,24 @@ namespace eval oodz {
 			}			
 		}
 
+		:public method current_database {} {
+			set result ""
+			set code "ok"
+			set :db_handles [ns_db gethandle]
+			set query "SELECT current_database();"
+			try {
+				set row [ns_db 0or1row ${:db_handles} $query]
+				set result [dict getnull [ns_set array $row] current_database]
+			} on error {e} {
+				oodzLog error "DB ERROR: $e"
+				set code "error"
+				set result $e
+			} finally {
+				: release
+				return -code $code $result
+			}			
+		}
+
 		:public method table_exists {table} {
 			set result 0
 			set code "ok"
