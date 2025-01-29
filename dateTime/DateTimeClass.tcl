@@ -237,6 +237,13 @@ namespace eval oodz {
 				}
 			}
 		}
+
+		:public method ISO_to_local {{iso_date_time ""}} {
+			# Remove milliseconds and 'Z' for compatibility
+			regsub {(\.\d+)?Z$} $iso_date_time "" clean_timestamp
+			# Parse the timestamp in UTC
+			set epochTime [clock scan $clean_timestamp -format "%Y-%m-%dT%H:%M:%S" -gmt false]
+			return [clock format $epochTime -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
+		}
 	}
 }
-
