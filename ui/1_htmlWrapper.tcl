@@ -49,18 +49,30 @@ namespace eval oodz {
 						set id [dict get $pr_dict var]
 						set :frame $id
 					} else {set id ${:frame}}
-					if {[dict exists $pr_dict autocomplete] != 0 && [dict get $pr_dict autocomplete] eq "off"} {
-						ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"multipart/form-data\" autocomplete=\"off\" data-api-url=\"$action\">"
+					set enctype [dict getnull $pr_dict enctype]
+					if {$enctype eq ""} {set enctype "multipart/form-data"} else {set enctype $enctype}
+					if {[dict exists $pr_dict noaction]} {
+						ns_adp_puts "<form id=\"$id\">"
 					} else {
-						ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"multipart/form-data\" data-api-url=\"$action\">"
+						if {[dict exists $pr_dict autocomplete] != 0 && [dict get $pr_dict autocomplete] eq "off"} {
+							ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"$enctype\" autocomplete=\"off\" data-api-url=\"$action\">"
+						} else {
+							ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"$enctype\" data-api-url=\"$action\">"
+						}
 					}
-
 				}
 			################################################# LINE ################################################# 
 			} elseif {$tag eq "line"} {
 				if {$tagsgn eq "/"} {
 				} else {
 					ns_adp_puts "<hr>"
+				}
+			################################################# DIV ################################################# 
+			} elseif {$tag eq "div"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "</div>\n"
+				} else {
+					ns_adp_puts "<div>"
 				}
 			################################################# CONTAINER ################################################# 
 			} elseif {$tag eq "container"} {
@@ -545,8 +557,6 @@ namespace eval oodz {
 					ns_adp_puts "}"
 					ns_adp_puts "\],"
 					ns_adp_puts "eventClick: function(info) {"
-					# ns_adp_puts "const eventModal = new bootstrap.Modal(document.getElementById('event_info'));"
-					# ns_adp_puts "eventModal.show();"
 					ns_adp_puts "info.jsEvent.preventDefault();"
 					ns_adp_puts "const eventData = JSON.parse(JSON.stringify(info.event, (key, value) => {"
         			ns_adp_puts "if (value instanceof Date) {"
@@ -554,15 +564,7 @@ namespace eval oodz {
         			ns_adp_puts "}"
         			ns_adp_puts "return value;"
     				ns_adp_puts "}));"
-					ns_adp_puts "eventeditData.sendAllData('/api/v2/planer/edit_event', \[\], false, eventData);"
-					# ns_adp_puts "document.getElementById('uuid_planer').value = info.event.id || 'No UUID';"
-					# ns_adp_puts "document.getElementById('event_summary').value = info.event.title || 'No Title';"
-					# ns_adp_puts "console.log('attendee:', JSON.stringify(info.event, null, 2));"
-
-					# ns_adp_puts "document.getElementById('attendee').value = info.event.attendee || 'No Title';"
-					# ns_adp_puts " \$('#attendee').val(info.event.attendee || null).trigger('change'); "
-					# ns_adp_puts "const eventModal = new bootstrap.Modal(document.getElementById('event_info'));"
-					# ns_adp_puts "eventModal.show();"
+					ns_adp_puts "mainData.sendAllData('/api/v2/planer/edit_event', \[\], false, eventData);"
 					ns_adp_puts "},"
 
 					ns_adp_puts "eventDrop: function(info) {"
