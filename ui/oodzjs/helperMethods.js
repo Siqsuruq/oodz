@@ -47,6 +47,30 @@ export function convertDataContainerToFormData(dataContainerInstance) {
     return formData;
 }
 
+export function convertObjectToFormData(obj) {
+    const formData = new FormData();
+
+    for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            const value = obj[key];
+
+            if (value instanceof File) {
+                // If the value is a File object (for uploads)
+                formData.append(key, value);
+            } else if (typeof value === "object" && value !== null) {
+                // If the value is an object (e.g., arrays, nested objects)
+                formData.append(key, JSON.stringify(value));
+            } else {
+                // Otherwise, append as a string
+                formData.append(key, value);
+            }
+        }
+    }
+
+    return formData;
+}
+
+
 export function isSuccess(statusCode) {
     return statusCode >= 200 && statusCode < 300;
 }

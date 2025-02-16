@@ -49,6 +49,13 @@ export function getFormData(form, ids, dataContainerInstance) {
 
 // Function to update form values and optionally clear specific components
 export function updateFormValues(data, form) {
+    let recievedData;
+    try {
+        recievedData = JSON.parse(data); // Convert string to object
+        console.log("Parsed JSON:", recievedData);
+    } catch (error) {
+        console.error("Invalid JSON:", error);
+    }
     // Check if 'componentsToClear' exists in the data and call 'clearForm'
     if (data.componentsToClear && Array.isArray(data.componentsToClear)) {
         // console.log('Clearing components:', data.componentsToClear);
@@ -58,16 +65,16 @@ export function updateFormValues(data, form) {
     }
 
     // Iterate over the remaining keys to update elements
-    Object.keys(data).forEach(key => {
+    Object.keys(recievedData).forEach(key => {
         const elmnt = document.getElementById(key);
         if (elmnt) {
-            updateElement(elmnt, data[key]);
+            updateElement(elmnt, recievedData[key]);
         }
     });
 }
 
 export function updateElement(elmnt, value) {
-    // console.log(`Updating element with ID: ${elmnt.id}, Type: ${elmnt.type}, Tag: ${elmnt.tagName}, Value: ${value}`);
+    console.log(`Updating element with ID: ${elmnt.id}, Type: ${elmnt.type}, Tag: ${elmnt.tagName}, Value: ${value}`);
     if (elmnt.type === "checkbox" || elmnt.type === "radio") {
         // elmnt.checked = value ? true : false;
         elmnt.checked = !!value;
@@ -94,6 +101,23 @@ export function updateElement(elmnt, value) {
         }
     }  else if (elmnt.type !== "hidden") {
         elmnt.value = value;
+    }
+}
+
+// Dynamically detect and update any table
+function updateTable(elmnt, data) {
+    if (!$.fn.DataTable.isDataTable("#" + elmnt.id)) {
+        console.warn(`Skipping update for '${elmnt.id}' because it's not a DataTable.`);
+        return;
+    }
+
+    const table = $("#" + elmnt.id).DataTable();
+    table.clear(); // Remove existing rows
+
+    if (Array.isArray(data)) {
+        table.rows.add(data).draw(); // Add multiple rows
+    } else {
+        console.warn(`Expected an array for table '${elmnt.id}', but got:`, data);
     }
 }
 

@@ -1,6 +1,6 @@
 import { dataContainer } from './dataContainerClass.js';
 import { getSelectedRowsData, getAllRowsData, deleteSelectedRows, clearTables } from './datatableMethods.js';
-import { isRequiredFieldFilled, convertDataContainerToFormData, isSuccess, isClientError, isServerError, getBooleanFromStorage } from './helperMethods.js';
+import { isRequiredFieldFilled, convertDataContainerToFormData, convertObjectToFormData, isSuccess, isClientError, isServerError, getBooleanFromStorage } from './helperMethods.js';
 import { getFormData,clearForm,updateFormValues,resetForm } from './formMethods.js';
 import { parseServerResponse } from './responseParser.js';
 import { visibilityMethods } from './visibility.js';
@@ -29,7 +29,7 @@ export class formData {
 
         this.isSubmitting = false;
         this.dataContainer = new dataContainer();
-        this.#initModalEvents();
+        this.initModalEvents();
         // Handle toast after redirect
         this.#checkForToastMessage();
 	}
@@ -56,7 +56,7 @@ export class formData {
         }
     }
 
-	async sendAllData(apiUrl = this.apiUrl, ids = [], useCaptcha = false) {
+	async sendAllData(apiUrl = this.apiUrl, ids = [], useCaptcha = false, customData = null) {
         if (this.isSubmitting) {
             showToast('Submission already in progress.', 'warning');
             return;
@@ -69,11 +69,16 @@ export class formData {
         this.isSubmitting = true;
 
 		try {
-            this.#getAllData(ids);
+            // Prepare data: use custom data if provided, otherwise default to #getAllData
+            if (!customData) {
+                this.#getAllData(ids); // Default data preparation
+            }
+            
             //showToast(`Sending data to: ${apiUrl} with IDs: ${ids.length > 0 ? ids.join(', ') : 'all'}`, 'info');
 
             // Send the data to the server
-            const result = await this.#sendDataToServer(apiUrl);
+            const result = await this.#sendDataToServer(apiUrl, {}, customData);
+
             if (result.redirect_url) {
                 console.log("Redirecting to:", result.redirect_url);
                 window.location.href = result.redirect_url; // Perform the redirect
@@ -116,8 +121,12 @@ export class formData {
 	}
 
 
-    async #sendDataToServer(apiUrl, config = {}) {
-        const formData = convertDataContainerToFormData(this.dataContainer);
+    async #sendDataToServer(apiUrl, config = {}, customData = null) {
+        // const formData = convertDataContainerToFormData(this.dataContainer);
+        const formData = customData 
+        ? convertObjectToFormData(customData)
+        : convertDataContainerToFormData(this.dataContainer);
+
         const defaultConfig = {
             method: 'POST',
             body: formData,
@@ -198,10 +207,14 @@ export class formData {
     }
 
     // Initialize modal events
-    #initModalEvents() {
+    initModalEvents() {
         // Check if the modal and table elements exist
         const deleteModal = document.getElementById('deleteConfirmationModal');
         const confirmDeleteButton = document.getElementById('confirmDeleteButton');
+
+        console.log("Modal:", deleteModal);
+        console.log("Confirm Button:", confirmDeleteButton);
+        console.log("Table IDs:", this.tableIds);
 
         if (!deleteModal || !confirmDeleteButton || !this.tableIds || this.tableIds.length === 0) {
             //console.warn('Modal or tables are not present, skipping modal event initialization.');
