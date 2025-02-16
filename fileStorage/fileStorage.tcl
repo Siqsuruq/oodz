@@ -4,14 +4,23 @@ namespace eval oodz {
 		:property {user_data_dir:substdefault {[file join [::oodzConf get path L] [::oodzConf get_global user_data_dir]]}}
 
 		:method init {} {
+			package require mimext
 			next
 		}
 
 		:method getMimeDiscreteType {file} {
 			try {
-				set ext [file extension $file]
-				set mime [::mimext get_mime $ext]
-				set discrete_type [::mimext get_discrete_type $mime]
+				set mimeString [ns_guesstype $file]
+				set ix [string first / $mimeString]
+				if {$ix >= 0} {
+					incr ix -1
+					set discrete_type [string range $mimeString 0 $ix]
+				} else {
+					return -code error "Invalid MIME type: $mimeString"
+				}
+				if {$discrete_type eq "multipart" || $discrete_type eq "message"} {
+					set discrete_type "multipart"
+				}
 				return -code ok $discrete_type
 			} on error {errMsg} {
 				oodzLog error "Error in getMimeType method: $errMsg"
@@ -29,17 +38,21 @@ namespace eval oodz {
 					set original_fname [ns_querygetall $uploaded_file]
 					puts "File name: $original_fname"
 					set file_ext [file extension $original_fname]
-
+					puts "File extension: $file_ext"
 					set discrete_type [:getMimeDiscreteType $original_fname]
+					puts "Discrete type: $discrete_type"
 					set fs_dir [file join ${:user_data_dir} $discrete_type]	
 					if {$original_fname ne ""} {
 						set tmp_file [ns_getformfile $uploaded_file]
 						set f [::oodz::fileClass new -fileName $tmp_file]
 						set fs_filename [::uuid::uuid generate]${file_ext}
+						puts "File name: $fs_filename"
 						$f moveFile [file join $fs_dir $fs_filename]
 						$f destroy
+						puts  "PATH: [file join $discrete_type $fs_filename]"
+						:add [dict create filepath [file join $discrete_type $fs_filename] ext $file_ext original_name $original_fname dz_user [::oodzSession get uuid_daidze_user]]
 						
-						:add [dict create path [file join $discrete_type $fs_filename] ext $file_ext original_name $original_fname dz_user [::oodzSession get uuid_daidze_user]]
+						puts "FILE STORAGE OBJECT: [: get]"
 						set res [:save2db]
 						lappend result [lindex $res 0]
 					}
@@ -56,7 +69,7 @@ namespace eval oodz {
 			try {
 				set result ""
 				foreach fileuuid $args {
-					set fpath [dict getnull [lindex [::db select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
+					set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
 					if {$fpath ne ""} {
 						lappend result $fpath
 					}
@@ -73,7 +86,7 @@ namespace eval oodz {
 			try {
 				set result ""
 				foreach fileuuid $args {
-					set fpath [dict getnull [lindex [::db select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
+					set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
 					if {$fpath ne ""} {
 						lappend result [file join ${:user_data_dir} $fpath]
 					}

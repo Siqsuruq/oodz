@@ -423,13 +423,13 @@ namespace eval oodz {
 								set select [dict get $pr_dict select]
 								switch $select {
 									"single" {
-										ns_adp_puts "select: {style: 'single', blurable: true},"
+										ns_adp_puts "select: {style: 'single', blurable: false},"
 									}
 									"multi" {
-										ns_adp_puts "select: {style: 'os', blurable: true},"
+										ns_adp_puts "select: {style: 'os', blurable: false},"
 									}
 									default {
-										ns_adp_puts "select: {style: 'os', blurable: true},"
+										ns_adp_puts "select: {style: 'os', blurable: false},"
 									}
 								}
 							} else {
@@ -460,6 +460,26 @@ namespace eval oodz {
 							ns_adp_puts "\],"
 						ns_adp_puts "} );"
 					ns_adp_puts "</script>"
+
+					ns_adp_puts "<!-- Bootstrap Modal -->"
+					ns_adp_puts "<div id='deleteConfirmationModal' class='modal fade' tabindex='-1'>"
+						ns_adp_puts "<div class='modal-dialog'>"
+							ns_adp_puts "<div class='modal-content'>"
+								ns_adp_puts "<div class='modal-header'>"
+									ns_adp_puts "<h5 class='modal-title'>[::msgcat::mc "Confirm Deletion"]</h5>"
+									ns_adp_puts "<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
+									ns_adp_puts "</button>"
+								ns_adp_puts "</div>"
+								ns_adp_puts "<div class='modal-body'>"
+									ns_adp_puts "<p>[::msgcat::mc "Are you sure you want to delete the selected rows?"]</p>"
+								ns_adp_puts "</div>"
+								ns_adp_puts "<div class='modal-footer'>"
+									ns_adp_puts "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>[::msgcat::mc "Cancel"]</button>"
+									ns_adp_puts "<button id='confirmDeleteButton' class='btn btn-danger'>[::msgcat::mc "Delete"]</button>"
+								ns_adp_puts "</div>"
+							ns_adp_puts "</div>"
+						ns_adp_puts "</div>"
+					ns_adp_puts "</div>"
 				}
 			################################################# DATE #################################################
 			# NEW DATE TIME RELATED 
