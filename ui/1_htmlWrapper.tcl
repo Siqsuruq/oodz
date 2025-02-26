@@ -594,6 +594,28 @@ namespace eval oodz {
 					ns_adp_puts "});"
 					ns_adp_puts "</script>"
 				}
+			############################################### CODE EDITOR ###############################################
+			} elseif {$tag eq "code_editor"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					set i_v [: Check_sdata $var]
+					ns_adp_puts "<textarea id=\"code_editor\" name=\"$var\" class=\"CodeMirror\">$i_v</textarea>"
+
+					ns_adp_puts "<script>"
+					# ns_adp_puts "editAreaLoader.init({id:\"code_editor\",syntax:\"tcl\",start_highlight:true,font_size:\"12\",allow_resize:\"both\",allow_toggle:true,word_wrap:true,language:\"en\",syntax_selection_allow:\"tcl,css,html,js,php,python,vb,xml,c,cpp,sql,basic,pas,brainfuck\",toolbar:\"search, go_to_line, |, undo, redo, |, syntax_selection, |, change_smooth_selection, highlight, reset_highlight, |, help\"});"
+					ns_adp_puts "var editor = CodeMirror.fromTextArea(document.getElementById('code_editor'), {"
+					ns_adp_puts "lineNumbers: true,"
+					# ns_adp_puts "mode: 'tcl',"
+					ns_adp_puts "theme: 'eclipse',"
+					ns_adp_puts "lineWrapping: true"
+					# ns_adp_puts "foldGutter: true,"
+        			# ns_adp_puts "gutters: \[\"CodeMirror-linenumbers\", \"CodeMirror-foldgutter\"\]"
+					ns_adp_puts "});"
+					ns_adp_puts "</script>"
+				}
 			}
 		}
 		
@@ -647,10 +669,10 @@ namespace eval oodz {
 				set module [lindex [split $cmd "::"] 2]
 				set val [lindex [split $cmd "::"] 4]
 				if {[file extension $val] eq ".xml"} {
-					if {[::dz_access::chk_mod_acc $module] == 1} {
+					#if {[::dz_access::chk_mod_acc $module] == 1} {
 						lappend link "?mod=$module&xml=$val"
 						ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"$link\" role=\"button\">$img_tag $placeholder</a>"
-					}
+					#}
 				} else {
 					ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
 				}

@@ -1,6 +1,6 @@
 package require nx
 
-nx::Class create InsertBuilder {
+nx::Class create InsertSQLBuilder {
     # Define the class properties
     :property tableName:required  ;# Name of the table to insert into (required)
     :property {rowsList ""}         ;# List of dictionaries (rows) to insert

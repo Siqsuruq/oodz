@@ -34,25 +34,17 @@ namespace eval oodz {
 				set result ""
 				puts "UPLOADING FILE ---------------------------"
 				foreach uploaded_file [ns_conn files] {
-					puts "Uploaded file: $uploaded_file"
 					set original_fname [ns_querygetall $uploaded_file]
-					puts "File name: $original_fname"
 					set file_ext [file extension $original_fname]
-					puts "File extension: $file_ext"
 					set discrete_type [:getMimeDiscreteType $original_fname]
-					puts "Discrete type: $discrete_type"
 					set fs_dir [file join ${:user_data_dir} $discrete_type]	
 					if {$original_fname ne ""} {
 						set tmp_file [ns_getformfile $uploaded_file]
 						set f [::oodz::fileClass new -fileName $tmp_file]
 						set fs_filename [::uuid::uuid generate]${file_ext}
-						puts "File name: $fs_filename"
 						$f moveFile [file join $fs_dir $fs_filename]
 						$f destroy
-						puts  "PATH: [file join $discrete_type $fs_filename]"
-						:add [dict create filepath [file join $discrete_type $fs_filename] ext $file_ext original_name $original_fname dz_user [::oodzSession get uuid_daidze_user]]
-						
-						puts "FILE STORAGE OBJECT: [: get]"
+						:add [dict create filepath [file join $discrete_type $fs_filename] ext $file_ext original_name $original_fname dz_user [::oodzSession get uuid_user]]
 						set res [:save2db]
 						lappend result [lindex $res 0]
 					}
@@ -102,7 +94,7 @@ namespace eval oodz {
 			try {
 				set result ""
 				foreach fileuuid $args {
-					set fpath [dict getnull [lindex [::db select_all filestorage path uuid_filestorage=\'$fileuuid\'] 0] path]
+					set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
 					if {$fpath ne ""} {
 						lappend result [ns_absoluteurl [file join [::oodzConf get_global user_data_dir] $fpath] [::oodzConf get srvaddress L]]
 						# lappend result [file join "[::oodzConf get srvaddress L]" [::oodzConf get_global user_data_dir] $fpath]

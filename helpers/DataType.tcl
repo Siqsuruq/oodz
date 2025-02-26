@@ -2,6 +2,7 @@
 namespace eval oodz {
 	nx::Object create DataType {
 		:public object method is_bool {value} {
+			# bug in disable case
 			set bool_values {1 yes true on enable 0 no false off disable}
 			if {$value eq ""} {
 				return 0

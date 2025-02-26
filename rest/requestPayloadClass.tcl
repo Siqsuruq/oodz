@@ -37,6 +37,18 @@ namespace eval oodz {
 			}
 		}
 
+		:public method get_allrows {tableName} {
+			if {$tableName eq ""} {
+				return -code error "Table name is required"
+			}
+			try {
+				set allRows [dict getnull [: allTableRows get] $tableName]
+				return $allRows
+			} on error {e} {
+				return -code error "$e"
+			}
+		}
+
 		:public method clear_request_data {args} {
 			set result ""
 			set code "ok"
