@@ -44,6 +44,9 @@ export function getAllRowsData(tableIds, dataContainerInstance) {
 
 export function deleteSelectedRows(tableIds) {
     try {
+        if (event) {
+            event.preventDefault(); // Prevent form submission
+        }
         const targetTableIds = tableIds.length ? tableIds : [];
         let hasDeletedRows = false; // Flag to check if any rows were deleted
 

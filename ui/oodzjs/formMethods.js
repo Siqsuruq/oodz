@@ -49,29 +49,43 @@ export function getFormData(form, ids, dataContainerInstance) {
 
 // Function to update form values and optionally clear specific components
 export function updateFormValues(data, form) {
+    console.log("Received Data Type:", typeof data);
+    console.log("Received Data:", data);
+
     let recievedData;
     try {
-        recievedData = JSON.parse(data); // Convert string to object
+        recievedData = typeof data === "string" ? JSON.parse(data) : data; // Convert string to object
         console.log("Parsed JSON:", recievedData);
     } catch (error) {
         console.error("Invalid JSON:", error);
+        return; // Exit the function if JSON is invalid
     }
-    // Check if 'componentsToClear' exists in the data and call 'clearForm'
-    if (data.componentsToClear && Array.isArray(data.componentsToClear)) {
-        // console.log('Clearing components:', data.componentsToClear);
-        clearForm(form, data.componentsToClear);
-        // Optionally, remove 'componentsToClear' from the data to avoid processing it as a key
-        delete data.componentsToClear;
+
+    // Debugging: Check if 'componentsToClear' exists
+    console.log("Checking componentsToClear:", recievedData.componentsToClear);
+
+    // Check if 'componentsToClear' exists in the parsed data and call 'clearForm'
+    if (recievedData.componentsToClear && Array.isArray(recievedData.componentsToClear)) {
+        console.log("Clearing components:", recievedData.componentsToClear);
+        clearForm(form, recievedData.componentsToClear);
+        delete recievedData.componentsToClear; // Remove it to prevent unintended updates
     }
+
+    // Debugging: Confirm remaining data keys
+    console.log("Updating elements for keys:", Object.keys(recievedData));
 
     // Iterate over the remaining keys to update elements
     Object.keys(recievedData).forEach(key => {
         const elmnt = document.getElementById(key);
         if (elmnt) {
+            console.log(`Updating element ${key} with value`, recievedData[key]);
             updateElement(elmnt, recievedData[key]);
+        } else {
+            console.warn(`Element with ID '${key}' not found.`);
         }
     });
 }
+
 
 export function updateElement(elmnt, value) {
     console.log(`Updating element with ID: ${elmnt.id}, Type: ${elmnt.type}, Tag: ${elmnt.tagName}, Value: ${value}`);

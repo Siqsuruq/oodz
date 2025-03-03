@@ -148,7 +148,6 @@ export class formData {
     #getAllData(ids = []) {
         try {
             // Ensure we only process valid table IDs
-            // Ensure we only process valid table IDs
             const validTableIds = this.tableIds || [];
 
             // Split ids into selected, all, and form
@@ -161,21 +160,26 @@ export class formData {
                     .filter(id => !id.includes('.selected') && validTableIds.includes(id)), // Whole table IDs
                 form: ids.filter(id => !validTableIds.includes(id)) // IDs not matching table IDs
             };
-            // Fetch selected rows for specified tables
-            if (splitIds.selected.length > 0) {
-                getSelectedRowsData(splitIds.selected, this.dataContainer);
+
+            // If no table-related IDs (selected or all) are provided, fetch all rows from all tables
+            if (splitIds.selected.length === 0 && splitIds.all.length === 0) {
+                getAllRowsData(validTableIds, this.dataContainer);
+            } else {
+                // Fetch selected rows for specified tables
+                if (splitIds.selected.length > 0) {
+                    getSelectedRowsData(splitIds.selected, this.dataContainer);
+                }
+
+                // Fetch all rows for explicitly specified tables
+                if (splitIds.all.length > 0) {
+                    getAllRowsData(splitIds.all, this.dataContainer);
+                }
             }
 
-            // Fetch all rows for specified tables
-            if (splitIds.all.length > 0) {
-                getAllRowsData(splitIds.all, this.dataContainer);
-            }
             // Process form data for form IDs or all forms if no form IDs provided
             if (splitIds.form.length > 0) {
-                // console.log("Processing specific form IDs:", splitIds.form);
                 getFormData(this.form, splitIds.form, this.dataContainer);
             } else if (!ids.length) {
-                // console.log("Processing entire form as no specific IDs are provided");
                 getFormData(this.form, [], this.dataContainer);
             }
         } catch (error) {
