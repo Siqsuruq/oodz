@@ -541,6 +541,49 @@ namespace eval oodz {
 			}
 		}
 
+		# data is a list of dictionaries
+		:public method insert {table data {conflict ""} {returning ""} {nspace 1}} {
+			set result ""
+			set tbl_cols [: get_columns_types $table]
+			set qb [InsertSQLBuilder new -tableName $table]
+			try {
+				foreach line $data {
+					set tmpline [dict create]
+					foreach col [dict keys $line] {
+						# Checking if column exists, if not ignore it and save log
+						if {[lsearch -exact [dict keys $tbl_cols] $col] != -1} {
+							dict set tmpline $col [dict get $line $col]
+						} else {
+							oodzLog warning "Column ${table}.${col} does not exists"
+						}
+					}
+					$qb addRow $tmpline
+				}
+
+				if {$returning eq ""} {
+					if {[lsearch -exact [dict keys $tbl_cols] id] != -1 && [lsearch -exact [dict keys $tbl_cols] uuid_${table}] != -1} {
+						$qb setReturningColumns [list id uuid_${table}]
+					} elseif {[lsearch -exact [dict keys $tbl_cols] id] != -1} {
+						$qb setReturningColumns [list id]
+					}
+				} else {
+					$qb setReturningColumns $returning
+				}
+				
+				set query "[$qb buildQuery]"
+				set :db_handles [ns_db gethandle]
+				set rows [ns_db select ${:db_handles} $query]
+				while {[ns_db getrow ${:db_handles} $rows]} {
+					lappend result [ns_set array $rows]
+				}
+				return -code ok $result
+			} on error {errMsg} {
+				return -code "error" "insert_all method: $errMsg"
+			} finally {
+				: release
+			}
+		}
+		
 		# Should always return inserted id and uuid get rid of returning empty, unless defined * ()return everything
 		:public method insert_all {table data {conflict ""} {returning ""} {nspace 1}} {
 			set result ""
@@ -616,7 +659,7 @@ namespace eval oodz {
 				return -code $code $result
 			}
 		}
-		
+
 		:public method update_all {table data {nspace 1}} {
 			set result ""
 			set code "ok"
