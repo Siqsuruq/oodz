@@ -43,38 +43,32 @@ namespace eval oodz {
 			}
 		}
 
+
+		# Upload files to server, result must be a dictionary with uploaded field name as key and uuid_filestorage as value
 		:public method uploadFile {} {
 			set fs_uuids [dict create]
 			try {
-				set result ""
+				set result [dict create]
 				puts "UPLOADING FILE ---------------------------"
 				foreach uploaded_file [ns_conn files] {
-					puts "Uploaded file: $uploaded_file"
 					set original_fname [ns_querygetall $uploaded_file]
-					puts "Original file name: $original_fname"
 					set file_ext [file extension $original_fname]
-					puts "File extension: $file_ext"
 					set discrete_type [:getMimeDiscreteType $original_fname]
-					puts "Discrete type: $discrete_type"
 					set fs_dir [file join ${:user_data_dir} $discrete_type]	
 					# if {![file isdirectory $fs_dir]} {
 					# 	file mkdir $fs_dir
 					# }
 					if {$original_fname ne ""} {
-						puts "Uploaded file: $uploaded_file"
 						set tmp_file [ns_getformfile $uploaded_file]
-						puts "Temp file: $tmp_file"
 						set f [::oodz::fileClass new -fileName $tmp_file]
-						puts "File object: $f"
 						set fs_filename [::uuid::uuid generate]${file_ext}
-						puts "File storage filename: $fs_filename"
 						$f moveFile [file join $fs_dir $fs_filename]
-						puts "File moved to: [file join $fs_dir $fs_filename]"
 						$f destroy
 						set res [: save_to_db [file join $discrete_type $fs_filename] $file_ext $original_fname]
-						lappend result [lindex $res 0]
+						dict set result $uploaded_file [lindex $res 0]
 					}
 				}
+				puts "File saved to DB: $result"
 				return -code ok $result
 			} on error {errMsg} {
 				oodzLog error "Error in uploadFile method: $errMsg"
