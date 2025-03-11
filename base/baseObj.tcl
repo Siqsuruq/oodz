@@ -102,8 +102,8 @@ namespace eval oodz {
 				if {[dict exists $obj_data id] || [dict exists $obj_data uuid_${:obj}]} {
 					set res [::db update_all ${:obj} $obj_data]
 				} else {
-					set res [::db insert_all ${:obj} $obj_data "" [list uuid_${:obj} id]]
-					: load_data uuid_${:obj} [lindex $res 0]
+					set res [lindex [::db insert ${:obj} [list $obj_data]] 0]
+					: load_data uuid_${:obj} [dict get $res uuid_${:obj}]
 				}
 				return -code ok $res
 			} on error {errMsg} {

@@ -28,24 +28,50 @@ namespace eval oodz {
 			}
 		}
 
+		:method save_to_db {filepath ext original_name} {
+			set qb [InsertSQLBuilder new -tableName filestorage]
+			try {
+				$qb addRow [dict create filepath $filepath ext $ext original_name $original_name dz_user [::oodzSession get uuid_user]]
+				$qb setReturningColumns uuid_filestorage
+				set res [::db execute_query [$qb buildQuery]]
+				return -code ok [dict getnull [lindex $res 0] uuid_filestorage]
+			} on error {errMsg} {
+				oodzLog error "Error in save_to_db method: $errMsg"
+				return -code error $errMsg
+			} finally {
+				$qb destroy
+			}
+		}
+
 		:public method uploadFile {} {
 			set fs_uuids [dict create]
 			try {
 				set result ""
 				puts "UPLOADING FILE ---------------------------"
 				foreach uploaded_file [ns_conn files] {
+					puts "Uploaded file: $uploaded_file"
 					set original_fname [ns_querygetall $uploaded_file]
+					puts "Original file name: $original_fname"
 					set file_ext [file extension $original_fname]
+					puts "File extension: $file_ext"
 					set discrete_type [:getMimeDiscreteType $original_fname]
+					puts "Discrete type: $discrete_type"
 					set fs_dir [file join ${:user_data_dir} $discrete_type]	
+					# if {![file isdirectory $fs_dir]} {
+					# 	file mkdir $fs_dir
+					# }
 					if {$original_fname ne ""} {
+						puts "Uploaded file: $uploaded_file"
 						set tmp_file [ns_getformfile $uploaded_file]
+						puts "Temp file: $tmp_file"
 						set f [::oodz::fileClass new -fileName $tmp_file]
+						puts "File object: $f"
 						set fs_filename [::uuid::uuid generate]${file_ext}
+						puts "File storage filename: $fs_filename"
 						$f moveFile [file join $fs_dir $fs_filename]
+						puts "File moved to: [file join $fs_dir $fs_filename]"
 						$f destroy
-						:add [dict create filepath [file join $discrete_type $fs_filename] ext $file_ext original_name $original_fname dz_user [::oodzSession get uuid_user]]
-						set res [:save2db]
+						set res [: save_to_db [file join $discrete_type $fs_filename] $file_ext $original_fname]
 						lappend result [lindex $res 0]
 					}
 				}
