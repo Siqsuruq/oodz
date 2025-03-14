@@ -1,7 +1,7 @@
 namespace eval oodz {
 	nx::Class create fileStorage -superclass ::oodz::baseObj {
 		:property {obj "filestorage"}
-		:property {user_data_dir:substdefault {[file join [::oodzConf get path L] [::oodzConf get_global user_data_dir]]}}
+		:property {user_data_dir:substdefault {[file join [::oodzConf get srvpath L] [::oodzConf get_global user_data_dir]]}}
 
 		:method init {} {
 			package require mimext

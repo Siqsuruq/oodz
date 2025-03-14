@@ -1,9 +1,9 @@
 # Main OODZ Superclass (What is my purpose? To keep server name, path and hardcoded address https:// + $name_server) 
 namespace eval oodz {
 	nx::Class create superClass {
-	 	:property -accessor public {version "0.0.1"}
+	 	:property -accessor public {oodz_version "0.0.1"}
 	 	:property -accessor public {srv:substdefault {[ns_info server]}}
-	 	:property -accessor public {path:substdefault {[ns_pagepath]}}
+	 	:property -accessor public {srvpath:substdefault {[ns_pagepath]}}
 	 	:property -accessor public {srvaddress:substdefault {https://[ns_info server]}}
 	}
 

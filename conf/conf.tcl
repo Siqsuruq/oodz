@@ -11,7 +11,7 @@ namespace eval oodz {
 
 		# Load config options from default.ini
 		:public method read_config {args} {
-			set config_file [file join ${:path} ../ conf ${:conf_file}]
+			set config_file [file join ${:srvpath} ../ conf ${:conf_file}]
 			set ini_handler [::ini::open $config_file]
 			foreach section [::ini::sections $ini_handler ] {
 				foreach key [::ini::keys $ini_handler $section] {
@@ -32,7 +32,7 @@ namespace eval oodz {
 		# Load Global Translations
 		:public method load_trns {args} {
 			try {
-				set lang_path [file join ${:path} [[self] get lang_dir L]]
+				set lang_path [file join ${:srvpath} [[self] get lang_dir L]]
 				set lang [[self] get language L]
 				load_trns_file $lang $lang_path
 				return -code ok
@@ -47,7 +47,7 @@ namespace eval oodz {
 		}
 		
 		:public method load_dz_procs {args} {
-			set folders [glob -nocomplain -directory [file join ${:path} [: get_global mod_dir]] *]
+			set folders [glob -nocomplain -directory [file join ${:srvpath} [: get_global mod_dir]] *]
 			foreach f $folders {
 				set module_namepace [file tail $f]
 				set files [glob -nocomplain -directory $f *.tcl]

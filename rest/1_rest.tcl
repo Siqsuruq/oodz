@@ -28,7 +28,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		set resource [lindex $surl 3]
 
 		#Check if resource folder exists and if it has API proc
-		if {[file isdirectory [file join ${:path} [oodzConf get_global mod_dir] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
+		if {[file isdirectory [file join ${:srvpath} [oodzConf get_global mod_dir] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
 			set values [lrange $surl 4 end]
 			set params [: get_body]
 			# puts "REQUEST: ${:reqType} VALUES: $values PARAMS: $params"

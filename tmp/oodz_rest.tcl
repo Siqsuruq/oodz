@@ -48,7 +48,7 @@ nx::Class create apiin -superclass oodz_superclass {
 			read_config
 
 			#Check if resource folder exists and if it has API proc
-			if {[file isdirectory [file join ${:path} [set ${:srv}::mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
+			if {[file isdirectory [file join ${:srvpath} [set ${:srv}::mod_dir] $resource]] == 1 && [info proc ::${resource}::api] ne ""} {
 				oodzLog notice "It exists"
 				set params [: get_body]
 				set values [lrange $surl 4 end]
