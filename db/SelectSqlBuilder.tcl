@@ -112,12 +112,13 @@ nx::Class create SQLBuilder {
 			# ILIKE makes search case-insensitive and CAST to text more versatile in terms of the data types it can handle. However, may afect the performance of the search, especially if you're working with large datasets or complex data types.
 			# Commented line is more general and will work with all databases and types
 			# lappend conditions "$column LIKE '%$term%'"
-            lappend conditions "CAST($column AS TEXT) ILIKE '%$term%'"
+            lappend conditions "CAST($column AS TEXT) ILIKE [ns_dbquotevalue %$term%]"
         }
         if {[llength $conditions] > 0} {
             set :whereClause [join $conditions " OR "]
         }
     }
+
 
     # Define the setLimit method
     :public method setLimit {limitValue} {
