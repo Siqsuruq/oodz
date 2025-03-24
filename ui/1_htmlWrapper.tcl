@@ -221,7 +221,7 @@ namespace eval oodz {
 				
 					ns_adp_puts "<div class=\"form-check\">"
 					ns_adp_puts "<input name=\"$var\" type=\"hidden\" value=\"0\">"
-					ns_adp_puts "<input class=\"$class\" name=\"$var\" id=\"$var\" type=\"checkbox\" $js $ch $mandatory>"
+					ns_adp_puts "<input class=\"$class\" name=\"$var\" id=\"$var\" type=\"checkbox\" value=\"1\" $js $ch $mandatory>"
 					ns_adp_puts "<label class=\"form-check-label\" for=\"$var\">$placeholder</label>"
 					ns_adp_puts "</div>"
 				}

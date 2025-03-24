@@ -39,7 +39,7 @@ db copy dbj
 dbj configure -result_format J
 db copy dbl
 dbl configure -result_format L
-::oodz::conf create ::oodzConf -db ::db
+::oodz::conf create ::oodzConf
 
 # Creating ::oodzSession Global Object (File)
 sessionFactory createSession -persist_type ::oodz::SessionFile
