@@ -616,6 +616,20 @@ namespace eval oodz {
 					ns_adp_puts "});"
 					ns_adp_puts "</script>"
 				}
+			############################################### HTML EDITOR ###############################################
+			} elseif {$tag eq "html_editor"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					set i_v [: Check_sdata $var]
+					ns_adp_puts "<textarea id=\"html_editor\" name=\"$var\">$i_v</textarea>"
+
+					ns_adp_puts "<script>"
+					ns_adp_puts "\$('#html_editor').trumbowyg();"
+					ns_adp_puts "</script>"
+				}
 			}
 		}
 		
