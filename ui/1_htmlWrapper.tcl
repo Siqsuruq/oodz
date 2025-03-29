@@ -630,6 +630,18 @@ namespace eval oodz {
 					ns_adp_puts "\$('#html_editor').trumbowyg();"
 					ns_adp_puts "</script>"
 				}
+			############################################### HCAPTCHA ###############################################
+			} elseif {$tag eq "hcaptcha"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "<div class=\"form-group\">"
+					ns_adp_puts "<div class=\"h-captcha\" data-sitekey=\"$sitekey\" data-size=\"normal\"></div>"
+					ns_adp_puts "</div>"
+				}
+			############################################### HCAPTCHA ###############################################
 			}
 		}
 		
