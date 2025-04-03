@@ -1,7 +1,7 @@
 nx::Class create UpdateSQLBuilder {
     :property tableName:required       ;# Table to update
     :property {setDict ""}             ;# Key/value pairs to update
-    :property {whereClause ""}         ;# WHERE condition string
+    :property {whereList {}}           ;# List of {column operator value}
     :property {columnTransforms ""}    ;# Optional column transformations
 
     :public method addRow {dataDict} {
@@ -12,8 +12,8 @@ nx::Class create UpdateSQLBuilder {
         dict set :setDict $key $value
     }
 
-    :public method setWhereClause {where} {
-        set :whereClause $where
+    :public method addWhere {column operator value} {
+        lappend :whereList [list $column $operator $value]
     }
 
     :public method setColumnTransform {column exprTemplate} {
@@ -29,6 +29,19 @@ nx::Class create UpdateSQLBuilder {
         return [ns_dbquotevalue $value]
     }
 
+    :method formatWhereCondition {column operator value} {
+        set op [string toupper $operator]
+        switch -- $op {
+            "IN" - "NOT IN" {
+                set values [join [lmap v $value { ns_dbquotevalue $v }] ", "]
+                return "$column $op ($values)"
+            }
+            default {
+                return "$column $op [ns_dbquotevalue $value]"
+            }
+        }
+    }
+
     :public method buildQuery {} {
         if {[dict size ${:setDict}] == 0} {
             return -code error "No columns provided for UPDATE."
@@ -41,8 +54,13 @@ nx::Class create UpdateSQLBuilder {
 
         set query "UPDATE ${:tableName} SET [join $assignments ", "]"
 
-        if {${:whereClause} ne ""} {
-            append query " WHERE ${:whereClause}"
+        if {[llength ${:whereList}] > 0} {
+            set conditions {}
+            foreach clause ${:whereList} {
+                lassign $clause column operator value
+                lappend conditions [:formatWhereCondition $column $operator $value]
+            }
+            append query " WHERE [join $conditions " AND "]"
         }
 
         return $query
