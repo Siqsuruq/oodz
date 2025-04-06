@@ -670,6 +670,27 @@ namespace eval oodz {
 					ns_adp_puts "<span class=\"input-group-text\" id=\"addon_$var\">$placeholder</span>"
 					ns_adp_puts "<input type=\"$type\" id=\"$var\" name=\"$var\" class=\"$class\" aria-describedby=\"addon_$var\" value=\"$i_v\" pattern=\"\[^\\x22\]+\" $mandatory $state $js>"
 					ns_adp_puts "</div>"
+				} elseif {$type eq "password"} {
+					ns_adp_puts "<div class=\"[: def_class group]\">"
+					ns_adp_puts "<label for=\"$var\" class=\"form-label\">$i_v</label>"
+					ns_adp_puts "<input type=\"$type\" class=\"$class\" id=\"$var\" name=\"$var\" placeholder=\"$placeholder\">"
+					ns_adp_puts "<button class=\"[: def_class button]\" type=\"button\" id=\"togglePassword\">"
+					ns_adp_puts "<i class=\"bi bi-eye\" id=\"toggleIcon\"></i>"
+					ns_adp_puts "</button>"
+					ns_adp_puts "</div>"
+
+					ns_adp_puts "<script>"
+					ns_adp_puts "const togglePassword = document.getElementById(\"togglePassword\");"
+					ns_adp_puts "const passwordField = document.getElementById(\"$var\");"
+					ns_adp_puts "const icon = document.getElementById(\"toggleIcon\");"
+
+					ns_adp_puts "togglePassword.addEventListener(\"click\", function () {"
+					ns_adp_puts "const isPassword = passwordField.type === \"password\";"
+					ns_adp_puts "passwordField.type = isPassword ? \"text\" : \"password\";"
+					ns_adp_puts "icon.classList.toggle(\"bi-eye\");"
+					ns_adp_puts "icon.classList.toggle(\"bi-eye-slash\");"
+					ns_adp_puts "});"
+					ns_adp_puts "</script>"
 				} else {
 					ns_adp_puts "<input id=\"$var\" name=\"$var\" type=\"$type\" class=\"$class\" placeholder=\"$placeholder\" value=\"$i_v\" pattern=\"\[^\\x22\]+\" $mandatory $state $js>"
 				}
