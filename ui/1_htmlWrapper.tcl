@@ -672,8 +672,8 @@ namespace eval oodz {
 					ns_adp_puts "</div>"
 				} elseif {$type eq "password"} {
 					ns_adp_puts "<div class=\"[: def_class group]\">"
-					ns_adp_puts "<label for=\"$var\" class=\"form-label\">$i_v</label>"
-					ns_adp_puts "<input type=\"$type\" class=\"$class\" id=\"$var\" name=\"$var\" placeholder=\"$placeholder\">"
+					ns_adp_puts "<label for=\"$var\" class=\"form-label\"></label>"
+					ns_adp_puts "<input type=\"$type\" class=\"$class\" id=\"$var\" name=\"$var\" placeholder=\"$placeholder\" value=\"$i_v\">"
 					ns_adp_puts "<button class=\"[: def_class button]\" type=\"button\" id=\"togglePassword\">"
 					ns_adp_puts "<i class=\"bi bi-eye\" id=\"toggleIcon\"></i>"
 					ns_adp_puts "</button>"

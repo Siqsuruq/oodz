@@ -1,5 +1,4 @@
 nx::Class create InsertSQLBuilder {
-    # Define the class properties
     :property tableName:required  ;# Name of the table to insert into (required)
     :property {rowsList ""}         ;# List of dictionaries (rows) to insert
     :property {returningColumns ""}
@@ -23,6 +22,10 @@ nx::Class create InsertSQLBuilder {
     # Method to set returning columns
     :public method setReturningColumns {columns} {
         set :returningColumns $columns
+    }
+
+    :public method setConflictAction {action} {
+        set :conflictAction $action
     }
 
     :public method setColumnTransform {column exprTemplate} {
