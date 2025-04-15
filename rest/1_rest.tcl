@@ -17,7 +17,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		set :obj_header [ns_conn headers]
 		oodzLog notice "************ V2 API CALL ******************"
 		oodzLog notice "METHOD: ${:reqType} - URL: ${:url}"
-		#oodzLog notice "HEADER: [ns_set array ${:obj_header}]"
+		oodzLog notice "HEADER: [ns_set array ${:obj_header}]"
 	}
 	
 	:public method answer_request {args} {

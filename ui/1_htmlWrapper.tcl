@@ -568,6 +568,7 @@ namespace eval oodz {
     				ns_adp_puts "view: 'timeGridWeek',"
 					ns_adp_puts "firstDay: 1,"
 					ns_adp_puts "height: '650px',"
+					ns_adp_puts "plugins: \['selectable','interaction'\],"
 					ns_adp_puts "selectable: true,"
 					ns_adp_puts "eventSources: \["
 					ns_adp_puts "{"
@@ -576,6 +577,15 @@ namespace eval oodz {
 					ns_adp_puts "contentType: 'application/x-www-form-urlencoded',"
 					ns_adp_puts "}"
 					ns_adp_puts "\],"
+					
+					ns_adp_puts "select: function (info) {"
+					ns_adp_puts "const formatDateTime = dt => dt.toISOString().slice(0, 16);"
+					ns_adp_puts "document.getElementById('dtstart').value = formatDateTime(info.start);"
+					ns_adp_puts "document.getElementById('dtend').value = formatDateTime(info.end);"
+					ns_adp_puts "const modal = new bootstrap.Modal(document.getElementById('add_event'));"
+					ns_adp_puts "modal.show();"
+					ns_adp_puts "},"
+
 					ns_adp_puts "eventClick: function(info) {"
 					ns_adp_puts "info.jsEvent.preventDefault();"
 					ns_adp_puts "const eventData = JSON.parse(JSON.stringify(info.event, (key, value) => {"
