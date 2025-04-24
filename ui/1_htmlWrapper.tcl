@@ -438,9 +438,7 @@ namespace eval oodz {
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
 							if {[dict get $pr_dict type] ne "empty"} {
 								ns_adp_puts "serverSide: $serverSide,"
-								ns_adp_puts "ajax: '$val',"
-								ns_adp_puts "type: 'POST',"
-								ns_adp_puts "dataSrc: 'data',"
+								ns_adp_puts "ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
 							}
 							
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
