@@ -80,6 +80,7 @@ nx::Class create datatablesClass {
         dict set :result columns ${:columns}
         dict set :result search ${:global_search}
         dict set :result search_columns ${:search_columns}
+        dict set :result order_columns ${:order_list}
         return -code ok ${:result}
     }
 

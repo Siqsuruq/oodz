@@ -53,6 +53,29 @@ namespace eval ::oodz {
 			delete_CkJsonObject $jObj
 		}
 
+		:public method Load {jsonStr} {
+			try {
+				CkJsonArray_Load ${:jsonArr} $jsonStr
+				return -code ok
+			} on error {err} {
+				return -code error "Error loading JSON array: $err"
+			}
+		}
+
+		:public method getSize {} {
+			set size [CkJsonArray_get_Size ${:jsonArr}]
+			return $size
+		}
+
+		:public method getObject {index} {
+			try {
+				set jObj [CkJsonArray_ObjectAt ${:jsonArr} $index]
+				return -code ok $jObj
+			} on error {errMsg} {
+				return -code error "Error getting JSON object at index $index: $errMsg"
+			}
+		}
+
 		:public method asJSON {} {
 			CkJsonArray_put_EmitCompact ${:jsonArr} 0
 			set res [CkJsonArray_emit ${:jsonArr}]

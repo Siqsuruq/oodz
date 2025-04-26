@@ -418,7 +418,12 @@ namespace eval oodz {
 					ns_adp_puts "<script>"
 						ns_adp_puts "\$('\#$var').DataTable( {"
 							ns_adp_puts "processing: true,"
-							ns_adp_puts "order: \[\[ 0, 'desc' \]\],"
+							if {[dict exists $pr_dict order]} {
+								set order [dict get $pr_dict order]
+								ns_adp_puts "order: \[\[ $order \]\],"
+							} else {
+								ns_adp_puts "order: \[\[ 0, 'desc' \]\],"
+							}
 							if {[dict exists $pr_dict select]} {
 								set select [dict get $pr_dict select]
 								switch $select {
@@ -438,7 +443,11 @@ namespace eval oodz {
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
 							if {[dict get $pr_dict type] ne "empty"} {
 								ns_adp_puts "serverSide: $serverSide,"
-								ns_adp_puts "ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
+								if {$serverSide eq "false"} {
+									ns_adp_puts "ajax: { url: '$val', dataSrc: 'data' },"	
+								} else {
+									ns_adp_puts "ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
+								}
 							}
 							
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }

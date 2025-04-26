@@ -69,6 +69,15 @@ namespace eval ::oodz {
 			delete_CkJsonArray $jArr
 		}
 
+		:public method Load {jsonStr} {
+			try {
+				CkJsonObject_Load ${:json} $jsonStr
+				return -code ok
+			} on error {err} {
+				return -code error "Error loading JSON array: $err"
+			}
+		}
+
 		:public method asJSON {} {
 			CkJsonObject_put_EmitCompact ${:json} 0
 			set res [CkJsonObject_emit ${:json}]
