@@ -1,43 +1,142 @@
 import { dataContainer } from './dataContainerClass.js';
 import { isRequiredFieldFilled } from './helperMethods.js';
 
-export function getFormData(form, ids, dataContainerInstance) {
+// export function getFormData(form, ids, dataContainerInstance) {
+//     if (!(dataContainerInstance instanceof dataContainer)) {
+//         throw new Error("Invalid dataContainer instance provided");
+//     }
+//     try {
+//         const filteredData = new FormData();
+//         const inputElements = ids.length > 0
+//             ? ids.map(id => form.querySelector(`#${id}`)).filter(Boolean) // Filter out nulls
+//             : Array.from(form.querySelectorAll('input, select, textarea'));
+
+//         // Validate fields
+//         const firstInvalidField = inputElements.find(inputElement =>
+//             inputElement.required && !isRequiredFieldFilled(inputElement, form)
+//         );
+
+//         if (firstInvalidField) {
+//             const fieldLabel = firstInvalidField.placeholder || firstInvalidField.name || "Unknown Field";
+//             throw new Error(`Field '${fieldLabel}' is required and not filled.`);
+//         }
+
+//         // Populate valid fields into FormData
+//         inputElements.forEach(inputElement => {
+//             // console.log("element: " + inputElement.id);
+//             if (!inputElement.name) {
+//                 // Skip fields without a name attribute (e.g., Bootstrap caption input)
+//                 return;
+//             }
+//             if (inputElement.type === 'file' && inputElement.files.length > 0) {
+//                 filteredData.append(inputElement.name, inputElement.files[0]);
+//             } else if (inputElement.type === 'checkbox') {
+//                 if (inputElement.checked) {
+//                     filteredData.append(inputElement.name, inputElement.value);
+//                 } else {
+//                     // Get the hidden input with the same name
+//                     const hiddenInput = form.querySelector(`input[type="hidden"][name="${inputElement.name}"]`);
+//                     if (hiddenInput) {
+//                         filteredData.append(hiddenInput.name, hiddenInput.value);
+//                     } else {
+//                         // Fallback if no hidden input present
+//                         filteredData.append(inputElement.name, "0");
+//                     }
+//                 }
+//             } else if (inputElement.type !== 'radio' || inputElement.checked) {
+//                 filteredData.append(inputElement.name, inputElement.value);
+//             }
+//         });
+
+//         // Update the data container with the filtered data
+//         dataContainerInstance.setFormData(filteredData);
+//     } catch (error) {
+//         console.error(error);
+//         throw error;
+//     }
+// }
+
+export function getFormData(defaultForm, ids = [], dataContainerInstance) {
     if (!(dataContainerInstance instanceof dataContainer)) {
         throw new Error("Invalid dataContainer instance provided");
     }
+
     try {
         const filteredData = new FormData();
-        const inputElements = ids.length > 0
-            ? ids.map(id => form.querySelector(`#${id}`)).filter(Boolean) // Filter out nulls
-            : Array.from(form.querySelectorAll('input, select, textarea'));
 
-        // Validate fields
-        const firstInvalidField = inputElements.find(inputElement =>
-            inputElement.required && !isRequiredFieldFilled(inputElement, form)
-        );
+        // --- Case 1: No IDs provided, collect ALL from default form ---
+        if (ids.length === 0) {
+            const elements = defaultForm.querySelectorAll('input, select, textarea');
+            elements.forEach(input => {
+                if (!input.name) return;
+                if (input.type === 'file' && input.files.length > 0) {
+                    filteredData.append(input.name, input.files[0]);
+                } else if (input.type === 'checkbox') {
+                    filteredData.append(input.name, input.checked ? input.value : '0');
+                } else if (input.type !== 'radio' || input.checked) {
+                    filteredData.append(input.name, input.value);
+                }
+            });
 
-        if (firstInvalidField) {
-            const fieldLabel = firstInvalidField.placeholder || firstInvalidField.name || "Unknown Field";
-            throw new Error(`Field '${fieldLabel}' is required and not filled.`);
+            dataContainerInstance.setFormData(filteredData);
+            return;
         }
 
-        // Populate valid fields into FormData
-        inputElements.forEach(inputElement => {
-            // console.log("element: " + inputElement.id);
-            if (!inputElement.name) {
-                // Skip fields without a name attribute (e.g., Bootstrap caption input)
-                return;
-            }
-            if (inputElement.type === 'file' && inputElement.files.length > 0) {
-                filteredData.append(inputElement.name, inputElement.files[0]);
-            } else if (inputElement.type === 'checkbox' && inputElement.checked) {
-                filteredData.append(inputElement.name, inputElement.value);
-            } else if (inputElement.type !== 'radio' || inputElement.checked) {
-                filteredData.append(inputElement.name, inputElement.value);
+        // --- Case 2: Group by form ID when dot notation used ---
+        const grouped = {};
+
+        ids.forEach(id => {
+            if (id.includes('.')) {
+                const [formId, fieldId] = id.split('.');
+                if (!grouped[formId]) grouped[formId] = [];
+                grouped[formId].push(fieldId);
+            } else {
+                if (!grouped['__default__']) grouped['__default__'] = [];
+                grouped['__default__'].push(id);
             }
         });
 
-        // Update the data container with the filtered data
+        for (const formId in grouped) {
+            const fieldIds = grouped[formId];
+            const form = formId === '__default__' ? defaultForm : document.getElementById(formId);
+
+            if (!form) {
+                console.warn(`Form with ID "${formId}" not found.`);
+                continue;
+            }
+
+            if (fieldIds.includes('*')) {
+                // Collect all inputs from that form
+                const elements = form.querySelectorAll('input, select, textarea');
+                elements.forEach(input => {
+                    if (!input.name) return;
+                    if (input.type === 'file' && input.files.length > 0) {
+                        filteredData.append(input.name, input.files[0]);
+                    } else if (input.type === 'checkbox') {
+                        filteredData.append(input.name, input.checked ? input.value : '0');
+                    } else if (input.type !== 'radio' || input.checked) {
+                        filteredData.append(input.name, input.value);
+                    }
+                });
+            } else {
+                // Specific fields from this form
+                fieldIds.forEach(fieldId => {
+                    const input = form.querySelector(`#${fieldId}, [name="${fieldId}"]`);
+                    if (input && input.name) {
+                        if (input.type === 'file' && input.files.length > 0) {
+                            filteredData.append(input.name, input.files[0]);
+                        } else if (input.type === 'checkbox') {
+                            filteredData.append(input.name, input.checked ? input.value : '0');
+                        } else if (input.type !== 'radio' || input.checked) {
+                            filteredData.append(input.name, input.value);
+                        }
+                    } else {
+                        console.warn(`Field "${fieldId}" not found in form "${formId}"`);
+                    }
+                });
+            }
+        }
+
         dataContainerInstance.setFormData(filteredData);
     } catch (error) {
         console.error(error);

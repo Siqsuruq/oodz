@@ -109,9 +109,9 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		try {
 			set req [::oodz::requestPayload new]
 			return $req
-		} on error {e} {
-			oodzLog error "Error getting form data."
-			: answer_error [dict create code 400 details "Form payload is malformed. $e"]
+		} on error {errMsg} {
+			oodzLog error "Error getting form data. $errMsg"
+			: answer_error [dict create code 400 details "Form payload is malformed. $errMsg"]
 			return 0
 		}
 	}

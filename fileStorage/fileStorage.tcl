@@ -31,7 +31,7 @@ namespace eval oodz {
 		:method save_to_db {filepath ext original_name} {
 			set qb [InsertSQLBuilder new -tableName filestorage]
 			try {
-				$qb addRow [dict create filepath $filepath ext $ext original_name $original_name dz_user [::oodzSession get uuid_user]]
+				$qb addRow [dict create filepath $filepath ext $ext original_name $original_name dz_user [::oodzSession get uuid_daidze_user]]
 				$qb setReturningColumns uuid_filestorage
 				set res [::db execute_query [$qb buildQuery]]
 				return -code ok [dict getnull [lindex $res 0] uuid_filestorage]
