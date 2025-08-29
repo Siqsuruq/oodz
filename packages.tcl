@@ -12,7 +12,6 @@ package require struct::list
 package require tdom
 package require htmlparse
 package require md5
-package require Pgtcl
 package require money
 package require mimext
 package require smtp
@@ -30,7 +29,6 @@ package require fileutil::magic::filetype
 package require sha256  
 package require valtype::common
 package require valtype::luhn
-package require TclCurl
 package require vfs
 package require ooxml
 

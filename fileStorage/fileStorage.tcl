@@ -81,9 +81,13 @@ namespace eval oodz {
 			try {
 				set result ""
 				foreach fileuuid $args {
-					set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
-					if {$fpath ne ""} {
-						lappend result $fpath
+					if {$fileuuid eq ""} {
+						continue
+					} else {
+						set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
+						if {$fpath ne ""} {
+							lappend result $fpath
+						}
 					}
 				}	
 				return $result
@@ -98,9 +102,13 @@ namespace eval oodz {
 			try {
 				set result ""
 				foreach fileuuid $args {
-					set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
-					if {$fpath ne ""} {
-						lappend result [file join ${:user_data_dir} $fpath]
+					if {$fileuuid eq ""} {
+						continue
+					} else {
+						set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
+						if {$fpath ne ""} {
+							lappend result [file join ${:user_data_dir} $fpath]
+						}
 					}
 				}
 				return $result	
@@ -114,10 +122,15 @@ namespace eval oodz {
 			try {
 				set result ""
 				foreach fileuuid $args {
-					set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
-					if {$fpath ne ""} {
-						lappend result [ns_absoluteurl [file join [::oodzConf get_global user_data_dir] $fpath] [::oodzConf get srvaddress L]]
-						# lappend result [file join "[::oodzConf get srvaddress L]" [::oodzConf get_global user_data_dir] $fpath]
+					puts "Getting file URL for uuid: $fileuuid"
+					if {$fileuuid eq "" || $fileuuid eq "{}"} {
+						continue
+					} else {
+						set fpath [dict getnull [lindex [::db select_all filestorage filepath uuid_filestorage=\'$fileuuid\'] 0] filepath]
+						if {$fpath ne ""} {
+							lappend result [ns_absoluteurl [file join [::oodzConf get_global user_data_dir] $fpath] [::oodzConf get srvaddress L]]
+							# lappend result [file join "[::oodzConf get srvaddress L]" [::oodzConf get_global user_data_dir] $fpath]
+						}
 					}
 				}
 				return $result	

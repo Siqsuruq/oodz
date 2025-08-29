@@ -130,6 +130,25 @@ nx::Class create SQLBuilder {
         set :offset $offsetValue
     }
 
+    :public method addDateRange {column start end {kind "timestamptz"}} {
+        if {$start eq "" || $end eq ""} {
+            return -code error "addDateRange needs non-empty start and end"
+        }
+        set kind [string tolower $kind]
+        if {$kind ni {date timestamp timestamptz}} {
+            return -code error "Unsupported kind '$kind' (use date|timestamp|timestamptz)"
+        }
+
+        set s [ns_dbquotevalue $start]
+        set e [ns_dbquotevalue $end]
+
+        # Build full casted literals without triggering Tcl namespace parsing
+        set startExpr "${s}::${kind}"
+        set endExpr   "${e}::${kind}"
+
+        :addComplexCondition "$column >= $startExpr AND $column < $endExpr" AND
+    }
+
     # Define the clear method
 	# Method that resets the SQLBuilder's properties related to LIMIT, OFFSET, ORDER BY, GROUP BY, and conditions (the WHERE clause)
     :public method clear {} {

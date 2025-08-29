@@ -604,7 +604,7 @@ namespace eval oodz {
 					} else {
 						if {[dict get $data $col] != ""} {
 							if {[dict get $tbl_cols $col] eq "bytea"} {
-								lappend my_values '[pg_escape_bytea [dict get $data $col]]'
+								lappend my_values [ns_dbquotevalue [dict get $data $col]]
 							} elseif {[dict get $tbl_cols $col] eq "ARRAY"} {
 								set values_list ""
 								set orig_values_list [dict get $data $col]
@@ -683,7 +683,7 @@ namespace eval oodz {
 					} else {
 						if {$val != ""} {
 							if {[: get_columns_types $table $col] eq "bytea"} {
-								lappend my_values $col='[pg_escape_bytea $val]'
+								lappend my_values $col=[ns_dbquotevalue $val]
 							} else {
 								if {$nspace != 1} {
 									lappend my_values $col=[ns_dbquotevalue $val]

@@ -71,6 +71,9 @@ namespace eval oodz {
 			try {
 				if {[llength $args] == 0} {
 					set objprops [: info vars]
+					puts "----------------------------------------------------"
+					puts "Clearing object ${:obj} properties: $objprops"
+					puts "----------------------------------------------------"
 					foreach prop $objprops {
 						if {$prop ne "obj"} {
 							if {[:prop_isobj [: cget -${prop}]] == 1} {
@@ -92,7 +95,7 @@ namespace eval oodz {
 					}
 				}
 			} on error {errMsg} {
-				return -code error $errMsg
+				return -code error "clear method: $errMsg"
 			}
 		}
 
@@ -113,9 +116,24 @@ namespace eval oodz {
 
 		:public method delete {args} {
 			try {
-				if {[dict exists [:get] id] || [dict exists [:get] uuid_${:obj}]} {
-					set res [::db delete_row ${:obj} [:get id]]
-					: clear
+				set values [:get]
+				set uuidKey uuid_${:obj}
+				set uuid [dict getnull $values $uuidKey]
+				set id [dict getnull $values id]
+
+				if {![string equal $uuid ""]} {
+					puts "**********************************************"
+					puts "Deleting object ${:obj} with uuid: $uuid"
+					puts "**********************************************"
+					set res [::db delete_row ${:obj} $uuid]
+					:clear
+					return -code ok $res
+				} elseif {![string equal $id ""]} {
+					puts "**********************************************"
+					puts "Deleting object ${:obj} with id: $id"
+					puts "**********************************************"
+					set res [::db delete_row ${:obj} $id]
+					:clear
 					return -code ok $res
 				} else {
 					return -code error "No id or uuid_${:obj} found"

@@ -194,6 +194,8 @@ namespace eval oodz {
 				}
 				set dd [:get]
 				foreach key [dict keys $dd] {
+					puts "*-*-*-*-*-*-*-*-*-*-*-*-*-*"
+					puts "Adding key: $key to cache: $cache_name"
 					ns_cache_append $cache_name $key [dict get $dd $key]
 				}
 			}

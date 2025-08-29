@@ -9,71 +9,95 @@ nx::Class create datatablesClass {
     :property {global_search_regex 0}
     :property {limit ""}
     :property {offset ""}
+    :property {valid_columns ""}
+    :property {table_name ""}
 
-:public method parse_datatable_request {} {
-    try {
-        set columnsDict [dict create]
-        set orderDict [dict create]
-
-        foreach key [dict keys ${:req}] {
-            set val [dict get ${:req} $key]
-            # Build columns dict
-            if {[regexp {^columns\[(\d+)\]\[(\w+)\]$} $key -> colIdx prop]} {
-                set column [dict getnull $columnsDict $colIdx]
-                dict set column $prop $val
-                dict set columnsDict $colIdx $column
-                continue
-            }
-
-            # Build order[i] → dict
-            if {[regexp {^order\[(\d+)\]\[(\w+)\]$} $key -> ordIdx prop]} {
-                set order [dict getnull $orderDict $ordIdx]
-                dict set order $prop $val
-                dict set orderDict $ordIdx $order
-                continue
-            }
-
-            if {[string equal $key "search\[value\]"]} {
-                set :global_search $val
-                continue
-            }
-
-            if {[string equal $key "search\[regex\]"]} {
-                set :global_search_regex $val
-                continue
+    :method init {} {
+        if {${:table_name} ne ""} {
+            try {
+                set :valid_columns [::db select_columns_names ${:table_name}]
+                return -code ok
+            } on error {errMsg} {
+                return -code error $errMsg
             }
         }
+    }
 
-        # Inject order info into corresponding columns
-        dict for {idx orderEntry} $orderDict {
-            if {
-                [dict exists $orderEntry column] &&
-                [dict exists $orderEntry dir]
-            } {
-                set colIdx [dict get $orderEntry column]
-                set dir [dict get $orderEntry dir]
-                set column [dict getnull $columnsDict $colIdx]
-                if {$column ne ""} {
-                    dict set column order_direction $dir
-                    dict set column order_index $idx
+    :public method parse_datatable_request {} {
+        try {
+            set columnsDict [dict create]
+            set orderDict [dict create]
+
+            foreach key [dict keys ${:req}] {
+                set val [dict get ${:req} $key]
+                # Build columns dict
+                if {[regexp {^columns\[(\d+)\]\[(\w+)\]$} $key -> colIdx prop]} {
+                    set column [dict getnull $columnsDict $colIdx]
+                    dict set column $prop $val
                     dict set columnsDict $colIdx $column
+                    continue
+                }
+
+                # Build order[i] → dict
+                if {[regexp {^order\[(\d+)\]\[(\w+)\]$} $key -> ordIdx prop]} {
+                    set order [dict getnull $orderDict $ordIdx]
+                    dict set order $prop $val
+                    dict set orderDict $ordIdx $order
+                    continue
+                }
+
+                if {[string equal $key "search\[value\]"]} {
+                    set :global_search $val
+                    continue
+                }
+
+                if {[string equal $key "search\[regex\]"]} {
+                    set :global_search_regex $val
+                    continue
                 }
             }
-        }
 
-        # Store dicts directly into instance properties
-        set :columns $columnsDict
-        set :order_columns_indx $orderDict
-        
-        :pagination
-        :order
-        :search
-        :result
-        return -code ok ${:result}
-    } on error {errMsg} {
-        return -code error "Method parse_datatable_request: $errMsg"
+            set filteredColumns [dict create]
+            dict for {colIdx column} $columnsDict {
+                if {[dict exists $column data]} {
+                    set colName [dict get $column data]
+                    if {[lsearch -exact ${:valid_columns} $colName] != -1} {
+                        dict set filteredColumns $colIdx $column
+                    }
+                }
+            }
+            set :columns $filteredColumns
+
+            # Inject order info into corresponding columns
+            dict for {idx orderEntry} $orderDict {
+                if {
+                    [dict exists $orderEntry column] &&
+                    [dict exists $orderEntry dir]
+                } {
+                    set colIdx [dict get $orderEntry column]
+                    set dir [dict get $orderEntry dir]
+                    set column [dict getnull $columnsDict $colIdx]
+                    if {$column ne ""} {
+                        dict set column order_direction $dir
+                        dict set column order_index $idx
+                        dict set columnsDict $colIdx $column
+                    }
+                }
+            }
+
+            # Store dicts directly into instance properties
+            #set :columns $columnsDict
+            set :order_columns_indx $orderDict
+            
+            :pagination
+            :order
+            :search
+            :result
+            return -code ok ${:result}
+        } on error {errMsg} {
+            return -code error "Method parse_datatable_request: $errMsg"
+        }
     }
-}
 
     # Compose :result dict
     :method result {} {
@@ -109,6 +133,7 @@ nx::Class create datatablesClass {
     }
 
     :public method build_query {tableName} {
+        set :valid_columns [::db select_columns_names $tableName]
         :parse_datatable_request
         set sb [SQLBuilder new -tableName $tableName]
         try {

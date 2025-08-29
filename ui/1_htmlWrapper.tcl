@@ -468,25 +468,34 @@ namespace eval oodz {
 						ns_adp_puts "} );"
 					ns_adp_puts "</script>"
 
+					if {[dict getnull $pr_dict confirm_delete] ne ""} {
 					ns_adp_puts "<!-- Bootstrap Modal -->"
-					ns_adp_puts "<div id='deleteConfirmationModal' class='modal fade' tabindex='-1'>"
-						ns_adp_puts "<div class='modal-dialog'>"
-							ns_adp_puts "<div class='modal-content'>"
-								ns_adp_puts "<div class='modal-header'>"
-									ns_adp_puts "<h5 class='modal-title'>[::msgcat::mc "Confirm Deletion"]</h5>"
-									ns_adp_puts "<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
-									ns_adp_puts "</button>"
-								ns_adp_puts "</div>"
-								ns_adp_puts "<div class='modal-body'>"
-									ns_adp_puts "<p>[::msgcat::mc "Are you sure you want to delete the selected rows?"]</p>"
-								ns_adp_puts "</div>"
-								ns_adp_puts "<div class='modal-footer'>"
-									ns_adp_puts "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>[::msgcat::mc "Cancel"]</button>"
-									ns_adp_puts "<button id='confirmDeleteButton' class='btn btn-danger'>[::msgcat::mc "Delete"]</button>"
+						ns_adp_puts "<div id='deleteConfirmationModal' class='modal fade' tabindex='-1'>"
+							ns_adp_puts "<div class='modal-dialog'>"
+								ns_adp_puts "<div class='modal-content'>"
+									ns_adp_puts "<div class='modal-header'>"
+										ns_adp_puts "<h5 class='modal-title'>[::msgcat::mc "Confirm Deletion"]</h5>"
+										ns_adp_puts "<button type='button' class='btn-close' data-bs-dismiss='modal' aria-label='Close'></button>"
+									ns_adp_puts "</div>"
+									ns_adp_puts "<div class='modal-body'>"
+										ns_adp_puts "<p>[::msgcat::mc "Are you sure you want to delete the selected rows?"]</p>"
+									ns_adp_puts "</div>"
+									ns_adp_puts "<div class='modal-footer'>"
+										ns_adp_puts "<button type='button' class='btn btn-secondary' data-bs-dismiss='modal'>[::msgcat::mc "Cancel"]</button>"
+										ns_adp_puts "<button id='confirmDeleteButton' class='btn btn-danger'>[::msgcat::mc "Delete"]</button>"
+									ns_adp_puts "</div>"
 								ns_adp_puts "</div>"
 							ns_adp_puts "</div>"
 						ns_adp_puts "</div>"
-					ns_adp_puts "</div>"
+					}
+
+					puts "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+					set i_v [: Check_sdata $var]
+					puts "Table has data: $i_v"
+					foreach row $i_v {
+						puts "Row: [$row asJSON]"
+					}
+					puts "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 				}
 			################################################# DATE #################################################
 			# NEW DATE TIME RELATED 
@@ -582,6 +591,11 @@ namespace eval oodz {
 					ns_adp_puts "url: \"$action\","
 					ns_adp_puts "method: 'POST',"
 					ns_adp_puts "contentType: 'application/x-www-form-urlencoded',"
+					if {[dict exists $pr_dict uuid_planer]} {
+						ns_adp_puts "extraParams: { uuid_planer: '$uuid_planer' }"
+					} else {
+						puts "DEFAULT PLANER IS NOT DEFINED"
+					}
 					ns_adp_puts "}"
 					ns_adp_puts "\],"
 					
@@ -691,7 +705,7 @@ namespace eval oodz {
 					ns_adp_puts "<div class=\"[: def_class group]\">"
 					ns_adp_puts "<label for=\"$var\" class=\"form-label\"></label>"
 					ns_adp_puts "<input type=\"$type\" class=\"$class\" id=\"$var\" name=\"$var\" placeholder=\"$placeholder\" value=\"$i_v\">"
-					ns_adp_puts "<button class=\"[: def_class button]\" type=\"button\" id=\"togglePassword\">"
+					ns_adp_puts "<button class=\"btn btn-outline-dark btn-sm\" type=\"button\" id=\"togglePassword\">"
 					ns_adp_puts "<i class=\"bi bi-eye\" id=\"toggleIcon\"></i>"
 					ns_adp_puts "</button>"
 					ns_adp_puts "</div>"
@@ -740,9 +754,11 @@ namespace eval oodz {
 				} else {
 					ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
 				}
-			}  elseif {[lindex $cmd 0] eq "modal"} {
+			} elseif {[lindex $cmd 0] eq "modal"} {
 				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" data-bs-toggle=\"modal\" data-bs-target=\"\#[dict get $pr_dict but_cmd]\">$img_tag [::msgcat::mc "$val"]</button><br>"
 			} elseif {[lindex $cmd 0] eq "js"} {
+				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\" $js>$img_tag [::msgcat::mc "$val"]</button><br>"
+			} elseif {[lindex $cmd 0] eq "js2"} {
 				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\" $js>$img_tag [::msgcat::mc "$val"]</button><br>"
 			} else {
 				ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
@@ -766,7 +782,20 @@ namespace eval oodz {
 		############################################ PROP2DICT ############################################
 
 		:method props_2_dict {props tag val} {
+			
+
 			set prop [string map {= { }} $props]
+			# set prop [dict create]
+			# foreach {key value} [regexp -all -inline {(\w+)="([^"]*)"} $props] {
+			# 	dict set prop $key $value
+			# }
+			# puts "---------------------------------------------------------------------------------------------------------------------------------------"
+			# puts "props_2_dict: $props"
+			# puts "PROP: [regexp -all -inline {(\w+)="([^"]*)"} $props]"
+			# puts "tag: $tag"
+			# puts "val: $val"
+
+			# puts "---------------------------------------------------------------------------------------------------------------------------------------"
 			
 			######################### FOR ALL WIDGETS #########################
 			
@@ -802,9 +831,14 @@ namespace eval oodz {
 			
 			################### END CHECKS FOR ALL WIDGETS ###################
 
+			# JavaScript events version 2
+			if {[dict exists $prop js2] == 1} {
+				set js [::htmlparse::mapEscapes [dict get $prop js]]
+				set js_event [dict get $js event]
+				set js_functions [dict get $js func]
+				set prop [dict replace $prop js "$js_event=\"$js_functions\""]
+			}
 			
-
-
 			# JavaScript events
 			if {[dict exists $prop js] == 1} {
 				set js [::htmlparse::mapEscapes [dict get $prop js]]
@@ -984,9 +1018,9 @@ namespace eval oodz {
 				date "form-control form-control-sm oodz_txt"\
 				time "form-control form-control-sm oodz_txt"\
 				clock "form-control form-control-sm oodz_txt"\
-				button "btn btn-outline-dark btn-sm btn-block"\
-				jsbutton "btn btn-outline-dark btn-sm btn-block"\
-				mod_button "btn btn-outline-dark btn-sm btn-block"\
+				button "btn btn-outline-dark btn-sm w-100"\
+				jsbutton "btn btn-outline-dark btn-sm w-100"\
+				mod_button "btn btn-outline-dark btn-sm w-100"\
 				modal ""\
 				text "form-control oodz_txt"\
 				msg "alert alert-dark"\

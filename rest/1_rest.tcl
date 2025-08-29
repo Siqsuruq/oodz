@@ -196,11 +196,34 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				CkJsonObject_AddNumberAt $json -1 "$key" $val
 			} elseif {$key eq "data"} {
 				if {$content_type eq "application/json"} {
-					set tmpJsonObj [new_CkJsonObject]
-					CkJsonObject_put_Utf8 $tmpJsonObj 1
-					CkJsonObject_Load $tmpJsonObj $val
-					CkJsonObject_AddObjectCopyAt $json -1 "$key" $tmpJsonObj
-					delete_CkJsonObject $tmpJsonObj
+					
+					set jobj [::oodz::Json new]
+					puts "***********************************************"
+					puts [$jobj get_json_type $val]
+					puts "***********************************************"
+					try {
+						
+						if {[$jobj get_json_type $val] eq "object"} {
+							set tmpJsonObj [new_CkJsonObject]
+							CkJsonObject_put_Utf8 $tmpJsonObj 1
+							CkJsonObject_Load $tmpJsonObj $val
+							CkJsonObject_AddObjectCopyAt $json -1 "$key" $tmpJsonObj
+							delete_CkJsonObject $tmpJsonObj
+						} elseif {[$jobj get_json_type $val] eq "array"} {
+							set tmpJsonArr [new_CkJsonArray]
+							CkJsonArray_put_Utf8 $tmpJsonArr 1
+							CkJsonArray_Load $tmpJsonArr $val
+							CkJsonObject_AppendArrayCopy $json "$key" $tmpJsonArr
+							delete_CkJsonArray $tmpJsonArr
+						} else {
+							CkJsonObject_AddStringAt $json -1 "$key" "Invalid JSON data type"
+						}
+					} on error {errMsg} {
+						oodzLog error "Error loading JSON data: $errMsg"
+						CkJsonObject_AddStringAt $json -1 "$key" "Error loading JSON data: $errMsg"
+					} finally {
+						$jobj destroy
+					}
 				} else {
 					CkJsonObject_AddStringAt $json -1 "$key" $val
 				}
@@ -220,9 +243,9 @@ nx::Class create apiin -superclass ::oodz::superClass {
 	
 	:method answer {args} {
 		set response [lindex $args 0]
-		#puts  "------------------------------------------"
-		#puts $response
-		#puts  "------------------------------------------"
+		# puts  "------------------------------------------"
+		# puts $response
+		# puts  "------------------------------------------"
 		switch [dict getnull $response type] {
 			json {set content_type "application/json"}
 			xml {set content_type "application/xml"}
