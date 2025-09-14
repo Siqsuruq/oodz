@@ -31,7 +31,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		if {[file isdirectory [file join ${:srvpath} [oodzConf get_global mod_dir] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
 			set values [lrange $surl 4 end]
 			set params [: get_body]
-			# puts "REQUEST: ${:reqType} VALUES: $values PARAMS: $params"
 			if {$params != 0} {
 				# Execute call and get result list.
 				set result [::${resource}::Api dispatcher ${:reqType} $values $params ${:url}]
@@ -52,7 +51,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 	
 	:method get_header {args} {
 		set what [lindex $args 0]
-		# puts "HEADER: [dz::ns_set_to_dict ${:obj_header}]"
 		if {$what eq "content_type"} {
 			set CT_str [ns_set iget ${:obj_header} "Content-Type"]
 			if {[set idx [string first ";" $CT_str]] != -1} {
@@ -84,10 +82,8 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		if {$content_type eq "" && ${:reqType} in {GET DELETE}} {
 			return [: handle_form_body]
 		} elseif {[dict exists $content_handlers $content_type]} {
-			# puts "EXECUTING : [dict get $content_handlers $content_type]"
 			return [: [dict get $content_handlers $content_type]]
 		} elseif {$content_length ne 0} {
-			# puts "EXECUTING BIN : $content_length"
 			return [: handle_binary_body]
 		} else {
 			oodzLog warning "Empty payload."
@@ -198,9 +194,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				if {$content_type eq "application/json"} {
 					
 					set jobj [::oodz::Json new]
-					puts "***********************************************"
-					puts [$jobj get_json_type $val]
-					puts "***********************************************"
 					try {
 						
 						if {[$jobj get_json_type $val] eq "object"} {
@@ -243,9 +236,6 @@ nx::Class create apiin -superclass ::oodz::superClass {
 	
 	:method answer {args} {
 		set response [lindex $args 0]
-		# puts  "------------------------------------------"
-		# puts $response
-		# puts  "------------------------------------------"
 		switch [dict getnull $response type] {
 			json {set content_type "application/json"}
 			xml {set content_type "application/xml"}

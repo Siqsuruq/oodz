@@ -350,11 +350,11 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					
+					set i_v [: Check_sdata $var]
 					set theads_trns {}
 					set theads {}
-
-					#------------- START Table Headers
+					set existing_data ""
+					# START Table Headers
 					if {[dict exists $pr_dict headers_type] != 0 && [dict get $pr_dict headers_type] == "list"} {
 						foreach t [dict get $pr_dict headers] {
 							lappend theads_trns [::msgcat::mc $t]
@@ -367,7 +367,7 @@ namespace eval oodz {
 							lappend theads $t
 						}
 					}
-					#------------- STOP Table Headers
+					# STOP Table Headers
 
 					ns_adp_puts "<br>"
 					ns_adp_puts "<div class=\"table-responsive-xl\">"
@@ -383,6 +383,17 @@ namespace eval oodz {
 					ns_adp_puts "</thead>"
 					
 					#------------- START Table Data
+					if {$i_v ne ""} {
+						set existing_data "\["
+						for {set i 0} {$i < [llength $i_v]} {incr i} {
+							append existing_data [::json::write object-strings {*}[lindex $i_v $i]]
+							if {$i < ([llength $i_v]-1)} {
+								append existing_data ","
+							}
+						}
+						append existing_data "\]"
+						set serverSide "false"
+					}
 					#------------- STOP Table Data
 					
 					
@@ -444,12 +455,17 @@ namespace eval oodz {
 							if {[dict get $pr_dict type] ne "empty"} {
 								ns_adp_puts "serverSide: $serverSide,"
 								if {$serverSide eq "false"} {
-									ns_adp_puts "ajax: { url: '$val', dataSrc: 'data' },"	
+									#ns_adp_puts "ajax: { url: '$val', dataSrc: 'data' },"
+									ns_adp_puts "data: $existing_data,"
 								} else {
 									ns_adp_puts "ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
 								}
 							}
 							
+							if {$existing_data ne ""} {
+								ns_adp_puts "data: $existing_data,"
+							}
+
 							if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
 							ns_adp_puts "multiSort: $multiSort,"
 							set a_trns [::msgcat::mc "Show all"]
@@ -488,14 +504,6 @@ namespace eval oodz {
 							ns_adp_puts "</div>"
 						ns_adp_puts "</div>"
 					}
-
-					puts "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
-					set i_v [: Check_sdata $var]
-					puts "Table has data: $i_v"
-					foreach row $i_v {
-						puts "Row: [$row asJSON]"
-					}
-					puts "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
 				}
 			################################################# DATE #################################################
 			# NEW DATE TIME RELATED 

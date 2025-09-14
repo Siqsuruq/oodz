@@ -90,7 +90,7 @@ nx::Class create InsertSQLBuilder {
         }
 
         set valuesStr [join $valuesList ", "]
-        set query "INSERT INTO ${:tableName} ([join $columns ", "]) VALUES $valuesStr"
+        set query "INSERT INTO \"${:tableName}\" ([join $columns ", "]) VALUES $valuesStr"
 
         if {[llength ${:returningColumns}] > 0} {
             append query " RETURNING [join ${:returningColumns} ", "]"

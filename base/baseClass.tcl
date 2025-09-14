@@ -194,15 +194,13 @@ namespace eval oodz {
 				}
 				set dd [:get]
 				foreach key [dict keys $dd] {
-					puts "*-*-*-*-*-*-*-*-*-*-*-*-*-*"
-					puts "Adding key: $key to cache: $cache_name"
 					ns_cache_append $cache_name $key [dict get $dd $key]
 				}
 			}
 		}
 
 		:public method destroy {} {
-			puts "Destroying object: [current object] of [[current object] info class] class."
+			oodzLog debug "Destroying object: [current object] of [[current object] info class] class."
 			next
 		}
 

@@ -162,7 +162,7 @@ nx::Class create SQLBuilder {
 
     # Define the buildCountQuery method
     :public method buildCountQuery {} {
-        set query "SELECT COUNT(*) FROM ${:tableName}"
+        set query "SELECT COUNT(*) FROM \"${:tableName}\""
 
         foreach join ${:joinList} {
             set joinType [lindex $join 0]
@@ -190,7 +190,7 @@ nx::Class create SQLBuilder {
             set columns "*"
         }
 
-        set query "SELECT $columns FROM ${:tableName}"
+        set query "SELECT $columns FROM \"${:tableName}\""
 
         foreach join ${:joinList} {
             set joinType [lindex $join 0]
