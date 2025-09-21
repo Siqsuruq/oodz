@@ -181,7 +181,7 @@ namespace eval oodz {
 				}
 			} elseif {$tag eq "legend"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</legend></div></div><hr>\n"
+					ns_adp_puts  "</legend></div></div>\n"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
