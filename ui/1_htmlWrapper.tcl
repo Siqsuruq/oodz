@@ -451,7 +451,11 @@ namespace eval oodz {
 							} else {
 								ns_adp_puts "select: false,"
 							}
-							if {[::oodz::DataType is_bool [dict getnull $pr_dict serverSide]]} { set serverSide true } else { set serverSide false }
+							if {![::oodz::DataType is_bool [dict getnull $pr_dict serverSide]] || [dict getnull $pr_dict serverSide]} {
+								set serverSide true
+							} else {
+								set serverSide false
+							}
 							if {[dict get $pr_dict type] ne "empty"} {
 								ns_adp_puts "serverSide: $serverSide,"
 								if {$serverSide eq "false"} {
@@ -461,6 +465,10 @@ namespace eval oodz {
 									ns_adp_puts "ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
 								}
 							}
+
+							
+
+
 							
 							if {$existing_data ne ""} {
 								ns_adp_puts "data: $existing_data,"

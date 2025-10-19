@@ -81,7 +81,6 @@ proc load_dz_procs {args} {
 					if {[regexp {Class.tcl} $file] == 1} {
 						load_oodz_class $file
 					} else {
-						puts "CURRENT NAMESPACE [namespace current] --> $file"
 						source $file
 					}
 				}
@@ -92,7 +91,6 @@ proc load_dz_procs {args} {
 
 # If filename ends with *Class.tcl loads in global namespace
 proc load_oodz_class {args} {
-	puts "CURRENT NAMESPACE [namespace current] --> [lindex $args 0]"
 	source [lindex $args 0]
 }
 
