@@ -7,6 +7,13 @@ namespace eval oodz {
 
 		:public method parse {module xmlFile} {
 			set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xmlFile]
+			# Guards
+			if {[file isdirectory $xml_file]} {
+				return -code error "Expected XML file, got directory: $xml_file"
+			}
+			if {![file exists $xml_file]} {
+				return -code error "XML not found: $xml_file"
+			}
 			set doc [dom parse [tdom::xmlReadFile $xml_file]]
 			set hd "[$doc asXML]"
 			::htmlparse::parse -cmd [list [self] html_wrapper] $hd
@@ -754,7 +761,6 @@ namespace eval oodz {
 				set img_tag "<span class=\"me-2\"><img src=\"[ns_absoluteurl [dict get $pr_dict img] [oodzConf get_global icons_dir]]\"></span>"
 			} else {set img_tag ""}
 
-			# puts "CMD: $cmd"
 			if {$cmd eq "reset_values" || $type eq "reset"} {
 				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.resetForm(event)\">$img_tag $placeholder</button>"
 			} elseif {$cmd eq "clear_values" || $type eq "clear"} {

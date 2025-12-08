@@ -245,5 +245,23 @@ namespace eval oodz {
 			set epochTime [clock scan $clean_timestamp -format "%Y-%m-%dT%H:%M:%S" -gmt false]
 			return [clock format $epochTime -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
 		}
+
+		:public method db_to_local_date {db_timestamp} {
+			# Convert database timestamp (2025-11-04 23:25:29) to Cape Verde date
+			set epochTime [clock scan $db_timestamp -format "%Y-%m-%d %H:%M:%S" -timezone "UTC"]
+			return [clock format $epochTime -format "%Y-%m-%d" -timezone "${:timezone}"]
+		}
+
+		:public method db_to_local_time {db_timestamp} {
+			# Convert database timestamp (2025-11-04 23:25:29) to Cape Verde time
+			set epochTime [clock scan $db_timestamp -format "%Y-%m-%d %H:%M:%S" -timezone "UTC"]
+			return [clock format $epochTime -format "%H:%M:%S" -timezone "${:timezone}"]
+		}
+
+		:public method db_to_local_datetime {db_timestamp} {
+			# Convert database timestamp to Cape Verde date and time
+			set epochTime [clock scan $db_timestamp -format "%Y-%m-%d %H:%M:%S" -timezone "UTC"]
+			return [clock format $epochTime -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
+		}
 	}
 }
