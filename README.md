@@ -3,7 +3,7 @@
 
 "OODZ" is a simple collection of NX (Next-Scripting Framework https://next-scripting.org/xowiki/) object oriented classes for developing the RestFull APIs and Web Applications using Tcl and Naviserver.
 
-It is still a work in progress :)
+It is still a work in progress :) Version: 2.0.0
 
 ---
 ## How to install "OODZ"
