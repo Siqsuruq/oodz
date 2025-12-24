@@ -3,20 +3,65 @@ namespace eval oodz {
 		# Possible result formats are: D - Tcl dict, L - Tcl list, J - JSON, default is Tcl dict
 		:property {result_format "D"}
 		
+		# :method with_db {varName script} {
+		# 	upvar 1 $varName dbh
+		# 	set dbh [ns_db gethandle]
+		# 	try {
+		# 		uplevel 1 $script
+		# 	} finally {
+		# 		ns_db releasehandle $dbh
+		# 	}
+		# }
+
+		:method with_db {varName script} {
+			upvar 1 $varName dbh
+
+			# One handle per thread; nested calls reuse it.
+			set key "__oodz_dbh__[ns_info server]"
+			set depthKey "__oodz_dbh_depth__[ns_info server]"
+
+			# If already inside with_db on this thread, reuse
+			if {[info exists ::$key]} {
+				set dbh [set ::$key]
+				incr ::$depthKey
+				try {
+					uplevel 1 $script
+				} finally {
+					incr ::$depthKey -1
+				}
+				return
+			}
+
+			# Outermost: acquire + release
+			set pool "[ns_info server]pool1"
+			set dbh [ns_db gethandle $pool]
+			set ::$key $dbh
+			set ::$depthKey 1
+
+			try {
+				uplevel 1 $script
+			} finally {
+				# release only once (outermost)
+				catch { ns_db releasehandle $dbh }
+				unset -nocomplain ::$key ::$depthKey
+			}
+		}
+
+
 		:public method show_pg_version {} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT version();"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] version]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] version]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}			
 		}
@@ -24,17 +69,17 @@ namespace eval oodz {
 		:public method current_database {} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT current_database();"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] current_database]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] current_database]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}			
 		}
@@ -43,9 +88,10 @@ namespace eval oodz {
 			set result 0
 			set code "ok"
 			set query "SELECT tbl_view_exists([ns_dbquotevalue $table])"
-			set :db_handles [ns_db gethandle]
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+				}
 				if {$row eq ""} {
 					set result 0
 				} else {
@@ -58,7 +104,6 @@ namespace eval oodz {
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -66,17 +111,17 @@ namespace eval oodz {
 		:public method select_uuid_by_id {table id} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT uuid_${table} FROM $table WHERE id=[ns_dbquotevalue $id]"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] uuid_${table}]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] uuid_${table}]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -84,17 +129,17 @@ namespace eval oodz {
 		:public method select_id_by_uuid {table uuid} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT id FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] id]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] id]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -102,19 +147,19 @@ namespace eval oodz {
 		:public method select_id_by_name {table name} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT id FROM $table WHERE name=[ns_dbquotevalue $name]"
 			try {
-				set rows [ns_db select ${:db_handles} $query]
-				while {[ns_db getrow ${:db_handles} $rows]} {
-					lappend result [dict get [ns_set array $rows] id]
+				:with_db dbh {
+					set rows [ns_db select $dbh $query]
+					while {[ns_db getrow $dbh $rows]} {
+						lappend result [dict get [ns_set array $rows] id]
+					}
 				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -122,19 +167,19 @@ namespace eval oodz {
 		:public method select_uuid_by_name {table name} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT uuid_$table FROM $table WHERE name=[ns_dbquotevalue $name]"
 			try {
-				set rows [ns_db select ${:db_handles} $query]
-				while {[ns_db getrow ${:db_handles} $rows]} {
-					lappend result [dict get [ns_set array $rows] uuid_$table]
+				:with_db dbh {
+					set rows [ns_db select $dbh $query]
+					while {[ns_db getrow $dbh $rows]} {
+						lappend result [dict get [ns_set array $rows] uuid_$table]
+					}
 				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -142,17 +187,17 @@ namespace eval oodz {
 		:public method select_col_by_id {table column id} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT $column FROM $table WHERE id=[ns_dbquotevalue $id]"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] $column]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] $column]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -160,17 +205,17 @@ namespace eval oodz {
 		:public method select_col_by_uuid {table column uuid} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT [ns_dbquotevalue $column] FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] $column]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] $column]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -178,17 +223,17 @@ namespace eval oodz {
 		:public method select_name_by_id {table id} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT name FROM $table WHERE id=[ns_dbquotevalue $id]"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] name]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] name]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -196,17 +241,17 @@ namespace eval oodz {
 		:public method select_name_by_uuid {table uuid} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT name FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 			try {
-				set row [ns_db 0or1row ${:db_handles} $query]
-				set result [dict getnull [ns_set array $row] name]
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] name]
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -215,12 +260,13 @@ namespace eval oodz {
 			set result ""
 			set code "ok"
 			set col_type [dict create]
-			set :db_handles [ns_db gethandle]
 			set query "SELECT * FROM information_schema.columns WHERE table_name = '$table'"
 			try {
-				set rows [ns_db select ${:db_handles} $query]
-				while {[ns_db getrow ${:db_handles} $rows]} {
-					dict append col_type [dict get [ns_set array $rows] column_name] [dict get [ns_set array $rows] data_type]
+				:with_db dbh {
+					set rows [ns_db select $dbh $query]
+					while {[ns_db getrow $dbh $rows]} {
+						dict append col_type [dict get [ns_set array $rows] column_name] [dict get [ns_set array $rows] data_type]
+					}
 				}
 				if {$columns eq "*"} {
 					set result $col_type
@@ -234,7 +280,6 @@ namespace eval oodz {
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -263,19 +308,19 @@ namespace eval oodz {
 		:public method select_columns_names {table} {
 			set result ""
 			set code "ok"
-			set :db_handles [ns_db gethandle]
 			set query "SELECT column_name FROM information_schema.columns WHERE table_name = '$table' AND table_schema='public' ORDER BY ordinal_position ASC"
 			try {
-				set rows [ns_db select ${:db_handles} $query]
-				while {[ns_db getrow ${:db_handles} $rows]} {
-					lappend result [dict get [ns_set array $rows] column_name]
+				:with_db dbh {
+					set rows [ns_db select $dbh $query]
+					while {[ns_db getrow $dbh $rows]} {
+						lappend result [dict get [ns_set array $rows] column_name]
+					}
 				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -376,7 +421,6 @@ namespace eval oodz {
 				if {$columns == "*"} {
 					set columns [: select_columns_names $table]
 				}
-				set :db_handles [ns_db gethandle]
 				set result [$sb buildSelectQuery]
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
@@ -395,8 +439,6 @@ namespace eval oodz {
 			if {$columns == "*"} {
 				set columns [: select_columns_names $table]
 			}
-			set :db_handles [ns_db gethandle]
-		
 			set params [lindex $args 0]
 			
 			if {[dict getnull $params sort] ne ""} {
@@ -497,7 +539,9 @@ namespace eval oodz {
 			# Count rows in case return_count is not 0, it must be done before LIMIT and OFFSET
 			if {$return_count != 0} {
 				set count_query "SELECT COUNT(*) FROM ($query) AS return_count"
-				set rows_count [ns_set array [ns_db 0or1row ${:db_handles} $count_query]]
+				:with_db dbh {
+					set rows_count [ns_set array [ns_db 0or1row $dbh $count_query]]
+				}
 			} 
 			
 			# LIMIT and OFFSET allow you to retrieve just a portion of the rows that are generated by the rest of the query
@@ -512,23 +556,28 @@ namespace eval oodz {
 				if {${:result_format} eq "J"} {
 					set query "SELECT json_agg(t) FROM ($query) t"
 					oodzLog notice "QUERY: $query"
-					
-					set row [ns_db 0or1row ${:db_handles} $query]
-					# oodzLog notice "ROW: $row"
-					# oodzLog notice "ROW ARRAY: [ns_set array $row]"
-					set result [dict get [ns_set array $row] json_agg]			
-				} elseif {${:result_format} eq "L"} { 
-					set rows [ns_db select ${:db_handles} $query]
-					# oodzLog notice "QUERY: $query"
-					while {[ns_db getrow ${:db_handles} $rows]} {
-						set row [ns_set array $rows]
-						lappend result [dict values $row]
+					:with_db dbh {
+						set row [ns_db 0or1row $dbh $query]
+						# oodzLog notice "ROW: $row"
+						# oodzLog notice "ROW ARRAY: [ns_set array $row]"
+						set result [dict get [ns_set array $row] json_agg]			
+					}
+				} elseif {${:result_format} eq "L"} {
+					:with_db dbh {
+						set rows [ns_db select $dbh $query]
+						# oodzLog notice "QUERY: $query"
+						while {[ns_db getrow $dbh $rows]} {
+							set row [ns_set array $rows]
+							lappend result [dict values $row]
+						}
 					}
 				} else {
-					set rows [ns_db select ${:db_handles} $query]
-					# oodzLog notice "QUERY: $query"
-					while {[ns_db getrow ${:db_handles} $rows]} {
-						lappend result [ns_set array $rows]
+					:with_db dbh {
+						set rows [ns_db select $dbh $query]
+						# oodzLog notice "QUERY: $query"
+						while {[ns_db getrow $dbh $rows]} {
+							lappend result [ns_set array $rows]
+						}
 					}
 				}
 			} on error {e} {
@@ -536,7 +585,6 @@ namespace eval oodz {
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -571,16 +619,17 @@ namespace eval oodz {
 				}
 				
 				set query "[$qb buildQuery]"
-				set :db_handles [ns_db gethandle]
-				set rows [ns_db select ${:db_handles} $query]
-				while {[ns_db getrow ${:db_handles} $rows]} {
-					lappend result [ns_set array $rows]
+				:with_db dbh {
+					set rows [ns_db select $dbh $query]
+					while {[ns_db getrow $dbh $rows]} {
+						lappend result [ns_set array $rows]
+					}
 				}
 				return -code ok $result
 			} on error {errMsg} {
 				return -code "error" "insert_all method: $errMsg"
 			} finally {
-				: release
+				$qb destroy
 			}
 		}
 		
@@ -639,23 +688,23 @@ namespace eval oodz {
 			}
 			oodzLog notice "QUERY: $query"
 			try {
-				set :db_handles [ns_db gethandle]
-				if {$returning ne ""} {
-					set query_res [ns_db 0or1row ${:db_handles} $query]
-					if {$query_res ne ""} {
-						foreach ret $returning {
-							lappend result [dict get [ns_set array $query_res] $ret]
-						}
-					} 
-				} else {
-					ns_db dml ${:db_handles} $query
+				:with_db dbh {
+					if {$returning ne ""} {
+						set query_res [ns_db 0or1row $dbh $query]
+						if {$query_res ne ""} {
+							foreach ret $returning {
+								lappend result [dict get [ns_set array $query_res] $ret]
+							}
+						} 
+					} else {
+						ns_db dml $dbh $query
+					}
 				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -703,14 +752,14 @@ namespace eval oodz {
 			oodzLog notice "QUERY: $query"
 
 			try {
-				set :db_handles [ns_db gethandle]
-				ns_db dml ${:db_handles} $query
+				:with_db dbh {
+					ns_db dml $dbh $query
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -724,7 +773,6 @@ namespace eval oodz {
 			set result ""
 			set code "ok"
 			try {
-				set :db_handles [ns_db gethandle]
 				set int_ids [list]
 				set uuids_ids [list]
 				foreach id $ids {
@@ -739,13 +787,14 @@ namespace eval oodz {
 				} elseif {[llength $uuids_ids] > 0} {
 					set query "DELETE FROM $table WHERE uuid_${table} IN ([ns_dbquotelist $uuids_ids])"
 				}
-				ns_db dml ${:db_handles} $query
+				:with_db dbh {
+					ns_db dml $dbh $query
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -771,14 +820,14 @@ namespace eval oodz {
 			oodzLog notice "QUERY: $query"
 
 			try {
-				set :db_handles [ns_db gethandle]
-				ns_db dml ${:db_handles} $query
+				:with_db dbh {
+					ns_db dml $dbh $query
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -796,14 +845,14 @@ namespace eval oodz {
 			}
 			oodzLog notice "QUERY: $query"
 			try {
-				set :db_handles [ns_db gethandle]
-				ns_db dml ${:db_handles} $query
+				:with_db dbh {
+					ns_db dml $dbh $query
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -821,17 +870,17 @@ namespace eval oodz {
 			}
 			oodzLog notice "QUERY: $query"
 			try {
-				set :db_handles [ns_db gethandle]
-				set row [ns_db 0or1row ${:db_handles} $query]
-				if {$row ne ""} {
-					set result [::json::json2dict [dict get [ns_set array $row] hstore_to_json]]
-				} 
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					if {$row ne ""} {
+						set result [::json::json2dict [dict get [ns_set array $row] hstore_to_json]]
+					} 
+				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
@@ -859,26 +908,27 @@ namespace eval oodz {
 			oodzLog notice "QUERY: $query"
 
 			try {
-				set :db_handles [ns_db gethandle]
-				
 				if {${:result_format} eq "J"} {
 					set query "SELECT json_agg(t) FROM ($query) t"
-					set result [dict getnull [ns_set array [ns_db 0or1row ${:db_handles} $query]] json_agg]
+					:with_db dbh {
+						set result [dict getnull [ns_set array [ns_db 0or1row $dbh $query]] json_agg]
+					}
 				} else {
-					set query_res [ns_db exec ${:db_handles} $query]
-					if {$query_res eq "NS_ROWS"} {
-						set rows [ns_db bindrow ${:db_handles}]
-						while {[ns_db getrow ${:db_handles} $rows]} {
-							lappend result [ns_set array $rows]
+					:with_db dbh {
+						set query_res [ns_db exec $dbh $query]
+						if {$query_res eq "NS_ROWS"} {
+							set rows [ns_db bindrow $dbh]
+							while {[ns_db getrow $dbh $rows]} {
+								lappend result [ns_set array $rows]
+							}
 						}
-					} 
+					}
 				}
 			} on error {e} {
 				oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
-				: release
 				return -code $code $result
 			}
 		}
