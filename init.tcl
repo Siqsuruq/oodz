@@ -76,7 +76,7 @@ proc load_dz_procs {args} {
 			if {[catch {set files [glob -directory [file join $::f] *.tcl]} errmsg]} {
 				puts "$errmsg"
 			} else {
-				set files [glob -directory [file join $::f] *.tcl]
+				set files [lsort -dictionary [glob -directory [file join $::f] *.tcl]]
 				foreach file $files {
 					if {[regexp {Class.tcl} $file] == 1} {
 						load_oodz_class $file
