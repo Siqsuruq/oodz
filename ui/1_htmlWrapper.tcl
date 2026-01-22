@@ -1073,8 +1073,8 @@ namespace eval oodz {
 				set result [ns_cache_get $cache_name $key]
 				ns_cache_flush $cache_name $key
 				return $result
-			} on error {e} {
-				puts "Error : $e"
+			} on error {errMsg} {
+				::oodzLog error "Error in Check_sdata: $errMsg"
 				return ""
 			}
 		}
