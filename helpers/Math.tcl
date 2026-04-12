@@ -9,5 +9,10 @@ namespace eval oodz {
                 return [string trimright $float 0]
             }
         }
+
+        :public object method commify {num} {
+            while {[regsub {^([-+]?\d+)(\d\d\d)} $num "\\1[::oodzConf get_global thousand_separator]\\2" num]} {}
+            return $num
+        }
     }
 }

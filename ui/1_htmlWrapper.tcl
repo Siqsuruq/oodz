@@ -21,10 +21,10 @@ namespace eval oodz {
 		}
 		
 		:method add_FormHandler {args} {
+			set formDataClassPath [file join [::oodzConf get oodz_js L] formDataClass.js]
 			ns_adp_puts "<script type='module'>"
-			ns_adp_puts "import { formData } from '[file join [::oodzConf get oodz_js L] formDataClass.js]';"
-			ns_adp_puts "let ${:frame}Data = new formData('${:frame}');"
-			ns_adp_puts "window.${:frame}Data = ${:frame}Data;"
+			ns_adp_puts "import { initFormData } from '$formDataClassPath';"
+			ns_adp_puts "window.${:frame}Data = initFormData('${:frame}');"
 			ns_adp_puts "</script>"
 		}
 		
@@ -56,15 +56,23 @@ namespace eval oodz {
 						set id [dict get $pr_dict var]
 						set :frame $id
 					} else {set id ${:frame}}
+					set formData "${:frame}Data"
+					# Get the method, default to POST if not specified
+					set send_method [string toupper [dict getnull $pr_dict "method"]]
+					if {$send_method eq ""} {set send_method "POST"}
+					if {$send_method ni {"GET" "POST"}} { set send_method "POST" }
+					
+					# Get the enctype, default to application/x-www-form-urlencoded if not specified. Possible values: text/plain, application/x-www-form-urlencoded, multipart/form-data
 					set enctype [dict getnull $pr_dict enctype]
-					if {$enctype eq ""} {set enctype "multipart/form-data"} else {set enctype $enctype}
+					if {$enctype eq "" || $send_method eq "GET"} {set enctype "application/x-www-form-urlencoded"}
+
 					if {[dict exists $pr_dict noaction]} {
 						ns_adp_puts "<form id=\"$id\">"
 					} else {
 						if {[dict exists $pr_dict autocomplete] != 0 && [dict get $pr_dict autocomplete] eq "off"} {
-							ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"$enctype\" autocomplete=\"off\" data-api-url=\"$action\">"
+							ns_adp_puts "<form method=\"$send_method\" id=\"$id\" data-formdata=\"$formData\" action=\"$action\" enctype=\"$enctype\" autocomplete=\"off\" data-api-url=\"$action\">"
 						} else {
-							ns_adp_puts "<form method=\"post\" id=\"$id\" action=\"$action\" enctype=\"$enctype\" data-api-url=\"$action\">"
+							ns_adp_puts "<form method=\"$send_method\" id=\"$id\" data-formdata=\"$formData\" action=\"$action\" enctype=\"$enctype\" data-api-url=\"$action\">"
 						}
 					}
 				}
@@ -239,6 +247,8 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					set trns 1
+					set remote_data 0
+					set data_attr ""
 					dict with pr_dict {}
 					# Main logic to create option_dict
 					set option_dict [dict create]
@@ -299,9 +309,36 @@ namespace eval oodz {
 								}
 							}
 						}
+						"ajax" {
+							set values [ns_unquotehtml [dict get $pr_dict values]]
+							set remote_data 1
+							set is_paginated 0
+							if {[dict exists $pr_dict paginated] && [dict get $pr_dict paginated] eq "1"} {
+								set is_paginated 1
+							}
+							set data_attr "data-ajax--url=\"$values\" data-ajax--cache=\"false\" data-allow-clear=\"true\""
+							if {[dict exists $pr_dict ajax_delay] && [dict get $pr_dict ajax_delay] ne ""} {
+								append data_attr " data-ajax--delay=\"[dict get $pr_dict ajax_delay]\""
+							} else {
+								append data_attr " data-ajax--delay=\"300\""
+							}
+							if {[dict exists $pr_dict min_input] && [dict get $pr_dict min_input] ne ""} {
+								set min_input [dict get $pr_dict min_input]
+								append data_attr " data-minimum-input-length=\"$min_input\""
+								append data_attr " data-msg-minimum-input=\"[::msgcat::mc "Please enter at least $min_input characters"]\""
+							}
+							if {$is_paginated} {
+								append data_attr " data-ajax--pagination=\"true\""
+							}
+						}
 					}
 
 					set i_v [: Check_sdata $var]
+					set selected_text ""
+					if {$remote_data == 1 && $i_v ne ""} {
+						set selected_text [: Check_sdata "${var}_text"]
+					}
+
 					ns_adp_puts "<div class=\"form-group\">"
 					if {[dict exists $pr_dict but_cmd]} {
 						ns_adp_puts "<div class=\"input-group\">"
@@ -310,16 +347,25 @@ namespace eval oodz {
 						ns_adp_puts "</div>"
 					}
 
-					ns_adp_puts "<select name=\"$var\" id=\"$var\" class=\"$class\" $js data-placeholder=\"$placeholder\" $mandatory $state>"
+					set cmd_attrs [:render_cmd_attrs [:normalize_cmd_config $pr_dict]]
+
+					ns_adp_puts "<select name=\"$var\" id=\"$var\" class=\"$class\" $cmd_attrs data-placeholder=\"$placeholder\" $data_attr $mandatory $state>"
 					ns_adp_puts "<option value=\"\" selected></option>"
 
-					dict for {dkey dval} $option_dict {
-						if {$dval eq $i_v || $dkey eq $i_v} {
-							ns_adp_puts "<option value=\"$dkey\" selected>$dval</option>"
-						} else {
-							ns_adp_puts "<option value=\"$dkey\">$dval</option>"
+					if {$remote_data == 0} {
+						dict for {dkey dval} $option_dict {
+							if {$dval eq $i_v || $dkey eq $i_v} {
+								ns_adp_puts "<option value=\"$dkey\" selected>$dval</option>"
+							} else {
+								ns_adp_puts "<option value=\"$dkey\">$dval</option>"
+							}
 						}
+					} elseif {$remote_data == 1} {
+						if {$i_v ne "" && $selected_text ne ""} {
+							ns_adp_puts "<option value=\"$i_v\" selected>$selected_text</option>"
+						}			
 					}
+		
 					ns_adp_puts "</select>"
 					ns_adp_puts "</div>"
 					if {[dict exists $pr_dict but_cmd]} {ns_adp_puts "</div>"}
@@ -346,10 +392,14 @@ namespace eval oodz {
 				}
 			################################################# BUTTON ################################################# 
 			} elseif {$tag eq "button"} {
-				if {$tagsgn eq "/"} {
-				} else {
+				if {$tagsgn ne "/"} {
 					: button $props $tag $val
 				}
+    			return
+				#if {$tagsgn eq "/"} {
+				#} else {
+				#	: button $props $tag $val
+				#}
 			################################################# TABLE ################################################# 
 			} elseif {$tag eq "table"} {
 				if {$tagsgn eq "/"} {
@@ -361,6 +411,9 @@ namespace eval oodz {
 					set theads_trns {}
 					set theads {}
 					set existing_data ""
+					# Default to serverSide true if not specified, as it's more common and efficient for large datasets. Client-side is only for small static data.
+					set serverSide "true"
+
 					# START Table Headers
 					if {[dict exists $pr_dict headers_type] != 0 && [dict get $pr_dict headers_type] == "list"} {
 						foreach t [dict get $pr_dict headers] {
@@ -390,17 +443,38 @@ namespace eval oodz {
 					ns_adp_puts "</thead>"
 					
 					#------------- START Table Data
+					# if {$i_v ne ""} {
+					# 	set existing_data "\["
+					# 	for {set i 0} {$i < [llength $i_v]} {incr i} {
+					# 		puts "Row $i: [lindex $i_v $i]"
+					# 		append existing_data [::json::write object-strings {*}[lindex $i_v $i]]
+					# 		if {$i < ([llength $i_v]-1)} {
+					# 			append existing_data ","
+					# 		}
+					# 	}
+					# 	append existing_data "\]"
+					# 	set serverSide "false"
+					# }
+
 					if {$i_v ne ""} {
-						set existing_data "\["
+						# Build a triples array: index → object (each row is a dict/list of pairs)
+						set array_triples {}
 						for {set i 0} {$i < [llength $i_v]} {incr i} {
-							append existing_data [::json::write object-strings {*}[lindex $i_v $i]]
-							if {$i < ([llength $i_v]-1)} {
-								append existing_data ","
+							set row [lindex $i_v $i]
+							# Build object triples from the key-value pairs in each row
+							set obj_triples {}
+							foreach {key val} $row {
+								lappend obj_triples $key string $val
 							}
+							lappend array_triples $i object $obj_triples
 						}
-						append existing_data "\]"
-						set serverSide "false"
+
+						# Emit as JSON array
+						set existing_data [ns_json value -type array $array_triples]
+						puts "Existing data for table $var (JSON): $existing_data"
+						set serverSide false
 					}
+
 					#------------- STOP Table Data
 					
 					
@@ -432,72 +506,151 @@ namespace eval oodz {
 						ns_adp_puts "</script>"
 					}
 					
-					
-					ns_adp_puts "<script>"
-						ns_adp_puts "\$('\#$var').DataTable( {"
-							ns_adp_puts "processing: true,"
-							if {[dict exists $pr_dict order]} {
-								set order [dict get $pr_dict order]
-								ns_adp_puts "order: \[\[ $order \]\],"
-							} else {
-								ns_adp_puts "order: \[\[ 0, 'desc' \]\],"
-							}
-							if {[dict exists $pr_dict select]} {
-								set select [dict get $pr_dict select]
-								switch $select {
-									"single" {
-										ns_adp_puts "select: {style: 'single', blurable: false},"
-									}
-									"multi" {
-										ns_adp_puts "select: {style: 'os', blurable: false},"
-									}
-									default {
-										ns_adp_puts "select: {style: 'os', blurable: false},"
-									}
-								}
-							} else {
-								ns_adp_puts "select: false,"
-							}
-							if {![::oodz::DataType is_bool [dict getnull $pr_dict serverSide]] || [dict getnull $pr_dict serverSide]} {
-								set serverSide true
-							} else {
-								set serverSide false
-							}
-							if {[dict get $pr_dict type] ne "empty"} {
-								ns_adp_puts "serverSide: $serverSide,"
-								if {$serverSide eq "false"} {
-									#ns_adp_puts "ajax: { url: '$val', dataSrc: 'data' },"
-									ns_adp_puts "data: $existing_data,"
-								} else {
-									ns_adp_puts "ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
-								}
-							}
 
-							
+					ns_adp_puts "<script>(function(){"
+					ns_adp_puts "  let id = '$var';"
+					ns_adp_puts "  let \$t = \$('#' + id);"
+					ns_adp_puts "  if (!\$t.length) return;"
 
+					# Destroy-safe guard
+					# ns_adp_puts "  if (\$.fn.dataTable.isDataTable(\$t)) {"
+					# ns_adp_puts "    try {"
+					# ns_adp_puts "      const old = \$t.DataTable();"
+					# ns_adp_puts "      // Abort any in-flight XHR to avoid keeping old page alive"
+					# ns_adp_puts "      if (old && old.settings && old.settings()\[0\] && old.settings()\[0\].jqXHR) {"
+					# ns_adp_puts "        try { old.settings()\[0\].jqXHR.abort(); } catch(e) {}"
+					# ns_adp_puts "      }"
+					# ns_adp_puts "      old.destroy(true);"
+					# ns_adp_puts "    } catch(e) {}"
+					# ns_adp_puts "  }"
 
-							
+					# Init
+					ns_adp_puts "  \$t.DataTable({"
+					ns_adp_puts "    processing: true,"
+
+					if {[dict exists $pr_dict order]} {
+						set order [dict get $pr_dict order]
+						ns_adp_puts "    order: \[\[ $order \]\],"
+					} else {
+						ns_adp_puts "    order: \[\[ 0, 'desc' \]\],"
+					}
+
+					if {[dict exists $pr_dict select]} {
+						set select [dict get $pr_dict select]
+						switch $select {
+							"single" {
+								ns_adp_puts "    select: {style: 'single', blurable: false},"
+							}
+							"multi" {
+								ns_adp_puts "    select: {style: 'os', blurable: false},"
+							}
+							default {
+								ns_adp_puts "    select: {style: 'os', blurable: false},"
+							}
+						}
+					} else {
+						ns_adp_puts "    select: false,"
+					}
+
+					if {[dict get $pr_dict type] ne "empty"} {
+						ns_adp_puts "    serverSide: $serverSide,"
+						if {$serverSide eq "false"} {
+							# client-side (static data)
 							if {$existing_data ne ""} {
-								ns_adp_puts "data: $existing_data,"
+								ns_adp_puts "    data: $existing_data,"
 							}
+						} else {
+							ns_adp_puts "    ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
+						}
+					}
 
-							if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
-							ns_adp_puts "multiSort: $multiSort,"
-							set a_trns [::msgcat::mc "Show all"]
-							ns_adp_puts "lengthMenu: \[\[ 15,20,25,50,100,-1 \],\['15','20','25','50','100', \"$a_trns\" \]\],"
-							if {![::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]} {
-								ns_adp_puts "buttons: \['copy', 'excel', 'pdf'\],"
-								ns_adp_puts "layout: {topStart: 'buttons', topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
-							} else {
-								ns_adp_puts "layout: {topStart: null, topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
-							}						
-							ns_adp_puts "columns: \["
-								foreach thead $theads thead_trns $theads_trns {
-									ns_adp_puts "{ data: '$thead' , name: '$thead_trns' },"
-								}	
-							ns_adp_puts "\],"
-						ns_adp_puts "} );"
-					ns_adp_puts "</script>"
+					if {$existing_data ne "" && $serverSide eq "false"} {
+						ns_adp_puts "    data: $existing_data,"
+					}
+
+					if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
+					ns_adp_puts "    multiSort: $multiSort,"
+
+					set a_trns [::msgcat::mc "Show all"]
+					ns_adp_puts "    lengthMenu: \[\[ 15,20,25,50,100,-1 \],\['15','20','25','50','100', \"$a_trns\" \]\],"
+
+					if {![::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]} {
+						ns_adp_puts "    buttons: \['copy', 'excel', 'pdf'\],"
+						ns_adp_puts "    layout: {topStart: 'buttons', topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
+					} else {
+						ns_adp_puts "    layout: {topStart: null, topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
+					}
+
+					ns_adp_puts "    columns: \["
+					foreach thead $theads thead_trns $theads_trns {
+						ns_adp_puts "      { data: '$thead' , name: '$thead_trns' },"
+					}
+					ns_adp_puts "    \],"
+
+					ns_adp_puts "  });"
+					ns_adp_puts "})();</script>"
+					
+					# ns_adp_puts "<script>"
+					# 	ns_adp_puts "\$('\#$var').DataTable( {"
+					# 		ns_adp_puts "processing: true,"
+					# 		if {[dict exists $pr_dict order]} {
+					# 			set order [dict get $pr_dict order]
+					# 			ns_adp_puts "order: \[\[ $order \]\],"
+					# 		} else {
+					# 			ns_adp_puts "order: \[\[ 0, 'desc' \]\],"
+					# 		}
+					# 		if {[dict exists $pr_dict select]} {
+					# 			set select [dict get $pr_dict select]
+					# 			switch $select {
+					# 				"single" {
+					# 					ns_adp_puts "select: {style: 'single', blurable: false},"
+					# 				}
+					# 				"multi" {
+					# 					ns_adp_puts "select: {style: 'os', blurable: false},"
+					# 				}
+					# 				default {
+					# 					ns_adp_puts "select: {style: 'os', blurable: false},"
+					# 				}
+					# 			}
+					# 		} else {
+					# 			ns_adp_puts "select: false,"
+					# 		}
+					# 		if {![::oodz::DataType is_bool [dict getnull $pr_dict serverSide]] || [dict getnull $pr_dict serverSide]} {
+					# 			set serverSide true
+					# 		} else {
+					# 			set serverSide false
+					# 		}
+					# 		if {[dict get $pr_dict type] ne "empty"} {
+					# 			ns_adp_puts "serverSide: $serverSide,"
+					# 			if {$serverSide eq "false"} {
+					# 				#ns_adp_puts "ajax: { url: '$val', dataSrc: 'data' },"
+					# 				ns_adp_puts "data: $existing_data,"
+					# 			} else {
+					# 				ns_adp_puts "ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
+					# 			}
+					# 		}
+
+					# 		if {$existing_data ne ""} {
+					# 			ns_adp_puts "data: $existing_data,"
+					# 		}
+
+					# 		if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
+					# 		ns_adp_puts "multiSort: $multiSort,"
+					# 		set a_trns [::msgcat::mc "Show all"]
+					# 		ns_adp_puts "lengthMenu: \[\[ 15,20,25,50,100,-1 \],\['15','20','25','50','100', \"$a_trns\" \]\],"
+					# 		if {![::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]} {
+					# 			ns_adp_puts "buttons: \['copy', 'excel', 'pdf'\],"
+					# 			ns_adp_puts "layout: {topStart: 'buttons', topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
+					# 		} else {
+					# 			ns_adp_puts "layout: {topStart: null, topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
+					# 		}						
+					# 		ns_adp_puts "columns: \["
+					# 			foreach thead $theads thead_trns $theads_trns {
+					# 				ns_adp_puts "{ data: '$thead' , name: '$thead_trns' },"
+					# 			}	
+					# 		ns_adp_puts "\],"
+					# 	ns_adp_puts "} );"
+					# ns_adp_puts "</script>"
 
 					if {[dict getnull $pr_dict confirm_delete] ne ""} {
 					ns_adp_puts "<!-- Bootstrap Modal -->"
@@ -603,7 +756,8 @@ namespace eval oodz {
 					dict with pr_dict {}
 					ns_adp_puts "<div class=\"$class\" id=\"$var\">"
 					ns_adp_puts "<script>"
-					ns_adp_puts "let ec = new EventCalendar(document.getElementById('$var'), {"
+					ns_adp_puts "const el = document.getElementById('$var');"
+					ns_adp_puts "const ec = EventCalendar.create(el, {"
     				ns_adp_puts "view: 'timeGridWeek',"
 					ns_adp_puts "firstDay: 1,"
 					ns_adp_puts "height: '650px',"
@@ -695,7 +849,23 @@ namespace eval oodz {
 					ns_adp_puts "<div class=\"h-captcha\" data-sitekey=\"$sitekey\" data-size=\"normal\"></div>"
 					ns_adp_puts "</div>"
 				}
-			############################################### HCAPTCHA ###############################################
+			################################################# ECHARTS #################################################
+			} elseif {$tag eq "chart"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "<div id=\"$var\" style=\"width:100%; height:500px;\"></div>"
+					
+					ns_adp_puts "<script>"
+						ns_adp_puts "$.get(\"$val\", function(data, status){"
+							ns_adp_puts "var myChart = echarts.init(document.getElementById('$var'));"
+							ns_adp_puts "var option = data;"
+							ns_adp_puts "myChart.setOption(option);"
+						ns_adp_puts "});"
+					ns_adp_puts "</script>"
+				}
 			}
 		}
 		
@@ -717,7 +887,7 @@ namespace eval oodz {
 				if {[dict exists $pr_dict but_cmd]} {
 					ns_adp_puts "<div class=\"[: def_class group]\">"
 						ns_adp_puts "<input type=\"$type\" id=\"$var\" name=\"$var\" class=\"$class\" placeholder=\"$placeholder\" aria-describedby=\"addon_$var\" value=\"$i_v\" pattern=\"\[^\\x22\]+\" $mandatory $state $js>"
-						ns_adp_puts "<button id=\"addon_$var\" class=\"[: def_class button]\" type=\"button\" data-bs-toggle=\"modal\" data-bs-target=\"\#[dict get $pr_dict but_cmd]\">[::msgcat::mc "[dict get $pr_dict but_txt]"]</button>"
+						ns_adp_puts "<button id=\"addon_$var\" class=\"[: def_class mod_button]\" type=\"button\" data-bs-toggle=\"modal\" data-bs-target=\"\#[dict get $pr_dict but_cmd]\">[::msgcat::mc "[dict get $pr_dict but_txt]"]</button>"
 					ns_adp_puts "</div>"
 				} elseif {[dict exists $pr_dict group]} {
 					ns_adp_puts "<div class=\"[: def_class group]\">"
@@ -728,7 +898,7 @@ namespace eval oodz {
 					ns_adp_puts "<div class=\"[: def_class group]\">"
 					ns_adp_puts "<label for=\"$var\" class=\"form-label\"></label>"
 					ns_adp_puts "<input type=\"$type\" class=\"$class\" id=\"$var\" name=\"$var\" placeholder=\"$placeholder\" value=\"$i_v\">"
-					ns_adp_puts "<button class=\"btn btn-outline-dark btn-sm\" type=\"button\" id=\"togglePassword\">"
+					ns_adp_puts "<button class=\"[: def_class mod_button]\" type=\"button\" id=\"togglePassword\">"
 					ns_adp_puts "<i class=\"bi bi-eye\" id=\"toggleIcon\"></i>"
 					ns_adp_puts "</button>"
 					ns_adp_puts "</div>"
@@ -754,53 +924,118 @@ namespace eval oodz {
 		:method button {props tag val} {
 			set pr_dict [: props_2_dict $props $tag $val]
 			dict with pr_dict {}
-			set link [list]
-			
-			# ADD IMAGE TO THE BUTTON
-			if {[dict exists $pr_dict img] != 0} {
-				set img_tag "<span class=\"me-2\"><img src=\"[ns_absoluteurl [dict get $pr_dict img] [oodzConf get_global icons_dir]]\"></span>"
-			} else {set img_tag ""}
 
-			if {$cmd eq "reset_values" || $type eq "reset"} {
-				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.resetForm(event)\">$img_tag $placeholder</button>"
-			} elseif {$cmd eq "clear_values" || $type eq "clear"} {
-				ns_adp_puts "<button type=\"reset\" class=\"$class\" onclick=\"${:frame}Data.clearForm()\">$img_tag $placeholder</button>"
-			} elseif {[regexp {::\w+::\w+} $cmd] == 1 } {
-				set module [lindex [split $cmd "::"] 2]
-				set val [lindex [split $cmd "::"] 4]
-				if {[file extension $val] eq ".xml"} {
-					#if {[::dz_access::chk_mod_acc $module] == 1} {
-						lappend link "?mod=$module&xml=$val"
-						ns_adp_puts "<a class=\"$class\" id=\"$var\" href=\"$link\" role=\"button\">$img_tag $placeholder</a>"
-					#}
-				} else {
-					ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
-				}
-			} elseif {[lindex $cmd 0] eq "modal"} {
-				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" data-bs-toggle=\"modal\" data-bs-target=\"\#[dict get $pr_dict but_cmd]\">$img_tag [::msgcat::mc "$val"]</button><br>"
-			} elseif {[lindex $cmd 0] eq "js"} {
-				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\" $js>$img_tag [::msgcat::mc "$val"]</button><br>"
-			} elseif {[lindex $cmd 0] eq "js2"} {
-				ns_adp_puts "<button class=\"$class\" id=\"$var\" type=\"button\" value=\"[::msgcat::mc "$val"]\" name=\"dz_name\" $js>$img_tag [::msgcat::mc "$val"]</button><br>"
+			# -------- image ----------
+			if {[dict exists $pr_dict img]} {
+				set img_tag "<span class=\"me-2\"><img src=\"[ns_absoluteurl [dict get $pr_dict img] [::oodzConf get_global icons_dir]]\"></span>"
 			} else {
-				ns_adp_puts "<button type=\"submit\" class=\"$class\" id=\"$var\" name=\"dz_cmd\" value=\"$cmd\">$img_tag $placeholder</button>"
+				set img_tag ""
 			}
-		}
-		
-		:method dbtable_data {tbl cols} {
-			set db [::oodz::db new]
-			set newDict [dict create]
-			set dictList [$db select_all $tbl "$cols"]
 
-			foreach line $dictList {
-				set a [dict values $line]
-				dict set newDict [lindex $a 0] [lindex $a 1]
+			# label (prefer placeholder if provided by props_2_dict)
+			set label ""
+			if {[info exists placeholder] && $placeholder ne ""} {
+				set label $placeholder
+			} else {
+				set label [string trim $val]
 			}
-			return $newDict
-			$db destroy
+			if {$label eq ""} { set label $var }
+
+			set cmd_dict [:normalize_cmd_config $pr_dict]
+			set cmd_block [:render_cmd_attrs $cmd_dict]
+
+			ns_adp_puts "<button type=\"button\" class=\"$class\" id=\"$var\" $cmd_block>$img_tag [::msgcat::mc $label]</button>"
+		}
+	
+		:method normalize_cmd_config {pr_dict} {
+			set cmd [string trim [dict getnull $pr_dict cmd]]
+			set url [dict getnull $pr_dict url]
+			set fields [dict getnull $pr_dict fields]
+			set target [dict getnull $pr_dict target]
+			set dz_cmd [dict getnull $pr_dict but_cmd]
+			set mod ""
+			set xml ""
+			set bs_toggle ""
+			set bs_target ""
+
+			set is_pipeline [expr {[string first ";" $cmd] >= 0}]
+			if {!$is_pipeline} {
+				switch -- $cmd {
+					reset -
+					reset_values { set cmd "reset" }
+					clear -
+					clear_values { set cmd "clear" }
+					modal {
+						# prefer but_cmd, fallback to target
+						set modal_id $dz_cmd
+						if {$modal_id eq ""} {
+							set modal_id $target
+						}
+
+						if {$modal_id ne ""} {
+							set bs_toggle "modal"
+							set bs_target "#$modal_id"
+						} else {
+							ns_log warning "button: cmd=modal but_cmd/target missing"
+						}
+					}
+				}
+				if {[regexp {^::([A-Za-z0-9_]+)::(.+)$} $cmd -> mod rest]} {
+					if {[file extension $rest] eq ".xml"} {
+						set cmd "navigate"
+						set xml $rest
+					} else {
+						set dz_cmd $cmd
+						set cmd "dz_cmd"
+					}
+				}
+			}
+			return [dict create cmd $cmd url $url fields $fields target $target dz_cmd $dz_cmd mod $mod xml $xml bs_toggle $bs_toggle bs_target $bs_target is_pipeline $is_pipeline]
 		}
 		
-		
+		:method render_cmd_attrs {cmd_dict} {
+			set extra ""
+			set cmd [dict getnull $cmd_dict cmd]
+			set url [dict getnull $cmd_dict url]
+			set fields [dict getnull $cmd_dict fields]
+			set target [dict getnull $cmd_dict target]
+			set dz_cmd [dict getnull $cmd_dict dz_cmd]
+			set mod [dict getnull $cmd_dict mod]
+			set xml [dict getnull $cmd_dict xml]
+			set bs_toggle [dict getnull $cmd_dict bs_toggle]
+			set bs_target [dict getnull $cmd_dict bs_target]
+
+			if {$cmd ne ""} { append extra " data-cmd=\"$cmd\"" }
+			if {$url ne ""} { append extra " data-url=\"$url\"" }
+			if {$fields ne ""} { append extra " data-fields=\"$fields\"" }
+			if {$target ne ""} { append extra " data-target=\"$target\"" }
+			if {$dz_cmd ne ""} { append extra " data-dz-cmd=\"$dz_cmd\"" }
+			if {$mod ne ""} { append extra " data-mod=\"$mod\"" }
+			if {$xml ne ""} { append extra " data-xml=\"$xml\"" }
+			if {$bs_toggle ne ""} { append extra " data-bs-toggle=\"$bs_toggle\"" }
+			if {$bs_target ne ""} { append extra " data-bs-target=\"$bs_target\"" }
+			return $extra
+		}
+
+		:method dbtable_data {tbl cols} {
+			try {
+				set db [::oodz::db new]
+				set newDict [dict create]
+				set dictList [$db select_all $tbl "$cols"]
+
+				foreach line $dictList {
+					set a [dict values $line]
+					dict set newDict [lindex $a 0] [lindex $a 1]
+				}
+				return $newDict
+			} on error {errMsg} {
+				::oodzLog error "Error in dbtable_data: $errMsg"
+				return [dict create]
+			} finally {
+				$db destroy
+			}
+		}
+
 		############################################ PROP2DICT ############################################
 
 		:method props_2_dict {props tag val} {
@@ -1040,9 +1275,8 @@ namespace eval oodz {
 				date "form-control form-control-sm oodz_txt"\
 				time "form-control form-control-sm oodz_txt"\
 				clock "form-control form-control-sm oodz_txt"\
-				button "btn btn-outline-dark btn-sm w-100"\
-				jsbutton "btn btn-outline-dark btn-sm w-100"\
-				mod_button "btn btn-outline-dark btn-sm w-100"\
+				button "btn btn-outline-dark btn-sm w-100 m-1"\
+				mod_button "btn btn-outline-dark btn-sm"\
 				modal ""\
 				text "form-control oodz_txt"\
 				msg "alert alert-dark"\
@@ -1050,7 +1284,7 @@ namespace eval oodz {
 				qrcode ""\
 				image_upload ""\
 				bool "form-check-input"\
-				dropdown "form-control form-control-sm oodz_select"\
+				dropdown "form-select form-select-sm oodz_select"\
 				geomap ""\
 				spinbox "form-control"\
 				editor "oodz_txt"\
@@ -1074,7 +1308,6 @@ namespace eval oodz {
 				ns_cache_flush $cache_name $key
 				return $result
 			} on error {errMsg} {
-				::oodzLog error "Error in Check_sdata: $errMsg"
 				return ""
 			}
 		}

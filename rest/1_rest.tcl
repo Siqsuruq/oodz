@@ -37,7 +37,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				: answer $result
 			}
 		} else {
-			oodzLog notice "API Controler doesnt exists"
+			oodzLog notice "API Controler doesnt exists: [file join ${:srvpath} [oodzConf get_global mod_dir] $resource] ---> ::${resource}::Api | [::oodz::api info instances ::${resource}::Api]"
 			: answer_error {code 404}
 		}
 	}
@@ -93,6 +93,17 @@ nx::Class create apiin -superclass ::oodz::superClass {
 
 	:method handle_json_body {} {
 		try {
+			set reqObj [::oodz::requestPayload new -content_type json]
+			return $reqObj
+		} on error {} {
+			oodzLog error "JSON payload is malformed."
+			: answer_error [dict create code 400 details "JSON payload is malformed."]
+			return 0
+		}
+	}
+
+	:method handle_json_body_old {} {
+		try {
 			return [json::json2dict [ns_getcontent -as_file false -binary false]]
 		} on error {} {
 			oodzLog error "JSON payload is malformed."
@@ -103,8 +114,8 @@ nx::Class create apiin -superclass ::oodz::superClass {
 
 	:method handle_form_body {} {
 		try {
-			set req [::oodz::requestPayload new]
-			return $req
+			set reqObj [::oodz::requestPayload new -content_type form]
+			return $reqObj
 		} on error {errMsg} {
 			oodzLog error "Error getting form data. $errMsg"
 			: answer_error [dict create code 400 details "Form payload is malformed. $errMsg"]

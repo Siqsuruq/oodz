@@ -3,6 +3,12 @@ namespace eval oodz {
 		:property {conf_table "dz_conf"}
 		:property {conf_file "default.ini"}
 		
+		:variable instance:object
+
+		:public object method create {args} {
+    		return [expr {[info exists :instance] ? ${:instance} : [set :instance [next]]}]
+		}
+
 		:method init {} {
 			: read_config
 			: read_dz_conf
@@ -11,6 +17,7 @@ namespace eval oodz {
 
 		# Load config options from default.ini
 		:public method read_config {args} {
+			::oodzLog error "Loading configuration from file ${:conf_file}..."
 			set config_file [file join ${:srvpath} ../ conf ${:conf_file}]
 			set ini_handler [::ini::open $config_file]
 			foreach section [::ini::sections $ini_handler ] {
@@ -23,6 +30,7 @@ namespace eval oodz {
 		
 		# Load config options from database table
 		:public method read_dz_conf {args} {
+			::oodzLog error "Loading configuration from database table ${:conf_table}..."
 			foreach line [::db select_all ${:conf_table} *] {
 				[self] add [dict create [dict get $line var] [dict get $line val]]
 			}
@@ -50,15 +58,23 @@ namespace eval oodz {
 			}
 		}
 		
+		:method load_trns_file {args} {
+			set lang [lindex $args 0]
+			set lang_path [lindex $args 1]
+			::msgcat::mclocale $lang
+			::msgcat::mcload $lang_path
+		} 
+
 		# Load Global Translations
 		:public method load_trns {args} {
+			::oodzLog error "Loading translations..."
 			try {
 				set lang_path [file join ${:srvpath} [[self] get lang_dir L]]
 				set lang [[self] get language L]
-				load_trns_file $lang $lang_path
+				: load_trns_file $lang $lang_path
 				return -code ok
-			} on error {msg} {
-				return -code error "Error loading translations: $msg"
+			} on error {errMsg} {
+				return -code error "Error loading translations: $errMsg"
 			}
 		}
 		
@@ -83,6 +99,7 @@ namespace eval oodz {
 		}
 		
 		:public method reload {args} {
+			::oodzLog error "Reloading configuration and translations..."
 			: read_dz_conf
 			: load_trns
 		}

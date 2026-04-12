@@ -84,6 +84,66 @@ namespace eval oodz {
 			}			
 		}
 
+		:public method row_exists {table column value} {
+			set result 0
+			set code "ok"
+			set query "SELECT EXISTS (SELECT 1 FROM ${table} WHERE ${column} = [ns_dbquotevalue $value]);"
+			try {
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+				}
+				if {$row eq ""} {
+					set result 0
+				} else {
+					if {[dict get [ns_set array $row] exists] eq "t"} {
+						set result 1
+					} else {
+						set result 0
+					}
+				}
+			} on error {e} {
+				oodzLog error "DB ERROR: $e"
+				set code "error"
+				set result $e
+			} finally {
+				return -code $code $result
+			}
+		}
+
+		:public method row_exists_multi {table where_dict} {
+			set result 0
+			set code "ok"
+			try {
+				if {[dict size $where_dict] == 0} {
+					return -code error "row_exists_multi requires at least one condition."
+				}
+				set conditions {}
+				dict for {column value} $where_dict {
+					lappend conditions "${column} = [ns_dbquotevalue $value]"
+				}
+				set where_clause [join $conditions " AND "]
+				set query "SELECT EXISTS (SELECT 1 FROM ${table} WHERE ${where_clause});"
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+				}
+				if {$row eq ""} {
+					set result 0
+				} else {
+					if {[dict get [ns_set array $row] exists] eq "t"} {
+						set result 1
+					} else {
+						set result 0
+					}
+				}
+			} on error {e} {
+				oodzLog error "DB ERROR: $e"
+				set code "error"
+				set result $e
+			} finally {
+				return -code $code $result
+			}
+		}
+
 		:public method table_exists {table} {
 			set result 0
 			set code "ok"
@@ -361,12 +421,11 @@ namespace eval oodz {
 			try {
 				set rows [ns_db select ${:db_handles} $query]
 				set rows [ns_db select ${:db_handles} $query]
-				# oodzLog notice "QUERY: $query"
 				while {[ns_db getrow ${:db_handles} $rows]} {
 					lappend result [ns_set array $rows]
 				}
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
+				::oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
@@ -406,9 +465,6 @@ namespace eval oodz {
 					lappend my_columns $table.$col
 				}
 			}
-			# puts "MY COLUMNS: $my_columns"
-			# puts "MY TABLES: $my_tables"
-			# puts "MY FKLIST: $fklist"
 			return [list $my_columns $my_tables $fklist]
 		}
 		
@@ -449,9 +505,15 @@ namespace eval oodz {
 			} else {set order "DESC"}
 			if {[dict getnull $params offset] ne ""} {
 				set offset [dict get $params offset]
+				if {![string is integer -strict $offset] || $offset < 0} {
+					set offset 0
+				}
 			} else {set offset ""}
 			if {[dict getnull $params limit] ne ""} {
 				set limit [dict get $params limit]
+				if {![string is integer -strict $limit] || $limit < 1} {
+					set limit ""
+				}
 			} else {set limit ""}
 			if {[dict getnull $params search] ne ""} {
 				set search [dict get $params search]
@@ -468,66 +530,37 @@ namespace eval oodz {
 			set my_columns [lindex $a 0]
 			set my_tables [lindex $a 1]
 			set fklist [lindex $a 2]
-			# set my_columns [list]
-			# set my_tables [list $table]
-			# set fklist [list]
-
-			# foreach col $columns {
-				# if {[string match fk_* $col] == 1} {
-					# set trimmed_tbl_name [::textutil::trim::trim $col fk_]
-					# if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
-						# lappend my_tables [set fk_table $trimmed_tbl_name]
-					# }
-					# # lappend my_columns "$fk_table.name as $fk_table\_name"
-					# lappend my_columns "$fk_table.name as $col"
-					# lappend fklist " $table.$col=$fk_table.id "
-					# if {$search ne "" && $def_search_col ne ""} {
-						# if {$def_search_col eq $col} {
-							# set def_search_col $fk_table.name
-						# }
-					# }
-				# } elseif {[string match ufk_* $col] == 1} {
-					# set trimmed_tbl_name [::textutil::trim::trim $col ufk_]
-					# if {[lsearch -exact $my_tables "$trimmed_tbl_name"] == -1} {
-						# lappend my_tables [set fk_table $trimmed_tbl_name]
-					# }
-					# lappend my_columns "$fk_table.name as ${fk_table}_name"
-					# lappend my_columns $table.$col
-					# lappend fklist " $table.$col=$fk_table.uuid_${fk_table} "
-				# } else {
-					# lappend my_columns $table.$col
-				# }
-			# }
-			# puts "MY COLUMNS: $my_columns"
-			# puts "MY TABLES: $my_tables"
-			# puts "MY FKLIST: $fklist"
 			
 			set query "SELECT "
 			append query "[::csv::join $my_columns]"
 			append query " FROM [::csv::join $my_tables] "
-						
+
+			if {$search ne ""} {
+				set search "%$search%"
+			}
+
 			if {[llength $fklist] != 0 && $extra != "none"} {
 				append query " WHERE "
 				append query [::csv::join $fklist AND]
 				append query " AND $extra"
 				if {$search ne "" && $def_search_col ne ""} {
-					append query " AND CAST($def_search_col AS TEXT) ILIKE '$search%'"
+					append query " AND CAST($def_search_col AS TEXT) ILIKE [ns_dbquotevalue $search]"
 				}
 			} elseif {[llength $fklist] != 0 && $extra == "none"} {
 				append query " WHERE "
 				append query [::csv::join $fklist AND]
 				if {$search ne "" && $def_search_col ne ""} {
-					append query " AND CAST($def_search_col AS TEXT) ILIKE '$search%'"
+					append query " AND CAST($def_search_col AS TEXT) ILIKE [ns_dbquotevalue $search]"
 				}
 			} elseif {[llength $fklist] == 0 && $extra != "none"} {
 				append query " WHERE "
 				append query " $extra"
 				if {$search ne "" && $def_search_col ne ""} {
-					append query " AND CAST($def_search_col AS TEXT) ILIKE '$search%'"
+					append query " AND CAST($def_search_col AS TEXT) ILIKE [ns_dbquotevalue $search]"
 				}
 			} elseif {[llength $fklist] == 0 && $extra eq "none"} {
 				if {$search ne "" && $def_search_col ne ""} {
-					append query " WHERE CAST($def_search_col AS TEXT) ILIKE '$search%'"
+					append query " WHERE CAST($def_search_col AS TEXT) ILIKE [ns_dbquotevalue $search]"
 				}
 			}
 			
@@ -551,21 +584,18 @@ namespace eval oodz {
 				append query " LIMIT $limit OFFSET $offset"
 			}
 			
-			oodzLog notice "QUERY: $query"
+			::oodzLog dev "QUERY: $query"
 			try {
 				if {${:result_format} eq "J"} {
 					set query "SELECT json_agg(t) FROM ($query) t"
-					oodzLog notice "QUERY: $query"
+					::oodzLog dev "QUERY: $query"
 					:with_db dbh {
 						set row [ns_db 0or1row $dbh $query]
-						# oodzLog notice "ROW: $row"
-						# oodzLog notice "ROW ARRAY: [ns_set array $row]"
 						set result [dict get [ns_set array $row] json_agg]			
 					}
 				} elseif {${:result_format} eq "L"} {
 					:with_db dbh {
 						set rows [ns_db select $dbh $query]
-						# oodzLog notice "QUERY: $query"
 						while {[ns_db getrow $dbh $rows]} {
 							set row [ns_set array $rows]
 							lappend result [dict values $row]
@@ -574,7 +604,6 @@ namespace eval oodz {
 				} else {
 					:with_db dbh {
 						set rows [ns_db select $dbh $query]
-						# oodzLog notice "QUERY: $query"
 						while {[ns_db getrow $dbh $rows]} {
 							lappend result [ns_set array $rows]
 						}
@@ -673,7 +702,7 @@ namespace eval oodz {
 							lappend my_values NULL
 						}
 					}
-				} else {oodzLog warning "Column ${table}.${col} does not exists"}
+				} else {::oodzLog warning "Column ${table}.${col} does not exists"}
 			}
 			set query "INSERT INTO \"$table\" ([join $my_columns ,]) VALUES ([join $my_values ,])"
 			if {$conflict ne ""} {
@@ -686,7 +715,7 @@ namespace eval oodz {
 					append query " RETURNING [join $returning ,]"
 				}
 			}
-			oodzLog notice "QUERY: $query"
+			::oodzLog dev "QUERY: $query"
 			try {
 				:with_db dbh {
 					if {$returning ne ""} {
@@ -701,7 +730,7 @@ namespace eval oodz {
 					}
 				}
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
+				::oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
@@ -749,14 +778,14 @@ namespace eval oodz {
 			}
 			set query "UPDATE $table SET [::csv::join $my_values , ""] WHERE [lindex $where 0]"
 			
-			oodzLog notice "QUERY: $query"
+			::oodzLog dev "QUERY: $query"
 
 			try {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
+				::oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
@@ -817,14 +846,14 @@ namespace eval oodz {
 				set query "UPDATE $table SET $col = $col || ('$hst_data') ::hstore WHERE $table.id='$id';"
 			}
 			
-			oodzLog notice "QUERY: $query"
+			::oodzLog dev "QUERY: $query"
 
 			try {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
+				::oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
@@ -843,13 +872,13 @@ namespace eval oodz {
 			} else {
 				set query "UPDATE $table SET $col = delete($col, '$key_2_del') WHERE $table.id='$id';"
 			}
-			oodzLog notice "QUERY: $query"
+			::oodzLog dev "QUERY: $query"
 			try {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
+				::oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
@@ -868,7 +897,7 @@ namespace eval oodz {
 			} else {
 				set query "SELECT hstore_to_json($col) FROM $table WHERE id='$id';"
 			}
-			oodzLog notice "QUERY: $query"
+			::oodzLog dev "QUERY: $query"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
@@ -877,7 +906,7 @@ namespace eval oodz {
 					} 
 				}
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
+				::oodzLog error "DB ERROR: $e"
 				set code "error"
 				set result $e
 			} finally {
@@ -905,7 +934,7 @@ namespace eval oodz {
 			set result ""
 			set code "ok"
 			set query [lindex $args 0]
-			oodzLog notice "QUERY: $query"
+			::oodzLog dev "QUERY: $query"
 
 			try {
 				if {${:result_format} eq "J"} {

@@ -12,6 +12,7 @@ namespace eval oodz {
 		}
 		
 		:public method dispatcher {req_method values params url} {
+			puts "Dispatcher called with method: $req_method, values: $values, params: $params, url: $url"
 			if {[llength $values] == 0} {
 				set dispatcher "${req_method}_${:name}"
 			} else {

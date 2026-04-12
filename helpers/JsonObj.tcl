@@ -25,7 +25,6 @@ namespace eval ::oodz {
 
 		# method for different datatypes values
 		:public method addNull {key} {
-
 			CkJsonObject_AddNullAt ${:json} -1 "$key"
 		}
 		
