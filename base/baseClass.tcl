@@ -128,7 +128,7 @@ namespace eval oodz {
 		:public method clear {args} {
 			try {
 				if {[llength $args] == 0} {
-					set objprops [: info vars]
+					set objprops [:props]
 					foreach prop $objprops {
 						if {[:prop_isobj [: cget -${prop}]] == 1} {
 							[: cget -${prop}] clear
@@ -137,7 +137,7 @@ namespace eval oodz {
 						}
 					}
 				} else {
-					foreach param $args {
+					foreach prop $args {
 						if {[:prop_isobj [: cget -${prop}]] == 1} {
 							[: cget -${prop}] clear
 						} else {
@@ -152,7 +152,7 @@ namespace eval oodz {
 
 		# Return 1 if object has no properties or all properties are empty, 0 otherwise
 		:public method is_empty {} {
-			set objprops [: info vars]
+			set objprops [:props]
 			if {[llength $objprops] == 0} {
 				return 1
 			} else {
@@ -172,7 +172,7 @@ namespace eval oodz {
 				return 0
 			} else {
 				foreach prop $objprops {
-					if {[: cget ${prop}] ne ""} {
+					if {[: cget -${prop}] ne ""} {
 						return 1
 					}
 				}
@@ -206,12 +206,6 @@ namespace eval oodz {
 
 		# This methods to be implemented
 		# Return object data as a ns_set object
-
-		:public method asNSSET {$key} {
-			#if {[: is_not_empty]} {
-			#	return [ns_set create $key ${:obj_data}]
-			#}
-		}
 
 		# Basic validation methods
 		:public method validate_keys {args} {

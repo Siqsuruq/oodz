@@ -62,7 +62,7 @@ ns_register_proc GET /handle_form handle_form GET
 ns_register_proc POST /handle_form handle_form POST
 
 proc load_dz_procs {args} {
-	set folders [glob -nocomplain -directory [file join [ns_pagepath] [::oodzConf get_global mod_dir]] *]
+	set folders [lsort -dictionary [glob -nocomplain -directory [file join [ns_pagepath] [::oodzConf get_global mod_dir]] *]]
 	foreach f $folders {
 		set ::f $f
 		set ns ::[file tail $f]
@@ -83,6 +83,9 @@ proc load_dz_procs {args} {
 	}
 }
 
+######################################## Mini APPS ##########################################
+ns_register_proc GET /cms ::cms::cms_home
+ns_register_proc GET /cms-preview ::cms::cms_preview
 
 # If filename ends with *Class.tcl loads in global namespace
 proc load_oodz_class {args} {

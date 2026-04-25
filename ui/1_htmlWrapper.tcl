@@ -809,20 +809,21 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
+					if {$rows eq ""} { set rows 20 }
 					set i_v [: Check_sdata $var]
-					ns_adp_puts "<textarea id=\"code_editor\" name=\"$var\" class=\"CodeMirror\">$i_v</textarea>"
+					ns_adp_puts "<textarea id=\"$var\" name=\"$var\" class=\"form-control\" rows=\"$rows\">$i_v</textarea>"
 
-					ns_adp_puts "<script>"
-					# ns_adp_puts "editAreaLoader.init({id:\"code_editor\",syntax:\"tcl\",start_highlight:true,font_size:\"12\",allow_resize:\"both\",allow_toggle:true,word_wrap:true,language:\"en\",syntax_selection_allow:\"tcl,css,html,js,php,python,vb,xml,c,cpp,sql,basic,pas,brainfuck\",toolbar:\"search, go_to_line, |, undo, redo, |, syntax_selection, |, change_smooth_selection, highlight, reset_highlight, |, help\"});"
-					ns_adp_puts "var editor = CodeMirror.fromTextArea(document.getElementById('code_editor'), {"
-					ns_adp_puts "lineNumbers: true,"
-					# ns_adp_puts "mode: 'tcl',"
-					ns_adp_puts "theme: 'eclipse',"
-					ns_adp_puts "lineWrapping: true"
-					# ns_adp_puts "foldGutter: true,"
-        			# ns_adp_puts "gutters: \[\"CodeMirror-linenumbers\", \"CodeMirror-foldgutter\"\]"
-					ns_adp_puts "});"
-					ns_adp_puts "</script>"
+					# ns_adp_puts "<script>"
+					# # ns_adp_puts "editAreaLoader.init({id:\"code_editor\",syntax:\"tcl\",start_highlight:true,font_size:\"12\",allow_resize:\"both\",allow_toggle:true,word_wrap:true,language:\"en\",syntax_selection_allow:\"tcl,css,html,js,php,python,vb,xml,c,cpp,sql,basic,pas,brainfuck\",toolbar:\"search, go_to_line, |, undo, redo, |, syntax_selection, |, change_smooth_selection, highlight, reset_highlight, |, help\"});"
+					# ns_adp_puts "var editor = CodeMirror.fromTextArea(document.getElementById('$var'), {"
+					# ns_adp_puts "lineNumbers: true,"
+					# ns_adp_puts "mode: \"$mode\","
+					# ns_adp_puts "theme: 'default',"
+					# ns_adp_puts "lineWrapping: true"
+					# # ns_adp_puts "foldGutter: true,"
+        			# # ns_adp_puts "gutters: \[\"CodeMirror-linenumbers\", \"CodeMirror-foldgutter\"\]"
+					# ns_adp_puts "});"
+					# ns_adp_puts "</script>"
 				}
 			############################################### HTML EDITOR ###############################################
 			} elseif {$tag eq "html_editor"} {

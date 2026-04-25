@@ -16,6 +16,22 @@ namespace eval oodz {
 				return 0
 			}
 		}
+
+		:public object method to_bool {value} {
+			set v [string tolower [string trim $value]]
+			if {$v in {1 true yes on enable}} {
+				return true
+			} elseif {$v in {0 false no off disable}} {
+				return false
+			} elseif {[string is integer -strict $value]} {
+				return [expr {$value ? "true" : "false"}]
+			} elseif {[string is boolean $value]} {
+				return [expr {$value ? "true" : "false"}]
+			} else {
+				return -code error "Invalid boolean value '$value'"
+			}
+		}
+
 		:public object method is_uuid {value} {
 			set pattern {^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$}
 			return [regexp $pattern $value]
@@ -26,7 +42,7 @@ namespace eval oodz {
 		}
 		
 		:public object method is_number {value} {
-			if {[string is integer -strict $value] || [string is double -strict $value] || [string is wideinteger $value]} {
+			if {[string is integer -strict $value] || [string is double -strict $value] || [string is wideinteger -strict $value]} {
 				return 1
 			} else { return 0 }
 		}

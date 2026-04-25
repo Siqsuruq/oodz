@@ -7,7 +7,6 @@ package require inifile
 package require msgcat
 package require uuid
 package require http
-puts [package version http]
 package require tdom
 package require htmlparse
 package require md5

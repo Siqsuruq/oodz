@@ -67,35 +67,6 @@ namespace eval oodz {
 			}
 		}
 
-		:public method clear {args} {
-			try {
-				if {[llength $args] == 0} {
-					set objprops [: info vars]
-					foreach prop $objprops {
-						if {$prop ne "obj"} {
-							if {[:prop_isobj [: cget -${prop}]] == 1} {
-								[: cget -${prop}] clear
-							} else {
-								: configure -${prop} ""
-							}
-						}
-					}
-				} else {
-					foreach param $args {
-						if {$prop ne "obj"} {
-							if {[:prop_isobj [: cget -${prop}]] == 1} {
-								[: cget -${prop}] clear
-							} else {
-								: configure -${prop} ""
-							}
-						}
-					}
-				}
-			} on error {errMsg} {
-				return -code error "clear method: $errMsg"
-			}
-		}
-
 		:public method save2db {args} {
 			try {
 				set obj_data [:prepare_data]
