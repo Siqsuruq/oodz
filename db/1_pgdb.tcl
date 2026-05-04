@@ -738,49 +738,42 @@ namespace eval oodz {
 			}
 		}
 
-		:public method update_all {table data {nspace 1}} {
+		:public method update_all {table data} {
 			set result ""
 			set code "ok"
-			set where [list]
-			set my_values [list]
 			set column_names [: select_columns_names $table]
+			set builder [UpdateSQLBuilder new -tableName $table]
+			try {
+				# Guard: require a WHERE key before doing anything
+				if {![dict exists $data id] && ![dict exists $data uuid_${table}]} {
+					return -code error "update_all: no id or uuid_${table} in data"
+				}
+				# Extract WHERE key
+				if {[dict exists $data id]} {
+					$builder addWhere id = [dict get $data id]
+					set data [dict remove $data id]
+				} elseif {[dict exists $data uuid_${table}]} {
+					$builder addWhere uuid_${table} = [dict get $data uuid_${table}]
+					set data [dict remove $data uuid_${table}]
+				}
+				# Populate SET assignments
+				foreach col [dict keys $data] val [dict values $data] {
+					if {[lsearch -exact $column_names $col] == -1} continue
 
-			# Ensuring id key is the first in the columns list
-			if {[dict exists $data id] == 1} {
-				lappend where id='[dict get $data id]'
-				set data [dict remove $data id]
-			} elseif {[dict exists $data uuid_${table}] == 1} {
-				lappend where uuid_${table}='[dict get $data uuid_${table}]'
-				set data [dict remove $data uuid_${table}]
-			}
-			
-			foreach col [dict keys $data] val [dict values $data] {
-				if {[lsearch -exact $column_names $col] != -1} {
-					if {[string match fk_* $col] == 1} {
-						lappend my_values $col=[ns_dbquotevalue [: select_id_by_name [::textutil::trim::trim $col fk_] $val]]
-					} else {
-						if {$val != ""} {
-							if {[: get_columns_types $table $col] eq "bytea"} {
-								lappend my_values $col=[ns_dbquotevalue $val]
-							} else {
-								if {$nspace != 1} {
-									lappend my_values $col=[ns_dbquotevalue $val]
-								} else {
-									lappend my_values $col=[ns_dbquotevalue [::oodz::Sanitize normalize_spaces $val]]
-								}
-							}
-								
-						} else {
-							lappend my_values $col=NULL
+					if {[string match fk_* $col]} {
+						set resolved [: select_id_by_name [::textutil::trim::trim $col fk_] $val]
+						if {$resolved eq ""} {
+							::oodzLog warn "update_all: could not resolve FK $col for value '$val', skipping"
+							continue
 						}
+						$builder addData $col $resolved
+					} else {
+						# empty string → NULL handled by formatValue in builder
+						$builder addData $col $val
 					}
 				}
-			}
-			set query "UPDATE $table SET [::csv::join $my_values , ""] WHERE [lindex $where 0]"
-			
-			::oodzLog dev "QUERY: $query"
-
-			try {
+				set query [$builder buildQuery]
+				::oodzLog dev "QUERY: $query"
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
@@ -789,9 +782,11 @@ namespace eval oodz {
 				set code "error"
 				set result $e
 			} finally {
+				$builder destroy
 				return -code $code $result
 			}
 		}
+
 		########################################################## Delete ##########################################################
 		# For compatibility, do not use for new code, will be removed in the future
 		:public method delete_row {table ids} {

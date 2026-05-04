@@ -184,6 +184,23 @@ namespace eval oodz {
 					ns_adp_puts "\n<p class=\"$class\">"
 					ns_adp_puts "[subst $val]"
 				}
+			################################################# LINK ################################################# 
+			} elseif {$tag eq "link"} {
+				if {$tagsgn eq "/"} {
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					set i_v [: Check_sdata $var]
+					if {[dict exists $pr_dict img]} {
+						set img_tag "<span class=\"me-2\"><img src=\"[ns_absoluteurl [dict get $pr_dict img] [::oodzConf get_global icons_dir]]\"></span>"
+					} else {
+						set img_tag ""
+					}
+					ns_adp_puts "\n<a class=\"$class\" href=\"$i_v\" target=\"_blank\">"
+					ns_adp_puts "$img_tag"
+					ns_adp_puts "[::msgcat::mc $val]"
+					ns_adp_puts "</a>"
+				}
 			################################################# LABEL ################################################# 
 			} elseif {$tag eq "label"} {
 				if {$tagsgn eq "/"} {
@@ -471,7 +488,6 @@ namespace eval oodz {
 
 						# Emit as JSON array
 						set existing_data [ns_json value -type array $array_triples]
-						puts "Existing data for table $var (JSON): $existing_data"
 						set serverSide false
 					}
 
@@ -839,6 +855,19 @@ namespace eval oodz {
 					ns_adp_puts "\$('#html_editor').trumbowyg();"
 					ns_adp_puts "</script>"
 				}
+			############################################### CLOUDZ EDITOR ###############################################
+			} elseif {$tag eq "cloudz_editor"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					set i_v [: Check_sdata $var]
+					ns_adp_puts "<textarea id=\"$var\" name=\"$var\" class=\"form-control\" rows=\"20\">$i_v</textarea>"
+					ns_adp_puts "<script>"
+						ns_adp_puts "new cloudzEditor('$var', { basePath: '/data/js/cloudz_editor', toolbar: '$toolbar' });"
+					ns_adp_puts "</script>"
+				}
 			############################################### HCAPTCHA ###############################################
 			} elseif {$tag eq "hcaptcha"} {
 				if {$tagsgn eq "/"} {
@@ -1203,6 +1232,10 @@ namespace eval oodz {
 				} else {
 					dict set prop type button
 				}
+			} elseif {$tag eq "cloudz_editor"} {
+				if {[dict getnull $prop toolbar] eq ""} {
+					dict set prop toolbar "toolbar.json"
+				}
 			}
 			
 			
@@ -1256,7 +1289,7 @@ namespace eval oodz {
 				h5 ""\
 				h6 ""\
 				p ""\
-				a "btn btn-outline-dark btn-sm btn-block"\
+				link "btn btn-outline-dark btn-sm w-100 m-1"\
 				plain_html ""\
 				chart ""\
 				html_string ""\
@@ -1300,7 +1333,7 @@ namespace eval oodz {
 			]
 			return [dict getnull $def_class $tag]
 		}
-		
+
 		:method Check_sdata {args} {
 			try {
 				set key [lindex $args 0]

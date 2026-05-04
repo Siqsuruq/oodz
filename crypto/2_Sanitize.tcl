@@ -29,15 +29,7 @@ namespace eval oodz {
 		}
 
 		:public object method normalize_spaces {data} {
-			set normalizedData [list]
-			foreach item $data {
-				lappend normalizedData [string trim [regsub -all {[\s]+} $item " "]]
-			}
-			# If only one string was provided (i.e., not a list), just return the single string
-			if {[llength $data] == 1} {
-				return [lindex $normalizedData 0]
-			}
-			return $normalizedData
+    		return [string trim [regsub -all {[\s]+} $data " "]]
 		}
 
 		:public object method check_password_strength {password} {
