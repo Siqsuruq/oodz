@@ -66,6 +66,24 @@ namespace eval oodz {
 			}			
 		}
 
+		:public method db_size {} {
+			set result ""
+			set code "ok"
+			set query "SELECT pg_size_pretty(pg_database_size(current_database()));"
+			try {
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					set result [dict getnull [ns_set array $row] pg_size_pretty]
+				}
+			} on error {e} {
+				oodzLog error "DB ERROR: $e"
+				set code "error"
+				set result $e
+			} finally {
+				return -code $code $result
+			}			
+		}
+
 		:public method current_database {} {
 			set result ""
 			set code "ok"

@@ -135,45 +135,39 @@ namespace eval oodz {
 			################################################# HTML Tags and Typography #################################################
 			} elseif {$tag eq "h1"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</h1>\n"
+					ns_adp_puts  "</h1>"
 				} else {
-					ns_adp_puts "\n<h1>"
-					ns_adp_puts "[::msgcat::mc $val]"
+					ns_adp_puts "<h1>[::msgcat::mc $val]"
 				}
 			} elseif {$tag eq "h2"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</h2>\n"
+					ns_adp_puts  "</h2>"
 				} else {
-					ns_adp_puts "\n<h2>"
-					ns_adp_puts "[::msgcat::mc $val]"
+					ns_adp_puts "<h2>[::msgcat::mc $val]"
 				}
 			} elseif {$tag eq "h3"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</h3>\n"
+					ns_adp_puts  "</h3>"
 				} else {
-					ns_adp_puts "\n<h3>"
-					ns_adp_puts "[::msgcat::mc $val]"
+					ns_adp_puts "<h3>[::msgcat::mc $val]"
 				}
 			} elseif {$tag eq "h4"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</h4>\n"
+					ns_adp_puts  "</h4>"
 				} else {
-					ns_adp_puts "\n<h4>"
-					ns_adp_puts "[::msgcat::mc $val]"
+					ns_adp_puts "<h4>[::msgcat::mc $val]"
 				}
 			} elseif {$tag eq "h5"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</h5>\n"
+					ns_adp_puts  "</h5>"
 				} else {
-					ns_adp_puts "\n<h5>"
-					ns_adp_puts "[::msgcat::mc $val]"
+					ns_adp_puts "<h5>[::msgcat::mc $val]"
 				}
 			} elseif {$tag eq "h6"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</h6>\n"
+					ns_adp_puts  "</h6>"
 				} else {
-					ns_adp_puts "\n<h6>"
-					ns_adp_puts "[::msgcat::mc $val]"
+					ns_adp_puts "<h6>[::msgcat::mc $val]"
 				}
 			} elseif {$tag eq "p"} {
 				if {$tagsgn eq "/"} {
@@ -761,7 +755,7 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					ns_adp_puts "<li class=\"$class\">"
+					ns_adp_puts "<li class=\"$class\">[subst $val]"
 				}
 			################################################# CALENDAR #################################################
 			} elseif {$tag eq "calendar"} {
