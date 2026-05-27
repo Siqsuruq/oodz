@@ -96,18 +96,17 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-
 					if {[dict get $pr_dict type] eq "frame" && [dict get $pr_dict pos] eq "hor"} {
-						ns_adp_puts "<div class=\"row\">"
+						ns_adp_puts "<div class=\"row gx-1 mt-2\">"
 					} elseif {[dict get $pr_dict type] eq "frame" && [dict get $pr_dict pos] eq "ver"} {
 						# Bootstrap Auto-layout columns
-						ns_adp_puts "<div class=\"col\">"
+						ns_adp_puts "<div class=\"col d-flex flex-column gap-1\">"
 					}
 				}
 			################################################# ACCORDION ################################################# 
 			} elseif {$tag eq "accordion"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "</div></div></div></div><br>"
+					ns_adp_puts "</div></div></div></div>"
 					# : dev_comments $tag
 				} else {
 					# : dev_comments $tag start
@@ -217,9 +216,8 @@ namespace eval oodz {
 			################################################# ENTRY || TEXT ################################################# 
 			} elseif {$tag eq "entry" || $tag eq "text"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "<br>"
+					ns_adp_puts ""
 				} else {
-					ns_adp_puts "<!-- Entry -->"
 					: input $props $tag $val
 					# iMask code
 					if {[info exists mask] != 0 && $mask ne ""} {
@@ -231,7 +229,26 @@ namespace eval oodz {
 							ns_adp_puts "</script>"
 						}
 					}
-					ns_adp_puts "<!-- End Entry -->"
+				}
+			################################################# BARCODE ################################################# 
+			} elseif {$tag eq "barcode"} {
+				if {$tagsgn eq "/"} {
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					set cmd_dict [:normalize_cmd_config $pr_dict]
+					set cmd_block [:render_cmd_attrs $cmd_dict]
+					set i_v [: Check_sdata $var]
+					if {$i_v eq "" && $value ne ""} {
+						set i_v $value
+					}
+					ns_adp_puts "<div class=\"[: def_class group]\">"
+					ns_adp_puts "<span class=\"input-group-text\" id=\"addon_$var\"><i class=\"bi bi-qr-code-scan\"></i></span>"
+					ns_adp_puts "<input type=\"text\" id=\"$var\" name=\"$var\" class=\"$class\" placeholder=\"$placeholder\"\
+						aria-describedby=\"addon_$var\" value=\"$i_v\"\
+						$cmd_block\
+						$mandatory $state $js autofocus>"
+					ns_adp_puts "</div>"
 				}
 			################################################# BOOL #################################################
 			} elseif {$tag eq "bool"} {
@@ -254,7 +271,7 @@ namespace eval oodz {
 			################################################# DROPDOWN ################################################# 
 			} elseif {$tag eq "dropdown"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "<br>\n"
+					ns_adp_puts "\n"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					set trns 1
@@ -350,7 +367,6 @@ namespace eval oodz {
 						set selected_text [: Check_sdata "${var}_text"]
 					}
 
-					ns_adp_puts "<div class=\"form-group\">"
 					if {[dict exists $pr_dict but_cmd]} {
 						ns_adp_puts "<div class=\"input-group\">"
 						ns_adp_puts "<div class=\"input-group-prepend\">"
@@ -378,7 +394,6 @@ namespace eval oodz {
 					}
 		
 					ns_adp_puts "</select>"
-					ns_adp_puts "</div>"
 					if {[dict exists $pr_dict but_cmd]} {ns_adp_puts "</div>"}
 				}
 			################################################# FILE ################################################# 
@@ -404,7 +419,11 @@ namespace eval oodz {
 			################################################# BUTTON ################################################# 
 			} elseif {$tag eq "button"} {
 				if {$tagsgn ne "/"} {
-					: button $props $tag $val
+					if {[:should_render $props $tag $val] == 1} {
+						: button $props $tag $val
+					} else {
+						return
+					}
 				}
     			return
 				#if {$tagsgn eq "/"} {
@@ -713,6 +732,10 @@ namespace eval oodz {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "<!-- END MODAL -->\n"
 				} else {
+					if {[:should_render $props $tag $val] != 1} {
+						return
+					}
+
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
 					ns_adp_puts "<!-- START MODAL -->\n"
@@ -753,9 +776,13 @@ namespace eval oodz {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "</li>"
 				} else {
-					set pr_dict [: props_2_dict $props $tag $val]
-					dict with pr_dict {}
-					ns_adp_puts "<li class=\"$class\">[subst $val]"
+					if {[:should_render $props $tag $val] == 1} {
+						set pr_dict [: props_2_dict $props $tag $val]
+						dict with pr_dict {}
+						ns_adp_puts "<li class=\"$class\">[subst $val]"
+					} else {
+						return
+					}
 				}
 			################################################# CALENDAR #################################################
 			} elseif {$tag eq "calendar"} {
@@ -869,9 +896,7 @@ namespace eval oodz {
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					ns_adp_puts "<div class=\"form-group\">"
 					ns_adp_puts "<div class=\"h-captcha\" data-sitekey=\"$sitekey\" data-size=\"normal\"></div>"
-					ns_adp_puts "</div>"
 				}
 			################################################# ECHARTS #################################################
 			} elseif {$tag eq "chart"} {
@@ -1061,6 +1086,23 @@ namespace eval oodz {
 		}
 
 		############################################ PROP2DICT ############################################
+		:method should_render {props tag val} {
+			set prop [string map {= { }} $props]
+			if {[dict getnull $prop show_if] ne ""} {
+				set key [dict get $prop show_if]
+				if {[::oodzConf get_module_config $key] != 1} {
+					return 0
+				}
+			}
+			if {[dict getnull $prop hide_if] ne ""} {
+				set key [dict get $prop hide_if]
+				if {[::oodzConf get_module_config $key] == 1} {
+					return 0
+				}
+			}
+			return 1
+		}
+
 
 		:method props_2_dict {props tag val} {
 			
@@ -1272,7 +1314,7 @@ namespace eval oodz {
 				form ""\
 				line ""\
 				container ""\
-				accordion "accordion"\
+				accordion "accordion accordion-sm"\
 				accordion-item ""\
 				label ""\
 				legend ""\
@@ -1283,7 +1325,7 @@ namespace eval oodz {
 				h5 ""\
 				h6 ""\
 				p ""\
-				link "btn btn-outline-dark btn-sm w-100 m-1"\
+				link "btn btn-outline-dark btn-sm w-100"\
 				plain_html ""\
 				chart ""\
 				html_string ""\
@@ -1295,6 +1337,7 @@ namespace eval oodz {
 				div ""\
 				banner ""\
 				entry "form-control form-control-sm oodz_txt"\
+				barcode "form-control form-control-sm oodz_barcode"\
 				group "input-group input-group-sm"\
 				radio "form-check-input"\
 				file "file"\
@@ -1303,7 +1346,7 @@ namespace eval oodz {
 				date "form-control form-control-sm oodz_txt"\
 				time "form-control form-control-sm oodz_txt"\
 				clock "form-control form-control-sm oodz_txt"\
-				button "btn btn-outline-dark btn-sm w-100 m-1"\
+				button "btn btn-outline-dark btn-sm w-100"\
 				mod_button "btn btn-outline-dark btn-sm"\
 				modal ""\
 				text "form-control oodz_txt"\

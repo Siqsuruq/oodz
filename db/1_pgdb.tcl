@@ -795,10 +795,10 @@ namespace eval oodz {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {e} {
-				::oodzLog error "DB ERROR: $e"
+			} on error {errMsg} {
+				::oodzLog error "Class=db method=update_all error=$errMsg"
 				set code "error"
-				set result $e
+				set result $errMsg
 			} finally {
 				$builder destroy
 				return -code $code $result
@@ -832,10 +832,10 @@ namespace eval oodz {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {e} {
-				oodzLog error "DB ERROR: $e"
+			} on error {errMsg} {
+				::oodzLog error "Class=db method=delete_rows error=$errMsg"
 				set code "error"
-				set result $e
+				set result $errMsg
 			} finally {
 				return -code $code $result
 			}
@@ -865,10 +865,10 @@ namespace eval oodz {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {e} {
-				::oodzLog error "DB ERROR: $e"
+			} on error {errMsg} {
+				::oodzLog error "Class=db method=update_hstore error=$errMsg"
 				set code "error"
-				set result $e
+				set result $errMsg
 			} finally {
 				return -code $code $result
 			}
@@ -890,10 +890,10 @@ namespace eval oodz {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {e} {
-				::oodzLog error "DB ERROR: $e"
+			} on error {errMsg} {
+				::oodzLog error "Class=db method=delete_hstore error=$errMsg"
 				set code "error"
-				set result $e
+				set result $errMsg
 			} finally {
 				return -code $code $result
 			}
@@ -918,10 +918,10 @@ namespace eval oodz {
 						set result [::json::json2dict [dict get [ns_set array $row] hstore_to_json]]
 					} 
 				}
-			} on error {e} {
-				::oodzLog error "DB ERROR: $e"
+			} on error {errMsg} {
+				::oodzLog error "DB ERROR: $errMsg"
 				set code "error"
-				set result $e
+				set result $errMsg
 			} finally {
 				return -code $code $result
 			}

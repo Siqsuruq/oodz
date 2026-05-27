@@ -17,7 +17,7 @@ package require json
 package require json::write
 package require tzint
 package require sha256
-#package require fileutil
+package require fileutil
 #package require hrfilesize
 #package require struct::list
 #package require smtp

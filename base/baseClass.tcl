@@ -8,12 +8,10 @@ namespace eval oodz {
 			set a [lindex $args 0]
 			if {$a ne "" && [dict is_dict $a] == 1} {
 				dict for {key value} $a {
-					if {[: prop_exists ${key}]} {
-						: ${key} set ${value}
-					} else {
+					if {![: prop_exists ${key}]} {
 						: object property -accessor public ${key}
-						: ${key} set ${value}
 					}
+					set :${key} $value
 				}
 				:props
 			} else {
@@ -62,19 +60,18 @@ namespace eval oodz {
 				}
 				# Iterate over the properties and gather their values 
 				foreach prop $what {
+					set val [: cget -${prop}]
 					if {$result_type eq "L"} {
-						if {[:prop_isobj [: cget -${prop}]] == 1} {
-							set a [[: cget -${prop}] get]
-							lappend result $a
+						if {[:prop_isobj $val] == 1} {
+							lappend result [$val get]
 						} else {
-							lappend result [: ${prop} get]
+							lappend result $val
 						}
 					} else {
-						if {[:prop_isobj [: cget -${prop}]] == 1} {
-							set a [[: cget -${prop}] get]
-							dict set result $prop $a
+						if {[:prop_isobj $val] == 1} {
+							dict set result $prop [$val get]
 						} else {
-							dict set result $prop [: ${prop} get]
+							dict set result $prop $val
 						}
 					}
 				}
@@ -86,12 +83,13 @@ namespace eval oodz {
 		}
 
 		:method prop_isobj {varName} {
+			return [::nsf::is object $varName]
 			# Check if the variable is an object by attempting to get its class info
-			if { [catch {${varName} info class}] } {
-				return 0
-			} else {
-				return 1
-			}
+			# if { [catch {${varName} info class}] } {
+			# 	return 0
+			# } else {
+			# 	return 1
+			# }
 		}
 
 		# Public interface to remove specific keys from object data, accepts list as of keys as parameter
