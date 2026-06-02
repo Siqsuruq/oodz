@@ -43,11 +43,10 @@ namespace eval oodz {
 			set val [lindex $ar_l 3]
 			set a [lindex $ar_l 4]	
 			
-			# ns_adp_puts "Some tag: $tag <br>"
 			################################################# FORM ################################################# 
 			if {$tag eq "form"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts  "</form><br>"
+					ns_adp_puts  "</form>"
 					: add_FormHandler
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
@@ -103,6 +102,22 @@ namespace eval oodz {
 						ns_adp_puts "<div class=\"col d-flex flex-column gap-1\">"
 					}
 				}
+			} elseif {$tag eq "row"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "</div>\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "<div class=\"$class\">"
+				}
+			} elseif {$tag eq "col"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "</div>\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					ns_adp_puts "<div class=\"$class\">"
+				}	
 			################################################# ACCORDION ################################################# 
 			} elseif {$tag eq "accordion"} {
 				if {$tagsgn eq "/"} {
@@ -125,10 +140,9 @@ namespace eval oodz {
 					ns_adp_puts "<div class=\"accordion-body\">"				
 				}
 			################################################# TAB #################################################
-			# NEW DATE TIME RELATED 
 			} elseif {$tag eq "tab"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "<br>"
+					ns_adp_puts ""
 				} else {
 				}
 			################################################# HTML Tags and Typography #################################################
@@ -253,7 +267,7 @@ namespace eval oodz {
 			################################################# BOOL #################################################
 			} elseif {$tag eq "bool"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "<br>\n"
+					ns_adp_puts "\n"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
@@ -399,7 +413,7 @@ namespace eval oodz {
 			################################################# FILE ################################################# 
 			} elseif {$tag eq "file"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "<br>\n"
+					ns_adp_puts "\n"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
@@ -459,7 +473,6 @@ namespace eval oodz {
 					}
 					# STOP Table Headers
 
-					ns_adp_puts "<br>"
 					ns_adp_puts "<div class=\"table-responsive-xl\">"
 					ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table $class\" style=\"width:100%\">"
 					
@@ -706,7 +719,6 @@ namespace eval oodz {
 			# NEW DATE TIME RELATED 
 			} elseif {$tag eq "date" || $tag eq "time" || $tag eq "month" || $tag eq "datetime-local"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "<br>"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
@@ -717,7 +729,6 @@ namespace eval oodz {
 			################################################# COLOR #################################################
 			} elseif {$tag eq "color"} {
 				if {$tagsgn eq "/"} {
-					ns_adp_puts "<br>"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
@@ -1291,27 +1302,49 @@ namespace eval oodz {
 
 		:method modify_class {tag {new_class ""}} {
 			set default_class [: def_class $tag]
-			
-			if {$new_class ne ""} {
-				if {[llength $new_class] > 1} {
-					set class_action [lindex $new_class 0]
-					set class_name [lrange  $new_class 1 end]
-					if {$class_action eq "+"} {
-						return [concat $default_class $class_name]
-					} elseif {$class_action eq "-"} {
-						return [remove_from_list $default_class $class_name]
-					} else {return $new_class}
-				} else {
-					return $new_class
-				} 
-			} else {
+			if {$new_class eq ""} {
 				return $default_class
 			}
+			# Check if any token uses + or - prefix (mixed mode)
+			set has_prefix 0
+			foreach token $new_class {
+				if {[string match "+*" $token] || [string match "-*" $token]} {
+					set has_prefix 1
+					break
+				}
+			}
+			if {$has_prefix} {
+				set result $default_class
+				foreach token $new_class {
+					set prefix [string index $token 0]
+					set cls    [string range $token 1 end]
+					if {$prefix eq "+"} {
+						if {$cls ni $result} {
+							lappend result $cls
+						}
+					} elseif {$prefix eq "-"} {
+						set idx [lsearch -exact $result $cls]
+						if {$idx >= 0} {
+							set result [lreplace $result $idx $idx]
+						}
+					} else {
+						# no prefix — treat as plain addition
+						if {$token ni $result} {
+							lappend result $token
+						}
+					}
+				}
+				return $result
+			}
+			# No prefixes — plain replacement
+			return $new_class
 		}
-		
+
 		:method def_class {tag} {
 			set def_class [dict create \
 				form ""\
+				row "row gx-1 mt-2"\
+				col "col d-flex flex-column gap-1"\
 				line ""\
 				container ""\
 				accordion "accordion accordion-sm"\

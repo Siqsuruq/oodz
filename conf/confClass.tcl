@@ -185,7 +185,6 @@ namespace eval oodz {
 
 
 		:public method reload {args} {
-			::oodzLog error "Reloading configuration and translations..."
 			: read_dz_conf
 			: load_trns
 		}
