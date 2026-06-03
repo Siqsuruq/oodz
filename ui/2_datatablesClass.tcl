@@ -95,7 +95,8 @@ nx::Class create datatablesClass {
             :result
             return -code ok ${:result}
         } on error {errMsg} {
-            return -code error "Method parse_datatable_request: $errMsg"
+            ::oodzLog error "Class=datatablesClass method=parse_datatable_request error=$errMsg"
+            return -code error $errMsg
         }
     }
 
@@ -157,7 +158,8 @@ nx::Class create datatablesClass {
             }
             return -code ok $res
         } on error {errMsg} {
-            return -code error "Method build_query: $errMsg"
+            ::oodzLog error "Class=datatablesClass method=build_query error=$errMsg"
+            return -code error $errMsg
         } finally {
             $sb destroy
         }

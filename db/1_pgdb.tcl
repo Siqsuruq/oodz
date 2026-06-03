@@ -3,16 +3,6 @@ namespace eval oodz {
 		# Possible result formats are: D - Tcl dict, L - Tcl list, J - JSON, default is Tcl dict
 		:property {result_format "D"}
 		
-		# :method with_db {varName script} {
-		# 	upvar 1 $varName dbh
-		# 	set dbh [ns_db gethandle]
-		# 	try {
-		# 		uplevel 1 $script
-		# 	} finally {
-		# 		ns_db releasehandle $dbh
-		# 	}
-		# }
-
 		:method with_db {varName script} {
 			upvar 1 $varName dbh
 
@@ -20,14 +10,16 @@ namespace eval oodz {
 			set key "__oodz_dbh__[ns_info server]"
 			set depthKey "__oodz_dbh_depth__[ns_info server]"
 
-			# If already inside with_db on this thread, reuse
 			if {[info exists ::$key]} {
 				set dbh [set ::$key]
 				incr ::$depthKey
+				set d [set ::$depthKey]
+				#::oodzLog error "with_db REUSE-IN  depth=$d caller=[info level -1]"
 				try {
 					uplevel 1 $script
 				} finally {
-					incr ::$depthKey -1
+					set d [incr ::$depthKey -1]
+					#::oodzLog error "with_db REUSE-OUT depth=$d caller=[info level -1]"
 				}
 				return
 			}
@@ -37,10 +29,12 @@ namespace eval oodz {
 			set dbh [ns_db gethandle $pool]
 			set ::$key $dbh
 			set ::$depthKey 1
-
+			#::oodzLog error "with_db ACQUIRED caller=[info level -1]"
 			try {
 				uplevel 1 $script
 			} finally {
+				#::oodzLog error "with_db RELEASING depth=[set ::$depthKey] caller=[info level -1]"
+
 				# release only once (outermost)
 				catch { ns_db releasehandle $dbh }
 				unset -nocomplain ::$key ::$depthKey
@@ -49,62 +43,49 @@ namespace eval oodz {
 
 
 		:public method show_pg_version {} {
-			set result ""
-			set code "ok"
 			set query "SELECT version();"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] version]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=show_pg_version error=$e"
+				return -code error $e
 			}			
 		}
 
 		:public method db_size {} {
-			set result ""
-			set code "ok"
 			set query "SELECT pg_size_pretty(pg_database_size(current_database()));"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] pg_size_pretty]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=db_size error=$e"
+				return -code error $e
 			}			
 		}
 
 		:public method current_database {} {
-			set result ""
-			set code "ok"
 			set query "SELECT current_database();"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] current_database]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=current_database error=$e"
+				return -code error $e
 			}			
 		}
 
 		:public method row_exists {table column value} {
 			set result 0
-			set code "ok"
 			set query "SELECT EXISTS (SELECT 1 FROM ${table} WHERE ${column} = [ns_dbquotevalue $value]);"
 			try {
 				:with_db dbh {
@@ -119,18 +100,15 @@ namespace eval oodz {
 						set result 0
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
-			}
+				::oodzLog error "Class=db method=row_exists error=$e"
+				return -code error $e
+			}			
 		}
 
 		:public method row_exists_multi {table where_dict} {
 			set result 0
-			set code "ok"
 			try {
 				if {[dict size $where_dict] == 0} {
 					return -code error "row_exists_multi requires at least one condition."
@@ -153,18 +131,15 @@ namespace eval oodz {
 						set result 0
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=row_exists_multi error=$e"
+				return -code error $e
 			}
 		}
 
 		:public method table_exists {table} {
 			set result 0
-			set code "ok"
 			set query "SELECT tbl_view_exists([ns_dbquotevalue $table])"
 			try {
 				:with_db dbh {
@@ -177,54 +152,45 @@ namespace eval oodz {
 						set result 1
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=table_exists error=$e"
+				return -code error $e
 			}
 		}
 
 		:public method select_uuid_by_id {table id} {
 			set result ""
-			set code "ok"
 			set query "SELECT uuid_${table} FROM $table WHERE id=[ns_dbquotevalue $id]"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] uuid_${table}]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_uuid_by_id error=$e"
+				return -code error $e
 			}
 		}
 
 		:public method select_id_by_uuid {table uuid} {
 			set result ""
-			set code "ok"
 			set query "SELECT id FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] id]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_id_by_uuid error=$e"
+				return -code error $e
 			}
 		}
 
 		:public method select_id_by_name {table name} {
 			set result ""
-			set code "ok"
 			set query "SELECT id FROM $table WHERE name=[ns_dbquotevalue $name]"
 			try {
 				:with_db dbh {
@@ -233,18 +199,15 @@ namespace eval oodz {
 						lappend result [dict get [ns_set array $rows] id]
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_id_by_name error=$e"
+				return -code error $e
 			}
 		}
 
 		:public method select_uuid_by_name {table name} {
 			set result ""
-			set code "ok"
 			set query "SELECT uuid_$table FROM $table WHERE name=[ns_dbquotevalue $name]"
 			try {
 				:with_db dbh {
@@ -253,90 +216,75 @@ namespace eval oodz {
 						lappend result [dict get [ns_set array $rows] uuid_$table]
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_uuid_by_name error=$e"
+				return -code error $e
 			}
 		}
 		
 		:public method select_col_by_id {table column id} {
 			set result ""
-			set code "ok"
 			set query "SELECT $column FROM $table WHERE id=[ns_dbquotevalue $id]"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] $column]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_col_by_id error=$e"
+				return -code error $e
 			}
 		}
 		
 		:public method select_col_by_uuid {table column uuid} {
 			set result ""
-			set code "ok"
 			set query "SELECT [ns_dbquotevalue $column] FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] $column]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_col_by_uuid error=$e"
+				return -code error $e
 			}
 		}
 		
 		:public method select_name_by_id {table id} {
 			set result ""
-			set code "ok"
 			set query "SELECT name FROM $table WHERE id=[ns_dbquotevalue $id]"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] name]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_name_by_id error=$e"
+				return -code error $e
 			}
 		}
 		
 		:public method select_name_by_uuid {table uuid} {
 			set result ""
-			set code "ok"
 			set query "SELECT name FROM $table WHERE uuid_${table}=[ns_dbquotevalue $uuid]"
 			try {
 				:with_db dbh {
 					set row [ns_db 0or1row $dbh $query]
 					set result [dict getnull [ns_set array $row] name]
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_name_by_uuid error=$e"
+				return -code error $e
 			}
 		}
 		
 		:public method get_columns_types {table {columns "*"}} {
 			set result ""
-			set code "ok"
 			set col_type [dict create]
 			set query "SELECT * FROM information_schema.columns WHERE table_name = '$table'"
 			try {
@@ -353,12 +301,10 @@ namespace eval oodz {
 						lappend result [dict getnull $col_type $col]
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=get_columns_types error=$e"
+				return -code error $e
 			}
 		}
 		
@@ -385,7 +331,6 @@ namespace eval oodz {
 		
 		:public method select_columns_names {table} {
 			set result ""
-			set code "ok"
 			set query "SELECT column_name FROM information_schema.columns WHERE table_name = '$table' AND table_schema='public' ORDER BY ordinal_position ASC"
 			try {
 				:with_db dbh {
@@ -394,61 +339,34 @@ namespace eval oodz {
 						lappend result [dict get [ns_set array $rows] column_name]
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_columns_names error=$e"
+				return -code error $e
 			}
 		}
 
 		:public method get_columns_names {table} {
 			set result ""
-			set code "ok"
-			set :db_handles [ns_db gethandle]
-			# set query "SELECT column_name FROM information_schema.columns WHERE table_name = '$table' AND table_schema='public' ORDER BY ordinal_position ASC"
-			set query "SELECT 
-				c.column_name, 
-				c.data_type,
-				CASE 
-					WHEN tc.constraint_type = 'FOREIGN KEY' THEN 'YES'
-					ELSE 'NO'
-				END AS is_foreign_key,
-				CASE 
-					WHEN tc.constraint_type = 'PRIMARY KEY' THEN 'YES'
-					ELSE 'NO'
-				END AS is_primary_key,
-				CASE 
-					WHEN c.column_default LIKE 'nextval%' THEN 'YES'
-					ELSE 'NO'
-				END AS is_auto_increment
-			FROM 
-				information_schema.columns c
-			LEFT JOIN information_schema.key_column_usage kcu
-				ON c.table_name = kcu.table_name
-				AND c.column_name = kcu.column_name
-				AND c.table_schema = kcu.table_schema
-			LEFT JOIN information_schema.table_constraints tc
-				ON kcu.constraint_name = tc.constraint_name
-				AND kcu.table_schema = tc.table_schema
+			set query "SELECT c.column_name, c.data_type, CASE WHEN tc.constraint_type = 'FOREIGN KEY' THEN 'YES' ELSE 'NO'
+				END AS is_foreign_key, CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN 'YES' ELSE 'NO'
+				END AS is_primary_key, CASE WHEN c.column_default LIKE 'nextval%' THEN 'YES' ELSE 'NO'
+				END AS is_auto_increment FROM information_schema.columns c LEFT JOIN information_schema.key_column_usage kcu
+				ON c.table_name = kcu.table_name AND c.column_name = kcu.column_name AND c.table_schema = kcu.table_schema
+				LEFT JOIN information_schema.table_constraints tc ON kcu.constraint_name = tc.constraint_name AND kcu.table_schema = tc.table_schema
 				AND (tc.constraint_type = 'FOREIGN KEY' OR tc.constraint_type = 'PRIMARY KEY')
-			WHERE 
-				c.table_name = '$table'
-				AND c.table_schema = 'public';"
+				WHERE c.table_name = '$table' AND c.table_schema = 'public';"
 			try {
-				set rows [ns_db select ${:db_handles} $query]
-				set rows [ns_db select ${:db_handles} $query]
-				while {[ns_db getrow ${:db_handles} $rows]} {
-					lappend result [ns_set array $rows]
+				:with_db dbh {
+					set rows [ns_db select $dbh $query]
+					while {[ns_db getrow $dbh $rows]} {
+						lappend result [ns_set array $rows]
+					}
 				}
+				return -code ok $result
 			} on error {e} {
-				::oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				: release
-				return -code $code $result
+				::oodzLog error "Class=db method=get_columns_names error=$e"
+				return -code error $e
 			}
 		}
 		
@@ -488,28 +406,24 @@ namespace eval oodz {
 		
 		:public method select_all2 {table {columns "*"}} {
 			set result ""
-			set code "ok"
 			set sb [::SQLBuilder new -tableName $table]
-			
 			try {
 				if {$columns == "*"} {
 					set columns [: select_columns_names $table]
 				}
 				set result [$sb buildSelectQuery]
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
+				::oodzLog error "Class=db method=select_all2 error=$e"
+				return -code error $e
 			} finally {
 				$sb destroy
 				: release
-				return -code $code $result
 			}
 		}
 
 		:public method select_all {table {columns "*"} {extra "none"} args} {
 			set result ""
-			set code "ok"
 			if {$columns == "*"} {
 				set columns [: select_columns_names $table]
 			}
@@ -609,7 +523,7 @@ namespace eval oodz {
 					::oodzLog dev "QUERY: $query"
 					:with_db dbh {
 						set row [ns_db 0or1row $dbh $query]
-						set result [dict get [ns_set array $row] json_agg]			
+						set result [dict getnull [ns_set array $row] json_agg]			
 					}
 				} elseif {${:result_format} eq "L"} {
 					:with_db dbh {
@@ -627,12 +541,9 @@ namespace eval oodz {
 						}
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=select_all error=$e"
 			}
 		}
 
@@ -673,8 +584,9 @@ namespace eval oodz {
 					}
 				}
 				return -code ok $result
-			} on error {errMsg} {
-				return -code "error" "insert_all method: $errMsg"
+			} on error {e} {
+				::oodzLog error "Class=db method=insert error=$e"
+				return -code error $e
 			} finally {
 				$qb destroy
 			}
@@ -683,7 +595,6 @@ namespace eval oodz {
 		# Should always return inserted id and uuid get rid of returning empty, unless defined * ()return everything
 		:public method insert_all {table data {conflict ""} {returning ""} {nspace 1}} {
 			set result ""
-			set code "ok"
 			set tbl_cols [: get_columns_types $table]
 			set my_columns [list]
 			set my_values [list]
@@ -747,24 +658,22 @@ namespace eval oodz {
 						ns_db dml $dbh $query
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				::oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=insert_all error=$e"
+				return -code error $e
 			}
 		}
 
 		:public method update_all {table data} {
 			set result ""
-			set code "ok"
 			set column_names [: select_columns_names $table]
 			set builder [UpdateSQLBuilder new -tableName $table]
 			try {
 				# Guard: require a WHERE key before doing anything
 				if {![dict exists $data id] && ![dict exists $data uuid_${table}]} {
-					return -code error "update_all: no id or uuid_${table} in data"
+					::oodzLog error "Class=db method=update_all error=\"No id or uuid_${table} in data\""
+					return -code error "No id or uuid_${table} in data"
 				}
 				# Extract WHERE key
 				if {[dict exists $data id]} {
@@ -795,13 +704,12 @@ namespace eval oodz {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {errMsg} {
-				::oodzLog error "Class=db method=update_all error=$errMsg"
-				set code "error"
-				set result $errMsg
+				return -code ok $result
+			} on error {e} {
+				::oodzLog error "Class=db method=update_all error=$e"
+				return -code error $e
 			} finally {
 				$builder destroy
-				return -code $code $result
 			}
 		}
 
@@ -813,7 +721,6 @@ namespace eval oodz {
 		
 		:public method delete_rows {table ids} {
 			set result ""
-			set code "ok"
 			try {
 				set int_ids [list]
 				set uuids_ids [list]
@@ -832,24 +739,20 @@ namespace eval oodz {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {errMsg} {
-				::oodzLog error "Class=db method=delete_rows error=$errMsg"
-				set code "error"
-				set result $errMsg
-			} finally {
-				return -code $code $result
+				return -code ok $result
+			} on error {e} {
+				::oodzLog error "Class=db method=delete_rows error=$e"
+				return -code error $e
 			}
 		}
 		########################################################## hstore ##########################################################
 		:public method update_hstore {table id data {col "extra"} {uuid_col ""}}  {
 			set result ""
-			set code "ok"
 			set hst_data ""
 			dict for {key val} $data {
 				append hst_data "\"$key\"=>\"$val\","
 			}
 			set hst_data [string trimright $hst_data ,]
-			
 			if {[::oodz::DataType is_uuid ${id}] == 1} {
 				if {$uuid_col eq ""} {
 					set uuid_col uuid_${table}
@@ -858,25 +761,20 @@ namespace eval oodz {
 			} else {
 				set query "UPDATE $table SET $col = $col || ('$hst_data') ::hstore WHERE $table.id='$id';"
 			}
-			
 			::oodzLog dev "QUERY: $query"
-
 			try {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {errMsg} {
-				::oodzLog error "Class=db method=update_hstore error=$errMsg"
-				set code "error"
-				set result $errMsg
-			} finally {
-				return -code $code $result
+				return -code ok $result
+			} on error {e} {
+				::oodzLog error "Class=db method=update_hstore error=$e"
+				return -code error $e
 			}
 		}
 		
 		:public method delete_hstore {table id key_2_del {col "extra"} {uuid_col ""}} {
 			set result ""
-			set code "ok"
 			if {[::oodz::DataType is_uuid ${id}] == 1} {
 				if {$uuid_col eq ""} {
 					set uuid_col uuid_${table}
@@ -890,18 +788,15 @@ namespace eval oodz {
 				:with_db dbh {
 					ns_db dml $dbh $query
 				}
-			} on error {errMsg} {
-				::oodzLog error "Class=db method=delete_hstore error=$errMsg"
-				set code "error"
-				set result $errMsg
-			} finally {
-				return -code $code $result
+				return -code ok $result
+			} on error {e} {
+				::oodzLog error "Class=db method=delete_hstore error=$e"
+				return -code error $e
 			}
 		}
 		
 		:public method get_hstore_dict {table id {col "extra"} {uuid_col ""}} {
 			set result ""
-			set code "ok"
 			if {[::oodz::DataType is_uuid ${id}] == 1} {
 				if {$uuid_col eq ""} {
 					set uuid_col uuid_${table}
@@ -918,12 +813,10 @@ namespace eval oodz {
 						set result [::json::json2dict [dict get [ns_set array $row] hstore_to_json]]
 					} 
 				}
-			} on error {errMsg} {
-				::oodzLog error "DB ERROR: $errMsg"
-				set code "error"
-				set result $errMsg
-			} finally {
-				return -code $code $result
+				return -code ok $result
+			} on error {e} {
+				::oodzLog error "Class=db method=get_hstore_dict error=$e"
+				return -code error $e
 			}
 		}
 		
@@ -945,10 +838,8 @@ namespace eval oodz {
 	###################################### Execute Query #################################################
 		:public method execute_query {args} {
 			set result ""
-			set code "ok"
 			set query [lindex $args 0]
 			::oodzLog dev "QUERY: $query"
-
 			try {
 				if {${:result_format} eq "J"} {
 					set query "SELECT json_agg(t) FROM ($query) t"
@@ -966,13 +857,30 @@ namespace eval oodz {
 						}
 					}
 				}
+				return -code ok $result
 			} on error {e} {
-				oodzLog error "DB ERROR: $e"
-				set code "error"
-				set result $e
-			} finally {
-				return -code $code $result
+				::oodzLog error "Class=db method=execute_query error=$e"
+				return -code error $e
 			}
 		}
+
+		:public method transaction {script} {
+			set code "ok"
+			set result ""
+			:with_db dbh {
+				try {
+					ns_db dml $dbh "BEGIN"
+					uplevel 1 $script
+					ns_db dml $dbh "COMMIT"
+				} on error {errMsg} {
+					catch {ns_db dml $dbh "ROLLBACK"}
+					::oodzLog error "Transaction ROLLBACK: $errMsg"
+					set code "error"
+					set result $errMsg
+				}
+			}
+			return -code $code $result
+		}
+
 	}
 }
