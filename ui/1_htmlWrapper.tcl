@@ -460,6 +460,7 @@ namespace eval oodz {
 					if {[:should_render $props $tag $val] == 1} {
 						set pr_dict [: props_2_dict $props $tag $val]
 						dict with pr_dict {}
+						set editUrl [dict getdef $pr_dict edit-url $val]
 						set i_v [: Check_sdata $var]
 						set theads_trns {}
 						set theads {}
@@ -529,26 +530,32 @@ namespace eval oodz {
 						ns_adp_puts "</table>"
 						
 						######################## JScript ########################
-						if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
-							ns_adp_puts "<script>"
-								ns_adp_puts "var editor = new DataTable.Editor( {"
-									ns_adp_puts "ajax:  '/api/staff',"
-									ns_adp_puts "table: '\#$var',"
-									ns_adp_puts "fields: \["
-										ns_adp_puts "{ label: 'First name', name: 'first_name' },"
-										ns_adp_puts "{ label: 'Last name',  name: 'last_name'  }"
-									ns_adp_puts "\]"
-								ns_adp_puts "} );"
-							
-							ns_adp_puts "</script>"
-						}
 						ns_adp_puts "<script>(function(){"
 						ns_adp_puts "  let id = '$var';"
 						ns_adp_puts "  let \$t = \$('#' + id);"
 						ns_adp_puts "  if (!\$t.length) return;"
 
-						# Init
-						ns_adp_puts "  \$t.DataTable({"
+						# Editor init
+						if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
+							ns_adp_puts "  let editor = new DataTable.Editor({"
+							ns_adp_puts "    ajax: { url: '$editUrl',"
+							ns_adp_puts "    type: 'PUT' ,"
+							ns_adp_puts "    contentType: 'application/json',"
+							ns_adp_puts "    data: function (d) { return JSON.stringify(d); }},"
+							ns_adp_puts "    table: '#$var',"
+							ns_adp_puts "    idSrc: '$idSrc',"
+							ns_adp_puts "    fields: \["
+							foreach thead $theads thead_trns $theads_trns {
+								ns_adp_puts "      { label: '$thead_trns', name: '$thead' },"
+							}
+							ns_adp_puts "    \]"
+							ns_adp_puts "  });"
+						} else {
+							ns_adp_puts "  let editor = null;"
+						}
+
+						# DataTable init
+						ns_adp_puts "  let table = \$t.DataTable({"
 						ns_adp_puts "    processing: true,"
 
 						if {[dict exists $pr_dict order]} {
@@ -578,7 +585,6 @@ namespace eval oodz {
 						if {[dict get $pr_dict type] ne "empty"} {
 							ns_adp_puts "    serverSide: $serverSide,"
 							if {$serverSide eq "false"} {
-								# client-side (static data)
 								if {$existing_data ne ""} {
 									ns_adp_puts "    data: $existing_data,"
 								}
@@ -591,7 +597,11 @@ namespace eval oodz {
 							ns_adp_puts "    data: $existing_data,"
 						}
 
-						if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} { set multiSort true } else { set multiSort false }
+						if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} {
+							set multiSort true
+						} else {
+							set multiSort false
+						}
 						ns_adp_puts "    multiSort: $multiSort,"
 
 						set a_trns [::msgcat::mc "Show all"]
@@ -606,11 +616,20 @@ namespace eval oodz {
 
 						ns_adp_puts "    columns: \["
 						foreach thead $theads thead_trns $theads_trns {
-							ns_adp_puts "      { data: '$thead' , name: '$thead_trns' },"
+							ns_adp_puts "      { data: '$thead', name: '$thead_trns' },"
 						}
-						ns_adp_puts "    \],"
+						ns_adp_puts "    \]"
 
 						ns_adp_puts "  });"
+
+						# Editor inline binding
+						if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
+							ns_adp_puts "  table.on('click', 'tbody td:not(:first-child)', function (e) {"
+							ns_adp_puts "    console.log('clicked cell', this);"
+							ns_adp_puts "    editor.inline(this);"
+							ns_adp_puts "  });"
+						}
+
 						ns_adp_puts "})();</script>"
 						
 						if {[dict getnull $pr_dict confirm_delete] ne ""} {
@@ -773,28 +792,27 @@ namespace eval oodz {
 					ns_adp_puts "});"
 					ns_adp_puts "</script>"
 				}
-			############################################### CODE EDITOR ###############################################
+			############################################### CODE EDITOR WILL BE REMOVED###############################################
 			} elseif {$tag eq "code_editor"} {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "\n"
 				} else {
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					if {$rows eq ""} { set rows 20 }
 					set i_v [: Check_sdata $var]
-					ns_adp_puts "<textarea id=\"$var\" name=\"$var\" class=\"form-control\" rows=\"$rows\">$i_v</textarea>"
+					ns_adp_puts "<textarea id=\"$var\" name=\"$var\" class=\"form-control\" rows=\"20\">$i_v</textarea>"
 
-					# ns_adp_puts "<script>"
-					# # ns_adp_puts "editAreaLoader.init({id:\"code_editor\",syntax:\"tcl\",start_highlight:true,font_size:\"12\",allow_resize:\"both\",allow_toggle:true,word_wrap:true,language:\"en\",syntax_selection_allow:\"tcl,css,html,js,php,python,vb,xml,c,cpp,sql,basic,pas,brainfuck\",toolbar:\"search, go_to_line, |, undo, redo, |, syntax_selection, |, change_smooth_selection, highlight, reset_highlight, |, help\"});"
-					# ns_adp_puts "var editor = CodeMirror.fromTextArea(document.getElementById('$var'), {"
-					# ns_adp_puts "lineNumbers: true,"
-					# ns_adp_puts "mode: \"$mode\","
-					# ns_adp_puts "theme: 'default',"
-					# ns_adp_puts "lineWrapping: true"
-					# # ns_adp_puts "foldGutter: true,"
-        			# # ns_adp_puts "gutters: \[\"CodeMirror-linenumbers\", \"CodeMirror-foldgutter\"\]"
-					# ns_adp_puts "});"
-					# ns_adp_puts "</script>"
+					ns_adp_puts "<script>"
+					# ns_adp_puts "editAreaLoader.init({id:\"code_editor\",syntax:\"tcl\",start_highlight:true,font_size:\"12\",allow_resize:\"both\",allow_toggle:true,word_wrap:true,language:\"en\",syntax_selection_allow:\"tcl,css,html,js,php,python,vb,xml,c,cpp,sql,basic,pas,brainfuck\",toolbar:\"search, go_to_line, |, undo, redo, |, syntax_selection, |, change_smooth_selection, highlight, reset_highlight, |, help\"});"
+					ns_adp_puts "var editor = CodeMirror.fromTextArea(document.getElementById('$var'), {"
+					ns_adp_puts "lineNumbers: true,"
+					ns_adp_puts "mode: \"$mode\","
+					ns_adp_puts "theme: 'default',"
+					ns_adp_puts "lineWrapping: true"
+					# ns_adp_puts "foldGutter: true,"
+        			# ns_adp_puts "gutters: \[\"CodeMirror-linenumbers\", \"CodeMirror-foldgutter\"\]"
+					ns_adp_puts "});"
+					ns_adp_puts "</script>"
 				}
 			############################################### HTML EDITOR ###############################################
 			} elseif {$tag eq "html_editor"} {

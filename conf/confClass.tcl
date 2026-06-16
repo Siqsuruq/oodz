@@ -17,7 +17,7 @@ namespace eval oodz {
 
 		# Load config options from default.ini
 		:public method read_config {args} {
-			::oodzLog error "Loading configuration from file ${:conf_file}..."
+			::oodzLog notice "Loading configuration from file ${:conf_file}..."
 			set config_file [file join ${:srvpath} ../ conf ${:conf_file}]
 			set ini_handler [::ini::open $config_file]
 			foreach section [::ini::sections $ini_handler ] {
@@ -30,7 +30,7 @@ namespace eval oodz {
 		
 		# Load config options from database table
 		:public method read_dz_conf {args} {
-			::oodzLog error "Loading configuration from database table ${:conf_table}..."
+			::oodzLog notice "Loading configuration from database table ${:conf_table}..."
 			foreach line [::db select_all ${:conf_table} *] {
 				[self] add [dict create [dict get $line var] [dict get $line val]]
 			}
@@ -67,14 +67,14 @@ namespace eval oodz {
 
 		# Load Global Translations
 		:public method load_trns {args} {
-			::oodzLog error "Loading translations..."
 			try {
 				set lang_path [file join ${:srvpath} [[self] get lang_dir L]]
 				set lang [[self] get language L]
 				: load_trns_file $lang $lang_path
 				return -code ok
 			} on error {errMsg} {
-				return -code error "Error loading translations: $errMsg"
+				::oodzLog error "Class=conf method=load_trns error=$errMsg"
+				return -code error $errMsg
 			}
 		}
 		
@@ -111,7 +111,8 @@ namespace eval oodz {
 				}
 				return $modules_list
 			} on error {errMsg} {
-				return -code error "Error retrieving modules: $errMsg"
+				::oodzLog error "Class=conf method=modules error=$errMsg"
+				return -code error $errMsg
 			}
 		}
 		:public method module_exists {args} {
@@ -120,7 +121,8 @@ namespace eval oodz {
 				set res [::db select_all ${:conf_table} module "module=[ns_dbquotevalue $module]" list]
 				return [expr {[llength $res] > 0}]
 			} on error {errMsg} {
-				return -code error "Error checking module existence: $errMsg"
+				::oodzLog error "Class=conf method=module_exists error=$errMsg"
+				return -code error $errMsg
 			}
 		}
 		# New method to retrieve configuration options for a specific module, with optional filtering by option name
@@ -152,7 +154,8 @@ namespace eval oodz {
 				}
 				return $module_config
 			} on error {errMsg} {
-				return -code error "Error retrieving module config: $errMsg"
+				::oodzLog error "Class=conf method=get_module_config error=$errMsg"
+				return -code error $errMsg
 			}
 		}
 		
@@ -179,10 +182,10 @@ namespace eval oodz {
 				:reload
 				return -code ok
 			} on error {errMsg} {
-				return -code error "Error writing module config: $errMsg"
+				::oodzLog error "Class=conf method=write_module_config error=$errMsg"
+				return -code error $errMsg
 			}
 		}
-
 
 		:public method reload {args} {
 			: read_dz_conf

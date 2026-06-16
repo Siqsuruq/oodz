@@ -23,10 +23,10 @@ namespace eval oodz {
 				close $fileHandle
 				set code ok
 				set msg $fileContent
-			} on error {emsg} {
-				oodzLog error "Can't read file: ${:fileName} - $emsg"
+			} on error {errMsg} {
+				::oodzLog error "Class=fileClass method=readFile error=$errMsg"
 				set code error
-				set msg $emsg
+				set msg $errMsg
 			} finally {
 				return -code $code $msg
 			}
@@ -40,10 +40,10 @@ namespace eval oodz {
 				close $fileHandle
 				set code ok
 				set msg "Data written to file ${:fileName} in mode $openMode"
-			} on error {emsg} {
-				oodzLog error "Can't write to file: ${:fileName} in mode $openMode - $emsg"
+			} on error {errMsg} {
+				::oodzLog error "Class=fileClass method=writeFile error=$errMsg"
 				set code error
-				set msg $emsg
+				set msg $errMsg
 			} finally {
 				return -code $code $msg
 			}
@@ -58,10 +58,10 @@ namespace eval oodz {
 				file copy -force ${:fileName} $newPath
 				set code ok
 				set msg "File copied to $newPath"
-			} on error {emsg} {
-				oodzLog error "Can't copy file: ${:fileName} to $newPath - $emsg"
+			} on error {errMsg} {
+				::oodzLog error "Class=fileClass method=copyFile error=$errMsg"
 				set code error
-				set msg $emsg
+				set msg $errMsg
 			} finally {
 				return -code $code $msg
 			}
@@ -73,10 +73,10 @@ namespace eval oodz {
 				file delete -force ${:fileName}
 				set code ok
 				set msg "File ${:fileName} deleted"
-			} on error {emsg} {
-				oodzLog error "Cant delete file: ${:fileName} - $emsg "
+			} on error {errMsg} {
+				::oodzLog error "Class=fileClass method=deleteFile error=$errMsg"
 				set code error
-				set msg $emsg
+				set msg $errMsg
 			} finally {
 				return -code $code $msg
 			}
@@ -93,10 +93,10 @@ namespace eval oodz {
 				:fileExtension
 				set code ok
 				set msg "File moved to $newPath"
-			} on error {emsg} {
-				oodzLog error "Can't move file: ${:fileName} to $newPath - $emsg"
+			} on error {errMsg} {
+				::oodzLog error "Class=fileClass method=moveFile error=$errMsg"
 				set code error
-				set msg $emsg
+				set msg $errMsg
 			} finally {
 				return -code $code $msg
 			}
@@ -109,11 +109,11 @@ namespace eval oodz {
 				set :hfileSize [::hrfilesize::bytestohr ${:fileSize}]
 				set code ok
 				set msg "${:hfileSize}"
-			} on error {emsg} {
+			} on error {errMsg} {
 				set :fileSize -1
-				oodzLog error "Can't get file size of: ${:fileName} - $emsg"
+				::oodzLog error "Class=fileClass method=fileSize error=$errMsg"
 				set code error
-				set msg $emsg
+				set msg $errMsg
 			} finally {
 				return -code $code $msg
 			}

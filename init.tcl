@@ -68,7 +68,6 @@ proc load_dz_procs {args} {
 		set ns ::[file tail $f]
 		namespace eval $ns {
 			if {[catch {set files [glob -directory [file join $::f] *.tcl]} errmsg]} {
-				ns_log Error "Error loading OODZ procs from folder $f: $errmsg"
 			} else {
 				set files [lsort -dictionary [glob -directory [file join $::f] *.tcl]]
 				foreach file $files {
@@ -94,7 +93,6 @@ proc load_oodz_class {args} {
 
 ns_runonce {
 	load_dz_procs
-	ns_log Error "------------------- MUAEHEHE ----------------------------"
 }
 
 # Translation initialization

@@ -23,7 +23,7 @@ namespace eval oodz {
 				}
 				return -code ok $discrete_type
 			} on error {errMsg} {
-				oodzLog error "Error in getMimeType method: $errMsg"
+				::oodzLog error "Class=fileStorage method=getMimeDiscreteType error=$errMsg"
 				return -code ok "unknown"
 			}
 		}
@@ -36,7 +36,7 @@ namespace eval oodz {
 				set res [::db execute_query [$qb buildQuery]]
 				return -code ok [dict getnull [lindex $res 0] uuid_filestorage]
 			} on error {errMsg} {
-				oodzLog error "Error in save_to_db method: $errMsg"
+				::oodzLog error "Class=fileStorage method=save_to_db error=$errMsg"
 				return -code error $errMsg
 			} finally {
 				$qb destroy
@@ -49,7 +49,6 @@ namespace eval oodz {
 			set fs_uuids [dict create]
 			try {
 				set result [dict create]
-				puts "UPLOADING FILE ---------------------------"
 				foreach uploaded_file [ns_conn files] {
 					set original_fname [ns_querygetall $uploaded_file]
 					set file_ext [file extension $original_fname]
@@ -71,7 +70,7 @@ namespace eval oodz {
 				puts "File saved to DB: $result"
 				return -code ok $result
 			} on error {errMsg} {
-				oodzLog error "Error in uploadFile method: $errMsg"
+				::oodzLog error "Class=fileStorage method=uploadFile error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -90,9 +89,9 @@ namespace eval oodz {
 						}
 					}
 				}	
-				return $result
+				return -code ok $result
 			} on error {errMsg} {
-				oodzLog error "Error in getFilesPath method: $errMsg"
+				::oodzLog error "Class=fileStorage method=getFilesPath error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -113,7 +112,7 @@ namespace eval oodz {
 				}
 				return $result	
 			} on error {errMsg} {
-				oodzLog error "Error in getFullFilesPath method: $errMsg"
+				::oodzLog error "Class=fileStorage method=getFullFilesPath error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -135,7 +134,7 @@ namespace eval oodz {
 				}
 				return $result	
 			} on error {errMsg} {
-				oodzLog error "Error in getFileURL method: $errMsg"
+				::oodzLog error "Class=fileStorage method=getFileURL error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -151,7 +150,7 @@ namespace eval oodz {
 				}
 				return -code ok "File deleted"
 			} on error {errMsg} {
-				oodzLog error "Error in deleteFile method: $errMsg"
+				::oodzLog error "Class=fileStorage method=deleteFile error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -165,14 +164,18 @@ namespace eval oodz {
 					return -code error "File not found"
 				}
 			} on error {errMsg} {
-				oodzLog error "Error in getFileById method: $errMsg"
+				::oodzLog error "Class=fileStorage method=getFileById error=$errMsg"
 				return -code error $errMsg
 			}
 		}
 
 		:public method save2db {args} {
-			:remove [list ts]
-			next
+			try {
+				:remove [list ts]
+				next
+			} on error {errMsg} {
+				::oodzLog error "Class=fileStorage method=save2db error=$errMsg"
+			}
 		}
 	}
 }
