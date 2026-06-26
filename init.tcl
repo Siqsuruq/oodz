@@ -84,7 +84,6 @@ proc load_dz_procs {args} {
 
 ######################################## Mini APPS ##########################################
 ns_register_proc GET /cms ::cms::cms_home
-ns_register_proc GET /cms-preview ::cms::cms_preview
 
 # If filename ends with *Class.tcl loads in global namespace
 proc load_oodz_class {args} {
