@@ -189,9 +189,9 @@ namespace eval oodz {
 		# init_date MUST BE ISO_date
 		:public method date_add {val val_type action {init_date ""}} {
 			if {$init_date eq ""} {
-				set init_date [: ISO_date]
+				set init_date [: ISO_timestamp]
 			}
-			return [clock format [clock add [clock scan $init_date -format %Y-%m-%d] $action$val $val_type] -format %Y-%m-%d -timezone "${:timezone}"]
+			return [clock format [clock add [clock scan $init_date -format "%Y-%m-%d %H:%M:%S"] $action$val $val_type] -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
 		}
 
 		# :public method get_country_timezone {args} {
