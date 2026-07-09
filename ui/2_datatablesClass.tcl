@@ -27,7 +27,6 @@ nx::Class create datatablesClass {
         try {
             set columnsDict [dict create]
             set orderDict [dict create]
-
             foreach key [dict keys ${:req}] {
                 set val [dict get ${:req} $key]
                 # Build columns dict
@@ -37,7 +36,6 @@ nx::Class create datatablesClass {
                     dict set columnsDict $colIdx $column
                     continue
                 }
-
                 # Build order[i] → dict
                 if {[regexp {^order\[(\d+)\]\[(\w+)\]$} $key -> ordIdx prop]} {
                     set order [dict getnull $orderDict $ordIdx]
@@ -45,18 +43,15 @@ nx::Class create datatablesClass {
                     dict set orderDict $ordIdx $order
                     continue
                 }
-
                 if {[string equal $key "search\[value\]"]} {
                     set :global_search $val
                     continue
                 }
-
                 if {[string equal $key "search\[regex\]"]} {
                     set :global_search_regex $val
                     continue
                 }
             }
-
             set filteredColumns [dict create]
             dict for {colIdx column} $columnsDict {
                 if {[dict exists $column data]} {
@@ -66,29 +61,59 @@ nx::Class create datatablesClass {
                     }
                 }
             }
+            # set :columns $filteredColumns
+            # # Inject order info into corresponding columns
+            # dict for {idx orderEntry} $orderDict {
+            #     if {
+            #         [dict exists $orderEntry column] &&
+            #         [dict exists $orderEntry dir]
+            #     } {
+            #         set colIdx [dict get $orderEntry column]
+            #         set dir [dict get $orderEntry dir]
+            #         set column [dict getnull $columnsDict $colIdx]
+            #         if {$column ne ""} {
+            #             dict set column order_direction $dir
+            #             dict set column order_index $idx
+            #             dict set columnsDict $colIdx $column
+            #         }
+            #     }
+            # }
+
+            # # Store dicts directly into instance properties
+            # #set :columns $columnsDict
+            # set :order_columns_indx $orderDict
+            
+            # Store only valid columns
             set :columns $filteredColumns
 
-            # Inject order info into corresponding columns
+            # Inject order info only into valid filtered columns
             dict for {idx orderEntry} $orderDict {
                 if {
                     [dict exists $orderEntry column] &&
                     [dict exists $orderEntry dir]
                 } {
                     set colIdx [dict get $orderEntry column]
-                    set dir [dict get $orderEntry dir]
-                    set column [dict getnull $columnsDict $colIdx]
-                    if {$column ne ""} {
+                    set dir [string tolower [dict get $orderEntry dir]]
+
+                    if {$dir ni {asc desc}} {
+                        set dir asc
+                    }
+
+                    if {[dict exists ${:columns} $colIdx]} {
+                        set column [dict get ${:columns} $colIdx]
+
                         dict set column order_direction $dir
                         dict set column order_index $idx
-                        dict set columnsDict $colIdx $column
+
+                        dict set :columns $colIdx $column
                     }
                 }
             }
 
-            # Store dicts directly into instance properties
-            #set :columns $columnsDict
             set :order_columns_indx $orderDict
-            
+
+
+
             :pagination
             :order
             :search
@@ -109,11 +134,50 @@ nx::Class create datatablesClass {
         return -code ok ${:result}
     }
 
+    # :method order {} {
+    #     dict for {key value} ${:order_columns_indx} {
+    #         set col [dict get [dict get ${:columns} [dict get $value column]] data]
+    #         lappend :order_list $col [dict get $value dir]
+    #     }
+    # }
+
     :method order {} {
+        set :order_list ""
+
         dict for {key value} ${:order_columns_indx} {
-            set col [dict get [dict get ${:columns} [dict get $value column]] data]
-            lappend :order_list $col [dict get $value dir]
+            if {![dict exists $value column]} {
+                continue
+            }
+
+            set colIdx [dict get $value column]
+
+            if {![dict exists ${:columns} $colIdx]} {
+                continue
+            }
+
+            set columnDict [dict get ${:columns} $colIdx]
+
+            if {![dict exists $columnDict data]} {
+                continue
+            }
+
+            set col [dict get $columnDict data]
+
+            if {[lsearch -exact ${:valid_columns} $col] == -1} {
+                continue
+            }
+
+            set dir [dict getnull $value dir]
+            set dir [string tolower $dir]
+
+            if {$dir ni {asc desc}} {
+                set dir asc
+            }
+
+            lappend :order_list $col $dir
         }
+
+        return -code ok
     }
 
     :method search {} {

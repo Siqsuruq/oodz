@@ -264,8 +264,17 @@ namespace eval oodz {
 		}
 
 		:public method db_to_local_datetime {db_timestamp} {
-			# Convert database timestamp to Cape Verde date and time
-			set epochTime [clock scan $db_timestamp -format "%Y-%m-%d %H:%M:%S" -timezone "UTC"]
+			if {$db_timestamp eq "" || $db_timestamp eq "null"} {
+				return ""
+			}
+			# Remove timezone offset or Z if present
+			regsub {(\.\d+)?(Z|[+-][0-9]{2}:[0-9]{2})$} $db_timestamp "" clean_timestamp
+			if {[string match "*T*" $clean_timestamp]} {
+				set fmt "%Y-%m-%dT%H:%M:%S"
+			} else {
+				set fmt "%Y-%m-%d %H:%M:%S"
+			}
+			set epochTime [clock scan $clean_timestamp -format $fmt -timezone "UTC"]
 			return [clock format $epochTime -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
 		}
 	}
