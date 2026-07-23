@@ -508,7 +508,6 @@ namespace eval oodz {
 								}
 								lappend array_triples $i object $obj_triples
 							}
-
 							# Emit as JSON array
 							set existing_data [ns_json value -type array $array_triples]
 							set serverSide false
@@ -558,12 +557,25 @@ namespace eval oodz {
 						ns_adp_puts "  let table = \$t.DataTable({"
 						ns_adp_puts "    processing: true,"
 
-						if {[dict exists $pr_dict order]} {
-							set order [dict get $pr_dict order]
-							ns_adp_puts "    order: \[\[ $order \]\],"
+						################ ORDERING BLOCK: Enable ordering by default unless explicitly disabled. ################
+						if {[dict exists $pr_dict ordering]} {
+							set ordering [::oodz::DataType is_bool [dict get $pr_dict ordering]]
 						} else {
-							ns_adp_puts "    order: \[\[ 0, 'desc' \]\],"
+							set ordering true
 						}
+						ns_adp_puts "    ordering: $ordering,"
+						if {$ordering} {
+							if {[dict exists $pr_dict order]} {
+								set order [dict get $pr_dict order]
+								ns_adp_puts "    order: \[\[ $order \]\],"
+							} else {
+								ns_adp_puts "    order: \[\[ 0, 'desc' \]\],"
+							}
+						} else {
+							# Preserve insertion order.
+							ns_adp_puts "    order: \[\],"
+						}
+						#########################################################################################################
 
 						if {[dict exists $pr_dict select]} {
 							set select [dict get $pr_dict select]
@@ -582,19 +594,16 @@ namespace eval oodz {
 							ns_adp_puts "    select: false,"
 						}
 
-						if {[dict get $pr_dict type] ne "empty"} {
-							ns_adp_puts "    serverSide: $serverSide,"
-							if {$serverSide eq "false"} {
-								if {$existing_data ne ""} {
-									ns_adp_puts "    data: $existing_data,"
-								}
-							} else {
-								ns_adp_puts "    ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
-							}
+						if {[dict get $pr_dict type] eq "empty"} {
+							set serverSide "false"
 						}
-
-						if {$existing_data ne "" && $serverSide eq "false"} {
-							ns_adp_puts "    data: $existing_data,"
+						ns_adp_puts "    serverSide: $serverSide,"
+						if {$serverSide eq "false"} {
+							if {$existing_data ne ""} {
+								ns_adp_puts "    data: $existing_data,"
+							}
+						} else {
+							ns_adp_puts "    ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
 						}
 
 						if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} {
