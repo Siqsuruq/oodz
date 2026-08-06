@@ -30,21 +30,25 @@ namespace eval ::oodz {
                 dict for {key val} $dictval {
                     if {$val eq "null" || $val eq ""} {
                         :addNull $key
-                    } elseif {[::oodz::DataType is_number $val]} {
-                        if {[string is integer -strict $val]} {
-                            :addInt $key $val
-                        } else {
-                            :addNumber $key $val
-                        }
-                    } elseif {[::oodz::DataType is_bool $val]} {
-                        :addBool $key $val
                     } else {
-                        :addString $key $val
+                        set trimmed [string trim $val]
+                        if {[::oodz::DataType is_number $trimmed]} {
+                            if {[string is integer -strict $trimmed]} {
+                                :addInt $key $trimmed
+                            } else {
+                                :addNumber $key $trimmed
+                            }
+                        } elseif {[::oodz::DataType is_bool $trimmed]} {
+                            :addBool $key $trimmed
+                        } else {
+                            :addString $key $val
+                        }
                     }
                 }
                 return [self]
             } on error {errMsg} {
-                return -code error "$errMsg"
+                ::oodzLog error "Class=nsJsonObject method=addDict error=$errMsg"
+                return -code error $errMsg
             }
         }
 
@@ -52,6 +56,7 @@ namespace eval ::oodz {
             try {
                 return [: upsert $key null {}]
             } on error {errMsg} {
+                ::oodzLog error "Class=nsJsonObject method=addNull error=$errMsg"
                 return -code error "$errMsg"
             }
         }
@@ -60,6 +65,7 @@ namespace eval ::oodz {
             try {
                 return [: upsert $key string $value]
             } on error {errMsg} {
+                ::oodzLog error "Class=nsJsonObject method=addString error=$errMsg"
                 return -code error "$errMsg"
             }
         }
@@ -71,6 +77,7 @@ namespace eval ::oodz {
                 }
                 return [: upsert $key number $value]
             } on error {errMsg} {
+                ::oodzLog error "Class=nsJsonObject method=addInt error=$errMsg"
                 return -code error "$errMsg"
             }
         }
@@ -82,6 +89,7 @@ namespace eval ::oodz {
                 }
                 return [: upsert $key number $value]
             } on error {errMsg} {
+                ::oodzLog error "Class=nsJsonObject method=addNumber error=$errMsg"
                 return -code error "$errMsg"
             }
         }
@@ -90,6 +98,7 @@ namespace eval ::oodz {
             try {
                 return [: upsert $key boolean [::oodz::DataType to_bool $value]]
             } on error {errMsg} {
+                ::oodzLog error "Class=nsJsonObject method=addBool error=$errMsg"
                 return -code error "$errMsg"
             }
         }
@@ -102,7 +111,8 @@ namespace eval ::oodz {
                 }
                 return [:upsert $key object [lindex $parsed 2]]
             } on error {errMsg} {
-                return -code error "Error loading JSON object: $errMsg"
+                ::oodzLog error "Class=nsJsonObject method=addObject error=$errMsg"
+                return -code error "$errMsg"
             }
         }
 
@@ -115,7 +125,8 @@ namespace eval ::oodz {
                 }
                 return [:upsert $key array [lindex $parsed 2]]
             } on error {errMsg} {
-                return -code error "Error loading JSON array: $errMsg"
+                ::oodzLog error "Class=nsJsonObject method=addArray error=$errMsg"
+                return -code error "$errMsg"
             }
         }
 
@@ -129,6 +140,7 @@ namespace eval ::oodz {
                 set :json $parsed
                 return [self]
             } on error {errMsg} {
+                ::oodzLog error "Class=nsJsonObject method=Load error=$errMsg"
                 return -code error "Error loading JSON: $errMsg"
             }
         }
@@ -138,8 +150,14 @@ namespace eval ::oodz {
                 if {${:json} eq ""} {
                     return ""
                 }
+                foreach {key type value} [lindex ${:json} 2] {
+                    if {$type eq "number"} {
+                        puts "NUMBER FIELD: key=<$key> value=<$value>"
+                    }
+                }
                 return [ns_json value -pretty ${:json}]
             } on error {errMsg} {
+                ::oodzLog error "Class=nsJsonObject method=asJSON error=$errMsg"
                 return -code error "$errMsg"
             }
         }
