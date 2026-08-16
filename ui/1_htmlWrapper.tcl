@@ -14,12 +14,37 @@ namespace eval oodz {
 			if {![file exists $xml_file]} {
 				return -code error "XML not found: $xml_file"
 			}
-			set doc [dom parse [tdom::xmlReadFile $xml_file]]
-			set hd "[$doc asXML]"
-			::htmlparse::parse -cmd [list [self] html_wrapper] $hd
-			set :frame "main"
+			set xml [tdom::xmlReadFile $xml_file]
+			return [:render_xml $xml]
+			# set doc [dom parse [tdom::xmlReadFile $xml_file]]
+			# set hd "[$doc asXML]"
+			# ::htmlparse::parse -cmd [list [self] html_wrapper] $hd
+			# set :frame "main"
+		}
+
+		# New entry point for XML coming from DB/string/etc.
+		:public method parse_xml {xml} {
+			if {[string trim $xml] eq ""} {
+				return -code error "Empty XML"
+			}
+			return [:render_xml $xml]
 		}
 		
+		:method render_xml {xml} {
+			try {
+				set doc [dom parse $xml]
+				::htmlparse::parse -cmd [list [self] html_wrapper] [$doc asXML]
+				return -code ok
+			} on error {errMsg} {
+				return -code error "Unable to parse XML: $errMsg"
+			} finally {
+				if {[info exists doc]} {
+					$doc delete
+				}
+				set :frame "main"
+			}
+		}
+
 		:method add_FormHandler {args} {
 			set formDataClassPath [file join [::oodzConf get oodz_js L] formDataClass.js]
 			ns_adp_puts "<script type='module'>"
@@ -711,13 +736,34 @@ namespace eval oodz {
 					
 					ns_adp_puts "</div>"
 					ns_adp_puts "<div class=\"modal-body\">"
-						  
-					set module [lindex [dict get $pr_dict values] 0]
-					set xml [lindex [dict get $pr_dict values] 1]
-					set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xml]
-					set doc [dom parse [tdom::xmlReadFile $xml_file]]
-					set hd "[$doc asXML]"
-					::htmlparse::parse -cmd [list [self] html_wrapper] $hd
+					set source "file"
+					if {[dict exists $pr_dict source]} {
+						set source [dict get $pr_dict source]
+					}
+					switch -- $source {
+						file {
+							set module [lindex [dict get $pr_dict values] 0]
+        					set xml [lindex [dict get $pr_dict values] 1]
+							set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xml]
+							set xml_data [tdom::xmlReadFile $xml_file]
+							:render_xml $xml_data
+						}
+						template {
+							set template_proc [lindex [dict get $pr_dict values] 0]
+							set xml_data [: $template_proc]
+							:render_xml $xml_data
+						}
+						default {
+							return -code error "Unknown modal source: $source"
+						}
+					}
+
+					# set module [lindex [dict get $pr_dict values] 0]
+					# set xml [lindex [dict get $pr_dict values] 1]
+					# set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xml]
+					# set doc [dom parse [tdom::xmlReadFile $xml_file]]
+					# set hd "[$doc asXML]"
+					# ::htmlparse::parse -cmd [list [self] html_wrapper] $hd
 
 					ns_adp_puts "</div>"
 					ns_adp_puts "</div>"

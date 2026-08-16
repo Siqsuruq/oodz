@@ -112,7 +112,8 @@ namespace eval oodz {
 					return -code ok "Signature is valid."
 				}
 			} on error {errMsg} {
-				return -code error "Error occurred: $errMsg"
+				::oodzLog error "Object=Crypto method=verify_file_signature error=$errMsg"
+				return -code error $errMsg
 			} finally {
 				delete_CkPublicKey $pubKey
 				delete_CkRsa $rsa
@@ -131,7 +132,8 @@ namespace eval oodz {
 				puts $file_handle $hash
 				return -code ok $output_file
 			} on error {errMsg} {
-				return -code error "Error in method write_hash_file: $errMsg"
+				::oodzLog error "Object=Crypto method=write_hash_file error=$errMsg"
+				return -code error $errMsg
 			} finally {
 				# Ensure file handle is closed in case of an error during writing
 				if {[info exists file_handle]} {
@@ -165,7 +167,8 @@ namespace eval oodz {
 				}
 				return -code ok $hash
 			} on error {errMsg} {
-				return -code error "Error in method hash_file: $errMsg"
+				::oodzLog error "Object=Crypto method=hash_file error=$errMsg"
+				return -code error $errMsg
 			}
 		}
 
