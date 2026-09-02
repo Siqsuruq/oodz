@@ -28,7 +28,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 		set resource [lindex $surl 3]
 
 		#Check if resource folder exists and if it has API proc
-		if {[file isdirectory [file join ${:srvpath} [oodzConf get_global mod_dir] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
+		if {[file isdirectory [file join [::oodzConf srvpath get] [::oodzConf mod_dir get] $resource]] == 1 && [::oodz::api info instances ::${resource}::Api] ne ""} {
 			set values [lrange $surl 4 end]
 			set params [: get_body]
 			if {$params != 0} {
@@ -37,7 +37,7 @@ nx::Class create apiin -superclass ::oodz::superClass {
 				: answer $result
 			}
 		} else {
-			oodzLog notice "API Controler doesnt exists: [file join ${:srvpath} [oodzConf get_global mod_dir] $resource] ---> ::${resource}::Api | [::oodz::api info instances ::${resource}::Api]"
+			oodzLog notice "API Controler doesnt exists: [file join [::oodzConf srvpath get] [::oodzConf mod_dir get] $resource] ---> ::${resource}::Api | [::oodz::api info instances ::${resource}::Api]"
 			: answer_error {code 404}
 		}
 	}

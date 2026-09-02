@@ -114,7 +114,6 @@ nx::Class create SQLBuilder {
         }
     }
 
-
     # Define the setLimit method
     :public method setLimit {limitValue} {
         set :limit $limitValue
@@ -142,6 +141,26 @@ nx::Class create SQLBuilder {
         set endExpr   "${e}::${kind}"
 
         :addComplexCondition "$column >= $startExpr AND $column < $endExpr" AND
+    }
+
+    # Method to build exists queries
+    :public method buildExistsQuery {} {
+        set query "SELECT 1 FROM ${:tableName}"
+        foreach join ${:joinList} {
+            set joinType [lindex $join 0]
+            set joinTable [lindex $join 1]
+            set joinCondition [lindex $join 2]
+            append query " $joinType JOIN $joinTable ON $joinCondition"
+        }
+        if {${:whereClause} ne ""} {
+            append query " WHERE ${:whereClause}"
+        }
+        if {[llength ${:groupByList}] > 0} {
+            set groupBy [join ${:groupByList} ", "]
+            append query " GROUP BY $groupBy"
+        }
+        # Return the complete EXISTS query
+        return "SELECT EXISTS ($query)"
     }
 
     # Define the clear method

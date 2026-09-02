@@ -473,10 +473,6 @@ namespace eval oodz {
 					}
 				}
     			return
-				#if {$tagsgn eq "/"} {
-				#} else {
-				#	: button $props $tag $val
-				#}
 			################################################# TABLE ################################################# 
 			} elseif {$tag eq "table"} {
 				if {$tagsgn eq "/"} {
@@ -722,18 +718,15 @@ namespace eval oodz {
 					if {[:should_render $props $tag $val] != 1} {
 						return
 					}
-
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
 					ns_adp_puts "<!-- START MODAL -->\n"
-					ns_adp_puts "<div class=\"modal fade\" id=\"$var\" data-bs-backdrop=\"static\" data-bs-keyboard=\"false\" tabindex=\"-1\" aria-labelledby=\"$var\" aria-hidden=\"true\">"
-
+					ns_adp_puts "<div class=\"modal fade\" id=\"$var\" data-bs-backdrop=\"static\" data-bs-keyboard=\"false\" tabindex=\"-1\" aria-labelledby=\"${var}_label\" aria-hidden=\"true\">"
 					ns_adp_puts "<div class=\"modal-dialog modal-dialog-centered modal-xl\">"
 					ns_adp_puts "<div class=\"modal-content\">"
 					ns_adp_puts "<div class=\"modal-header\">"
-					ns_adp_puts "<h5 class=\"modal-title fs-5\" id=\"$var\">[::msgcat::mc $val]</h5>"
+					ns_adp_puts "<h5 class=\"modal-title fs-5\" id=\"${var}_label\">[::msgcat::mc $val]</h5>"
 					ns_adp_puts "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\" aria-label=\"[::msgcat::mc Close]\"></button>"
-					
 					ns_adp_puts "</div>"
 					ns_adp_puts "<div class=\"modal-body\">"
 					set source "file"
@@ -743,7 +736,7 @@ namespace eval oodz {
 					switch -- $source {
 						file {
 							set module [lindex [dict get $pr_dict values] 0]
-        					set xml [lindex [dict get $pr_dict values] 1]
+							set xml [lindex [dict get $pr_dict values] 1]
 							set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xml]
 							set xml_data [tdom::xmlReadFile $xml_file]
 							:render_xml $xml_data
@@ -757,14 +750,6 @@ namespace eval oodz {
 							return -code error "Unknown modal source: $source"
 						}
 					}
-
-					# set module [lindex [dict get $pr_dict values] 0]
-					# set xml [lindex [dict get $pr_dict values] 1]
-					# set xml_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $xml]
-					# set doc [dom parse [tdom::xmlReadFile $xml_file]]
-					# set hd "[$doc asXML]"
-					# ::htmlparse::parse -cmd [list [self] html_wrapper] $hd
-
 					ns_adp_puts "</div>"
 					ns_adp_puts "</div>"
 					ns_adp_puts "</div>"
@@ -921,6 +906,60 @@ namespace eval oodz {
 							ns_adp_puts "myChart.setOption(option);"
 						ns_adp_puts "});"
 					ns_adp_puts "</script>"
+				}
+			################################################# HTML #################################################
+			} elseif {$tag eq "html"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts  "\n"
+				} else {
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					set i_v [: Check_sdata $var]
+					puts "-----> $i_v"
+					switch -- $source {
+						inline {
+							ns_adp_puts "[::oodz::Sanitize unquotehtml $val]"
+						}
+						file {
+							set filename [lindex [dict get $pr_dict values] 0]
+							set fullpath [file join [ns_pagepath] [::oodzConf user_data_dir get] $filename]
+							set fp [open $fullpath r]
+							set html [read $fp]
+							close $fp
+							ns_adp_puts $html
+						}
+						url {
+							set url [lindex [dict get $pr_dict values] 0]
+							try {
+								set response [ns_http run -connecttimeout 2s -timeout 5s -expire 10s $url]
+								set status [dict get $response status]
+								if {$status == 200} {
+									ns_adp_puts [dict get $response body]
+								} else {
+									::oodzLog warning "htmlWrapper URL returned status=$status url=$url"
+								}
+							} on error {errMsg} {
+								::oodzLog error "htmlWrapper URL error url=$url error=$errMsg"
+							}
+						}
+						request {
+							set url $i_v
+							try {
+								set response [ns_http run -connecttimeout 2s -timeout 5s -expire 10s $url]
+								set status [dict get $response status]
+								if {$status == 200} {
+									ns_adp_puts [dict get $response body]
+								} else {
+									::oodzLog warning "htmlWrapper URL returned status=$status url=$url"
+								}
+							} on error {errMsg} {
+								::oodzLog error "htmlWrapper URL error url=$url error=$errMsg"
+							}
+						}
+						default {
+							error "Unknown HTML source '$source'"
+						}
+					}
 				}
 			}
 		}

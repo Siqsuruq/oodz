@@ -644,7 +644,7 @@ namespace eval oodz {
 					append query " RETURNING [join $returning ,]"
 				}
 			}
-			::oodzLog dev "QUERY: $query"
+			::oodzLog info "QUERY: $query"
 			try {
 				:with_db dbh {
 					if {$returning ne ""} {

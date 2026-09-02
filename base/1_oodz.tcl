@@ -1,10 +1,7 @@
 # Main OODZ Superclass (What is my purpose? To keep server name, path and hardcoded address https:// + $name_server) 
 namespace eval oodz {
 	nx::Class create superClass {
-	 	:property -accessor public {oodz_version "2.1.1"}
-	 	:property -accessor public {srv:substdefault {[ns_info server]}}
-	 	:property -accessor public {srvpath:substdefault {[ns_pagepath]}}
-	 	:property -accessor public {srvaddress:substdefault {https://[ns_info server]}}
+		
 	}
 
 	# Simple singleton class to write separate log file
@@ -17,7 +14,7 @@ namespace eval oodz {
 
 		:method init {} {
 			set oodz_log_dir [file join [ns_info home] logs]
-			set logfile [file join $oodz_log_dir ${:srv}.oodz.log]
+			set logfile [file join $oodz_log_dir [ns_info server].oodz.log]
 			set :oodzlog [ns_asynclogfile open "$logfile"]
 		}
 		

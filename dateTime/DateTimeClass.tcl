@@ -268,7 +268,9 @@ namespace eval oodz {
 				return ""
 			}
 			# Remove timezone offset or Z if present
-			regsub {(\.\d+)?(Z|[+-][0-9]{2}:[0-9]{2})$} $db_timestamp "" clean_timestamp
+			#regsub {(\.\d+)?(Z|[+-][0-9]{2}:[0-9]{2})$} $db_timestamp "" clean_timestamp
+			regsub {(\.\d+)?(Z|[+-][0-9]{2}(:[0-9]{2})?)?$} $db_timestamp "" clean_timestamp
+
 			if {[string match "*T*" $clean_timestamp]} {
 				set fmt "%Y-%m-%dT%H:%M:%S"
 			} else {

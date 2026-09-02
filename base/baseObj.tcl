@@ -78,6 +78,7 @@ namespace eval oodz {
 				}
 				return -code ok $res
 			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=save2db error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -106,19 +107,25 @@ namespace eval oodz {
 		}
 
 		:method prepare_data {} {
-			set obj_data [:get]
-			if {![::oodz::DataType is_dbid [dict getnull $obj_data id]]} {
-				set obj_data [dict unset obj_data id]
+			try {
+				set obj_data [:get]
+				if {![::oodz::DataType is_dbid [dict getnull $obj_data id]]} {
+					set obj_data [dict unset obj_data id]
+				}
+				if {![::oodz::DataType is_dbid [dict getnull $obj_data uuid_${:obj}]]} {
+					set obj_data [dict unset obj_data uuid_${:obj}]
+				}
+				set obj_data [dict unset obj_data extra]
+				set obj_data [dict unset obj_data obj]
+				set obj_data [dict unset obj_data identifier]
+				set obj_data [dict unset obj_data created_at]
+				set obj_data [dict unset obj_data updated_at]
+				return $obj_data
+			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=save2db error=$errMsg"
+				return -code error $errMsg
 			}
-			if {![::oodz::DataType is_dbid [dict getnull $obj_data uuid_${:obj}]]} {
-				set obj_data [dict unset obj_data uuid_${:obj}]
-			}
-			set obj_data [dict unset obj_data extra]
-			set obj_data [dict unset obj_data obj]
-			set obj_data [dict unset obj_data identifier]
-			set obj_data [dict unset obj_data created_at]
-			set obj_data [dict unset obj_data updated_at]
-			return $obj_data
+			
 		}
 
 		:method update_identifier {} {
