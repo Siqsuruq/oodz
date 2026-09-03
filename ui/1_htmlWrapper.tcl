@@ -961,6 +961,189 @@ namespace eval oodz {
 						}
 					}
 				}
+			################################################# CLICKMAP #################################################
+			} elseif {$tag eq "clickmap"} {
+				if {$tagsgn eq "/"} {
+					ns_adp_puts "\n"
+				} else {
+					if {[:should_render $props $tag $val] != 1} {
+						return
+					}
+					# Defaults
+					set class ""
+					set source "file"
+					set multiple "false"
+					set pr_dict [: props_2_dict $props $tag $val]
+					dict with pr_dict {}
+					#
+					# values:
+					#   0 = module
+					#   1 = svg filename
+					#
+					set module   [lindex $values 0]
+					set svg_name [lindex $values 1]
+					if {$module eq "" || $svg_name eq ""} {
+						error "clickmap requires values='module filename.svg'"
+					}
+					switch -- $source {
+						file {
+							set svg_file [file join [ns_pagepath] [${:conf} get_global mod_dir] $module $svg_name ]
+							if {![file exists $svg_file]} {
+								error "clickmap SVG file not found: $svg_file"
+							}
+							set fd [open $svg_file r]
+							try {
+								set svg_data [read $fd]
+							} finally {
+								close $fd
+							}
+							#
+							# Remove XML declaration if SVG was exported
+							# from Inkscape/Illustrator/etc.
+							#
+							regsub -all {<\?xml[^>]*\?>} $svg_data "" svg_data
+						}
+
+						default {
+							error "Unknown clickmap source '$source'"
+						}
+					}
+					#
+					# Wrapper
+					#
+					ns_adp_puts "<div id=\"$var\" class=\"oodz-clickmap $class\" data-multiple=\"$multiple\">"
+					#
+					# IMPORTANT:
+					# Put SVG directly into DOM, not <img src='...'>
+					#
+					ns_adp_puts $svg_data
+					#
+					# Standard form value
+					#
+					ns_adp_puts "<input type=\"hidden\" id=\"${var}_value\" name=\"$var\" data-type=\"json\" value=\"\">"
+					ns_adp_puts "</div>"
+					#
+					# First version JS
+					#
+					ns_adp_puts "<script>
+					(() => {
+						const root = document.getElementById('$var');
+						if (!root) {
+							return;
+						}
+						// Avoid initializing twice
+						if (root.dataset.clickmapInitialized === 'true') {
+							return;
+						}
+						root.dataset.clickmapInitialized = 'true';
+						const input = document.getElementById('${var}_value');
+						// Read mode from:
+						// data-multiple=\"true\" / data-multiple=\"false\"
+						const multiple = root.dataset.multiple === 'true';
+						root.addEventListener('click', (event) => {
+							const region = event.target.closest('\[data-value\]');
+							if (!region || !root.contains(region)) {
+								return;
+							}
+							const value = region.dataset.value;
+							if (multiple) {
+								/*
+								* Check whether this logical value is already selected.
+								* There may be several SVG paths with the same data-value.
+								*/
+								const alreadySelected = Array.from(
+									root.querySelectorAll('\[data-value\]')
+								).some(el =>
+									el.dataset.value === value &&
+									el.classList.contains('clickmap-selected')
+								);
+								/*
+								* Toggle every SVG part belonging to this value.
+								*/
+								root.querySelectorAll('\[data-value\]').forEach(el => {
+
+									if (el.dataset.value !== value) {
+										return;
+									}
+									if (alreadySelected) {
+										el.classList.remove('clickmap-selected');
+									} else {
+										el.classList.add('clickmap-selected');
+									}
+								});
+							} else {
+								/*
+								* Single selection:
+								* clear everything first.
+								*/
+								root.querySelectorAll('\[data-value\]').forEach(el => {
+									el.classList.remove('clickmap-selected');
+								});
+								/*
+								* Select all SVG parts having the same logical value.
+								*/
+								root.querySelectorAll('\[data-value\]').forEach(el => {
+									if (el.dataset.value === value) {
+										el.classList.add('clickmap-selected');
+									}
+								});
+							}
+							/*
+							* Collect selected values.
+							*
+							* Several SVG paths can have the same data-value,
+							* therefore Set removes duplicates.
+							*/
+							const values = Array.from(
+								new Set(
+									Array.from(
+										root.querySelectorAll(
+											'\[data-value\].clickmap-selected'
+										)
+									).map(el => el.dataset.value)
+								)
+							);
+							/*
+							* Store result in hidden input.
+							*
+							* multiple=true:
+							*     \[\"14\",\"15\",\"16\"\]
+							*
+							* multiple=false:
+							*     14
+							*/
+							if (multiple) {
+								input.value = JSON.stringify(values);
+							} else {
+								input.value = values.find(() => true) || '';
+							}
+							/*
+							* Notify normal form listeners.
+							*/
+							input.dispatchEvent(
+								new Event('change', {
+									bubbles: true
+								})
+							);
+							/*
+							* Generic clickmap event.
+							*/
+							root.dispatchEvent(
+								new CustomEvent('clickmap:select', {
+									bubbles: true,
+									detail: {
+										value: multiple
+											? values
+											: (values.find(() => true) || ''),
+										region: region
+									}
+								})
+							);
+
+						});
+					})();
+					</script>"
+				}
 			}
 		}
 		

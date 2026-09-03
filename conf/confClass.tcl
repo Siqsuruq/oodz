@@ -2,7 +2,7 @@ namespace eval oodz {
 	nx::Class create conf -superclass baseClass -mixins superClass {
 		:property {conf_table "dz_conf"}
 		:property {conf_file "default.ini"}
-		:property -accessor public {oodz_version "2.2.0"}
+		:property -accessor public {oodz_version "2.2.1"}
 	 	:property -accessor public {srv:substdefault {[ns_info server]}}
 	 	:property -accessor public {srvpath:substdefault {[ns_pagepath]}}
 	 	:property -accessor public {srvaddress:substdefault {https://[ns_info server]}}

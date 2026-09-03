@@ -17,8 +17,9 @@ namespace eval oodz {
                     }
                 }
 			} else {
-			 	oodzLog error "Cant init object TABLE doesnt exist"
-			 	return -code error "Cant init object TABLE/VIEW doesnt exist"
+			 	set errMsg "Cant init object TABLE doesnt exist"
+				::oodzLog error "Class=baseObj method=init table=${:obj} error=$errMsg"
+			 	return -code error $errMsg
 			}
 		}
 
@@ -48,6 +49,60 @@ namespace eval oodz {
 			}
 		}
 		
+############################################################## EXTRA ##############################################################
+		:public method get_extra {{key ""}} {
+			try {
+				set id [:id get]
+				if {$id eq ""} {
+					return -code error "Cannot read extra: object has no id"
+				}
+				set extra [::db get_hstore_dict ${:obj} $id]
+				if {$key eq ""} {
+					return $extra
+				}
+				return [dict getnull $extra $key]
+			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=get_extra table=${:obj} error=$errMsg"
+				return -code error $errMsg
+			}
+		}
+
+		:public method set_extra {key value} {
+			try {
+				if {$key eq ""} {
+					return -code error "Extra key cannot be empty"
+				}
+				set id [:id get]
+				if {$id eq ""} {
+					return -code error "Cannot save extra: object has no id"
+				}
+				set data [dict create $key $value]
+				::db update_hstore ${:obj} $id $data
+				return -code ok $value
+			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=set_extra table=${:obj} key=$key error=$errMsg"
+				return -code error $errMsg
+			}
+		}
+
+		:public method delete_extra {key} {
+			try {
+				if {$key eq ""} {
+					return -code error "Extra key cannot be empty"
+				}
+				set id [:id get]
+				if {$id eq ""} {
+					return -code error "Cannot delete extra: object has no id"
+				}
+				::db delete_hstore ${:obj} $id $key
+				return -code ok
+			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=delete_extra table=${:obj} key=$key error=$errMsg"
+				return -code error $errMsg
+			}
+		}
+
+############################################################## Defaults ##############################################################
 		:public method load_default {args} {
 			set a [lindex $args 0]
 			try {
@@ -63,6 +118,7 @@ namespace eval oodz {
 					return -code error "No default data found."
 				}
 			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=load_default table=${:obj} error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -78,7 +134,7 @@ namespace eval oodz {
 				}
 				return -code ok $res
 			} on error {errMsg} {
-				::oodzLog error "Class=baseObj method=save2db error=$errMsg"
+				::oodzLog error "Class=baseObj method=save2db table=${:obj} error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -102,6 +158,7 @@ namespace eval oodz {
 					return -code error "No id or uuid_${:obj} found"
 				}
 			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=delete table=${:obj} error=$errMsg"
 				return -code error $errMsg
 			}
 		}
