@@ -348,7 +348,7 @@ namespace eval oodz {
 
 		:public method get_columns_names {table} {
 			set result ""
-			set query "SELECT c.column_name, c.data_type, CASE WHEN tc.constraint_type = 'FOREIGN KEY' THEN 'YES' ELSE 'NO'
+			set query "SELECT c.column_name, c.data_type, c.udt_name, CASE WHEN tc.constraint_type = 'FOREIGN KEY' THEN 'YES' ELSE 'NO'
 				END AS is_foreign_key, CASE WHEN tc.constraint_type = 'PRIMARY KEY' THEN 'YES' ELSE 'NO'
 				END AS is_primary_key, CASE WHEN c.column_default LIKE 'nextval%' THEN 'YES' ELSE 'NO'
 				END AS is_auto_increment FROM information_schema.columns c LEFT JOIN information_schema.key_column_usage kcu
@@ -547,6 +547,49 @@ namespace eval oodz {
 			}
 		}
 
+##################################################### Select Object #####################################################
+		:public method select_obj {table where} {
+			try {
+				set has_hstore_extra 0
+				foreach col [:get_columns_names $table] {
+					if {[dict get $col column_name] eq "extra" && [dict get $col udt_name] eq "hstore"} {
+						set has_hstore_extra 1
+						break
+					}
+				}
+				if {$has_hstore_extra} {
+					set query "SELECT $table.*, hstore_to_json($table.extra)::text AS __extra_json FROM $table WHERE $where LIMIT 1"
+				} else {
+					set query "SELECT $table.* FROM $table WHERE $where LIMIT 1"
+				}
+				::oodzLog dev "QUERY: $query"
+				set result ""
+				:with_db dbh {
+					set row [ns_db 0or1row $dbh $query]
+					if {$row ne ""} {
+						set result [ns_set array $row]
+					}
+				}
+				if {$result eq ""} {
+					return ""
+				}
+				if {$has_hstore_extra} {
+					set json [dict getdef $result __extra_json ""]
+					if {$json eq ""} {
+						dict set result extra [dict create]
+					} else {
+						dict set result extra [::json::json2dict $json]
+					}
+					dict unset result __extra_json
+				}
+				return $result
+			} on error {errMsg} {
+				::oodzLog error "Class=db method=select_obj table=$table error=$errMsg"
+				return -code error $errMsg
+			}
+		}
+
+
 		# data is a list of dictionaries
 		:public method insert {table data {conflict ""} {returning ""} {nspace 1}} {
 			set result ""
@@ -644,7 +687,7 @@ namespace eval oodz {
 					append query " RETURNING [join $returning ,]"
 				}
 			}
-			::oodzLog info "QUERY: $query"
+			::oodzLog notice "QUERY: $query"
 			try {
 				:with_db dbh {
 					if {$returning ne ""} {

@@ -1,5 +1,4 @@
 nx::Class create DeleteSQLBuilder {
-    # Define the class variables
     :property tableName:required
     :property {whereClause ""}
     :property {joinList ""}

@@ -23,18 +23,19 @@ namespace eval oodz {
 			}
 		}
 
-        :method read {idType} {
-		 	if {$idType eq "uuid"} {
-		 		return [lindex [::db select_all ${:obj} * uuid_${:obj}=\'${:identifier}\'] 0]
-		 	} elseif {$idType eq "id"} {
-		 		return [lindex [::db select_all ${:obj} * ${:obj}.id=\'${:identifier}\'] 0]
-		 	}
+		:method read {idType} {
+			if {$idType eq "uuid"} {
+				return [::db select_obj ${:obj} "uuid_${:obj}='${:identifier}'"]
+			} elseif {$idType eq "id"} {
+				return [::db select_obj ${:obj} "${:obj}.id='${:identifier}'"]
+			}
 		}
 		
 		:public method load_data {key val} {
 			if {$key ne "" && $val ne ""} {
 				try {
-					set result [lindex [::db select_all ${:obj} * ${:obj}.$key=\'$val\'] 0]
+					#set result [lindex [::db select_all ${:obj} * ${:obj}.$key=\'$val\'] 0]
+					set result [::db select_obj ${:obj} "${:obj}.$key='$val'"]
 					if {[llength $result] > 0} {
 						:add $result
 						:update_identifier
@@ -48,21 +49,18 @@ namespace eval oodz {
 				return -code error "Key and value must not be empty"
 			}
 		}
-		
+
 ############################################################## EXTRA ##############################################################
 		:public method get_extra {{key ""}} {
 			try {
-				set id [:id get]
-				if {$id eq ""} {
-					return -code error "Cannot read extra: object has no id"
-				}
-				set extra [::db get_hstore_dict ${:obj} $id]
+				set data [:get extra]
+				set extra [dict getdef $data extra ""]
 				if {$key eq ""} {
 					return $extra
 				}
-				return [dict getnull $extra $key]
+				return [dict getdef $extra $key ""]
 			} on error {errMsg} {
-				::oodzLog error "Class=baseObj method=get_extra table=${:obj} error=$errMsg"
+				::oodzLog error "Class=baseObj method=get_extra error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -72,15 +70,26 @@ namespace eval oodz {
 				if {$key eq ""} {
 					return -code error "Extra key cannot be empty"
 				}
-				set id [:id get]
-				if {$id eq ""} {
-					return -code error "Cannot save extra: object has no id"
-				}
-				set data [dict create $key $value]
-				::db update_hstore ${:obj} $id $data
-				return -code ok $value
+				set extra [:get_extra]
+				dict set extra $key $value
+				:add [dict create extra $extra]
+				return $value
 			} on error {errMsg} {
-				::oodzLog error "Class=baseObj method=set_extra table=${:obj} key=$key error=$errMsg"
+				::oodzLog error "Class=baseObj method=set_extra error=$errMsg"
+				return -code error $errMsg
+			}
+		}
+
+		:public method append_extra {key value} {
+			try {
+				if {$key eq ""} {
+					return -code error "Extra key cannot be empty"
+				}
+				set value [concat [:get_extra $key] $value]
+				:set_extra $key $value
+				return $value
+			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=append_extra error=$errMsg"
 				return -code error $errMsg
 			}
 		}
@@ -90,26 +99,50 @@ namespace eval oodz {
 				if {$key eq ""} {
 					return -code error "Extra key cannot be empty"
 				}
-				set id [:id get]
-				if {$id eq ""} {
-					return -code error "Cannot delete extra: object has no id"
+				set extra [:get_extra]
+				if {![dict exists $extra $key]} {
+					return -code ok
 				}
-				::db delete_hstore ${:obj} $id $key
+				set id [:id get]
+				# Delete from database if object already exists
+				if {$id ne ""} {
+					::db delete_hstore ${:obj} $id $key
+				}
+				# Also update the in-memory object
+				dict unset extra $key
+				:add [dict create extra $extra]
 				return -code ok
 			} on error {errMsg} {
-				::oodzLog error "Class=baseObj method=delete_extra table=${:obj} key=$key error=$errMsg"
+				::oodzLog error "Class=baseObj method=delete_extra error=$errMsg"
 				return -code error $errMsg
 			}
 		}
 
+		:public method save_extra {} {
+			try {
+				set id [:id get]
+				if {$id eq ""} {
+					return -code error "Cannot save extra: object has no id"
+				}
+				set extra [:get_extra]
+				if {[dict size $extra] == 0} {
+					return -code ok
+				}
+				::db update_hstore ${:obj} $id $extra
+				return -code ok
+			} on error {errMsg} {
+				::oodzLog error "Class=baseObj method=save_extra error=$errMsg"
+				return -code error $errMsg
+			}
+		}
 ############################################################## Defaults ##############################################################
 		:public method load_default {args} {
 			set a [lindex $args 0]
 			try {
 				if {$a ne ""} {
-					set result [lindex [::db select_all ${:obj} * "${:obj}.$a IS TRUE"] 0]
+					set result [::db select_obj ${:obj} "${:obj}.$a IS TRUE"]
 				} else {
-					set result [lindex [::db select_all ${:obj} * "${:obj}.def IS TRUE"] 0]
+					set result [::db select_obj ${:obj} "${:obj}.def IS TRUE"]
 				}
 				if {[llength $result] > 0} {
 					:add $result
