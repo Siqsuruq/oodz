@@ -481,7 +481,10 @@ namespace eval oodz {
 					if {[:should_render $props $tag $val] == 1} {
 						set pr_dict [: props_2_dict $props $tag $val]
 						dict with pr_dict {}
+						
 						set editUrl [dict getdef $pr_dict edit-url $val]
+						set rowKey [dict getdef $pr_dict row-key ""]
+
 						set i_v [: Check_sdata $var]
 						set theads_trns {}
 						set theads {}
@@ -505,7 +508,11 @@ namespace eval oodz {
 						######################## STOP Table Headers ########################
 
 						ns_adp_puts "<div class=\"table-responsive-xl\">"
-						ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table $class\" style=\"width:100%\">"
+						set rowKeyAttr ""
+						if {$rowKey ne ""} {
+							set rowKeyAttr " data-row-key=\"$rowKey\""
+						}
+						ns_adp_puts "<table name=\"$var\" id=\"$var\" class=\"table $class\" style=\"width:100%\"$rowKeyAttr>"
 						
 						# THEAD
 						ns_adp_puts "<thead class=\"table-dark\">"
@@ -793,6 +800,7 @@ namespace eval oodz {
 					ns_adp_puts "height: '650px',"
 					ns_adp_puts "plugins: \['selectable','interaction'\],"
 					ns_adp_puts "selectable: true,"
+					ns_adp_puts "editable: true,"
 					ns_adp_puts "eventSources: \["
 					ns_adp_puts "{"
 					ns_adp_puts "url: \"$action\","
@@ -826,7 +834,15 @@ namespace eval oodz {
 					ns_adp_puts "},"
 
 					ns_adp_puts "eventDrop: function(info) {"
-					ns_adp_puts "postData(\"$update_action\", info).then(data => console.log('Response:', data)).catch(error => console.error('Error:', error.message));"
+					ns_adp_puts "    const eventData = {"
+					ns_adp_puts "        event: {"
+					ns_adp_puts "            id: info.event.id,"
+					ns_adp_puts "            start: info.event.start ? info.event.start.toISOString() : null,"
+					ns_adp_puts "            end: info.event.end ? info.event.end.toISOString() : null"
+					ns_adp_puts "        }"
+					ns_adp_puts "    };"
+					ns_adp_puts "    console.log('DROP EVENT:', eventData);"
+					ns_adp_puts "    mainData.sendAllData(\"$update_action\", \[\], false, eventData);"
 					ns_adp_puts "}"
 
 					ns_adp_puts "});"
