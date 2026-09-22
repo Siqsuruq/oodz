@@ -789,63 +789,331 @@ namespace eval oodz {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "</div>"
 				} else {
+
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
+					# -------------------------------------------------------
+					# Defaults
+					# -------------------------------------------------------
+					set calendar_view "timeGridWeek"
+					if {[dict exists $pr_dict view] && $view ne ""} {
+						set calendar_view $view
+					}
+					set calendar_views "timeGridDay,timeGridWeek,dayGridMonth,listWeek"
+					if {[dict exists $pr_dict available_views] && $available_views ne ""} {
+						set calendar_views $available_views
+					}
+					set calendar_first_day 1
+					if {[dict exists $pr_dict first_day] && $first_day ne ""} {
+						set calendar_first_day $first_day
+					}
+					set calendar_height "650px"
+					if {[dict exists $pr_dict height] && $height ne ""} {
+						set calendar_height $height
+					}
+					set calendar_slot_duration "00:30:00"
+					if {[dict exists $pr_dict slot_duration] && $slot_duration ne ""} {
+						set calendar_slot_duration $slot_duration
+					}
+					set calendar_slot_min_time "00:00:00"
+					if {[dict exists $pr_dict slot_min_time] && $slot_min_time ne ""} {
+						set calendar_slot_min_time $slot_min_time
+					}
+					set calendar_slot_max_time "24:00:00"
+					if {[dict exists $pr_dict slot_max_time] && $slot_max_time ne ""} {
+						set calendar_slot_max_time $slot_max_time
+					}
+					#
+					# Boolean options
+					#
+					set calendar_selectable "true"
+					if {[dict exists $pr_dict selectable]} {
+						if {$selectable in {0 false f no off}} {
+							set calendar_selectable "false"
+						}
+					}
+					set calendar_editable "true"
+					if {[dict exists $pr_dict editable]} {
+						if {$editable in {0 false f no off}} {
+							set calendar_editable "false"
+						}
+					}
+					set calendar_now_indicator "true"
+					if {[dict exists $pr_dict now_indicator]} {
+						if {$now_indicator in {0 false f no off}} {
+							set calendar_now_indicator "false"
+						}
+					}
+					# -------------------------------------------------------
+					# Parse filters
+					#
+					# Format:
+					# filters="planer:planer_name,medic:uuid_medic"
+					# element-id : request-parameter
+					# -------------------------------------------------------
+					set calendar_filters [list]
+					if {[dict exists $pr_dict filters] && [string trim $filters] ne ""} {
+						foreach filter [split $filters ","] {
+							set filter [string trim $filter]
+							if {$filter eq ""} {
+								continue
+							}
+							set filter_parts [split $filter ":"]
+							if {[llength $filter_parts] != 2} {
+								::oodzLog warning "Invalid calendar filter '$filter'. Expected element:param"
+								continue
+							}
+							set filter_element [string trim [lindex $filter_parts 0]]
+							set filter_param [string trim [lindex $filter_parts 1]]
+							if {$filter_element eq "" || $filter_param eq ""} {
+								continue
+							}
+							lappend calendar_filters [list $filter_element $filter_param]
+						}
+					}
+					# Calendar locale and UI translations
+					set oodz_language [::oodzConf language get]
+					set locale_map [dict create pt "pt-PT" en "en" fr "fr" es "es" ch "zh-CN" ru "ru"]
+					set calendar_locale [dict getdef $locale_map $oodz_language "en"]
+					set txt_today     [::msgcat::mc "Today"]
+					set txt_day       [::msgcat::mc "Day"]
+					set txt_week      [::msgcat::mc "Week"]
+					set txt_month     [::msgcat::mc "Month"]
+					set txt_list      [::msgcat::mc "List"]
+					set txt_no_events [::msgcat::mc "No events"]
+					set txt_all_day   [::msgcat::mc "All day"]
+
+					# -------------------------------------------------------
+					# HTML container
+					# -------------------------------------------------------
 					ns_adp_puts "<div class=\"$class\" id=\"$var\">"
 					ns_adp_puts "<script>"
+					# IIFE
+					#
+					# Important:
+					# allows several <calendar> instances on same page without
+					# const/let variable collisions.
+					ns_adp_puts "(() => {"
 					ns_adp_puts "const el = document.getElementById('$var');"
+					ns_adp_puts "if (!el) {"
+					ns_adp_puts "    console.error('Calendar element not found: $var');"
+					ns_adp_puts "    return;"
+					ns_adp_puts "}"
+					# -------------------------------------------------------
+					# Filters
+					# -------------------------------------------------------
+					ns_adp_puts "const filterMappings = \["
+					foreach filter $calendar_filters {
+						lassign $filter filter_element filter_param
+						ns_adp_puts "{"
+						ns_adp_puts "element: '$filter_element',"
+						ns_adp_puts "param: '$filter_param'"
+						ns_adp_puts "},"
+					}
+					ns_adp_puts "\];"
+					# -------------------------------------------------------
+					# EventCalendar
+					# -------------------------------------------------------
 					ns_adp_puts "const ec = EventCalendar.create(el, {"
-    				ns_adp_puts "view: 'timeGridWeek',"
-					ns_adp_puts "firstDay: 1,"
-					ns_adp_puts "height: '650px',"
+					ns_adp_puts "locale: '$calendar_locale',"
+					# Main view
+					ns_adp_puts "view: '$calendar_view',"
+					# Toolbar
+					ns_adp_puts "headerToolbar: {"
+					ns_adp_puts "    start: 'prev,next today',"
+					ns_adp_puts "    center: 'title',"
+					ns_adp_puts "    end: '$calendar_views'"
+					ns_adp_puts "},"
+
+					# Translated toolbar buttons
+					ns_adp_puts "buttonText: text => ({"
+					ns_adp_puts "    ...text,"
+					ns_adp_puts "    today: '$txt_today',"
+					ns_adp_puts "    timeGridDay: '$txt_day',"
+					ns_adp_puts "    timeGridWeek: '$txt_week',"
+					ns_adp_puts "    dayGridMonth: '$txt_month',"
+					ns_adp_puts "    listDay: '$txt_list',"
+					ns_adp_puts "    listWeek: '$txt_list',"
+					ns_adp_puts "    listMonth: '$txt_list'"
+					ns_adp_puts "}),"
+					ns_adp_puts "noEventsContent: '$txt_no_events',"
+					ns_adp_puts "allDayContent: '$txt_all_day',"
+
+					# General options
+					ns_adp_puts "firstDay: $calendar_first_day,"
+					ns_adp_puts "height: '$calendar_height',"
+					ns_adp_puts "selectable: $calendar_selectable,"
+					ns_adp_puts "editable: $calendar_editable,"
+					ns_adp_puts "nowIndicator: $calendar_now_indicator,"
+					# Time-grid configuration
+					ns_adp_puts "slotDuration: '$calendar_slot_duration',"
+					ns_adp_puts "slotMinTime: '$calendar_slot_min_time',"
+					ns_adp_puts "slotMaxTime: '$calendar_slot_max_time',"
+					# Plugins
+					# Standalone EventCalendar build already contains the view plugins.
 					ns_adp_puts "plugins: \['selectable','interaction'\],"
-					ns_adp_puts "selectable: true,"
-					ns_adp_puts "editable: true,"
+					# -------------------------------------------------------
+					# Event source
+					# -------------------------------------------------------
 					ns_adp_puts "eventSources: \["
 					ns_adp_puts "{"
-					ns_adp_puts "url: \"$action\","
+					ns_adp_puts "url: '$action',"
 					ns_adp_puts "method: 'POST',"
 					ns_adp_puts "contentType: 'application/x-www-form-urlencoded',"
-					if {[dict exists $pr_dict uuid_planer]} {
-						ns_adp_puts "extraParams: { uuid_planer: '$uuid_planer' }"
-					} else {
-						puts "DEFAULT PLANER IS NOT DEFINED"
+					# EventCalendar automatically adds: start end. We add our generic filters.
+					ns_adp_puts "extraParams: function() {"
+					ns_adp_puts "const params = {};"
+					# Keep your existing uuid_planer support for backward compatibility.
+					if {[dict exists $pr_dict uuid_planer] && $uuid_planer ne ""} {
+						ns_adp_puts "params.uuid_planer = '$uuid_planer';"
 					}
+					# Read dynamic filters
+					ns_adp_puts "filterMappings.forEach(filter => {"
+					ns_adp_puts "    const input = document.getElementById(filter.element);"
+					ns_adp_puts "    if (!input) {"
+					ns_adp_puts "        return;"
+					ns_adp_puts "    }"
+					ns_adp_puts "    if (input.value !== '') {"
+					ns_adp_puts "        params\[filter.param\] = input.value;"
+					ns_adp_puts "    }"
+					ns_adp_puts "});"
+					ns_adp_puts "return params;"
+					ns_adp_puts "}"
 					ns_adp_puts "}"
 					ns_adp_puts "\],"
-					
-					ns_adp_puts "select: function (info) {"
-					ns_adp_puts "const formatDateTime = dt => dt.toISOString().slice(0, 16);"
-					ns_adp_puts "document.getElementById('dtstart').value = formatDateTime(info.start);"
-					ns_adp_puts "document.getElementById('dtend').value = formatDateTime(info.end);"
-					ns_adp_puts "const modal = new bootstrap.Modal(document.getElementById('add_event'));"
-					ns_adp_puts "modal.show();"
-					ns_adp_puts "},"
-
-					ns_adp_puts "eventClick: function(info) {"
-					ns_adp_puts "info.jsEvent.preventDefault();"
-					ns_adp_puts "const eventData = JSON.parse(JSON.stringify(info.event, (key, value) => {"
-        			ns_adp_puts "if (value instanceof Date) {"
-            		ns_adp_puts "return value.toISOString();"
-        			ns_adp_puts "}"
-        			ns_adp_puts "return value;"
-    				ns_adp_puts "}));"
-					ns_adp_puts "mainData.sendAllData('/api/v2/planer/edit_event', \[\], false, eventData);"
-					ns_adp_puts "},"
-
-					ns_adp_puts "eventDrop: function(info) {"
-					ns_adp_puts "    const eventData = {"
-					ns_adp_puts "        event: {"
-					ns_adp_puts "            id: info.event.id,"
-					ns_adp_puts "            start: info.event.start ? info.event.start.toISOString() : null,"
-					ns_adp_puts "            end: info.event.end ? info.event.end.toISOString() : null"
-					ns_adp_puts "        }"
-					ns_adp_puts "    };"
-					ns_adp_puts "    console.log('DROP EVENT:', eventData);"
-					ns_adp_puts "    mainData.sendAllData(\"$update_action\", \[\], false, eventData);"
-					ns_adp_puts "}"
-
+					# -------------------------------------------------------
+					# Select new event
+					# -------------------------------------------------------
+					if {$calendar_selectable eq "true" && [dict exists $pr_dict select_modal]} {
+						set calendar_start_var "dtstart"
+						if {[dict exists $pr_dict start_var] && $start_var ne ""} {
+							set calendar_start_var $start_var
+						}
+						set calendar_end_var "dtend"
+						if {[dict exists $pr_dict end_var] && $end_var ne ""} {
+							set calendar_end_var $end_var
+						}
+						ns_adp_puts "select: function(info) {"
+						ns_adp_puts "const formatDateTime = dt =>"
+						ns_adp_puts "    dt.toISOString().slice(0, 16);"
+						ns_adp_puts "const startInput = document.getElementById('$calendar_start_var');"
+						ns_adp_puts "const endInput = document.getElementById('$calendar_end_var');"
+						ns_adp_puts "if (startInput) {"
+						ns_adp_puts "    startInput.value = formatDateTime(info.start);"
+						ns_adp_puts "}"
+						ns_adp_puts "if (endInput) {"
+						ns_adp_puts "    endInput.value = formatDateTime(info.end);"
+						ns_adp_puts "}"
+						ns_adp_puts "const modalElement = document.getElementById('$select_modal');"
+						ns_adp_puts "if (modalElement) {"
+						ns_adp_puts "    const modal = new bootstrap.Modal(modalElement);"
+						ns_adp_puts "    modal.show();"
+						ns_adp_puts "}"
+						ns_adp_puts "},"
+					}
+					# -------------------------------------------------------
+					# Event click
+					# -------------------------------------------------------
+					if {
+						[dict exists $pr_dict click_action] &&
+						$click_action ne ""
+					} {
+						ns_adp_puts "eventClick: function(info) {"
+						ns_adp_puts "info.jsEvent.preventDefault();"
+						ns_adp_puts "const eventData = JSON.parse("
+						ns_adp_puts "    JSON.stringify("
+						ns_adp_puts "        info.event,"
+						ns_adp_puts "        (key, value) => {"
+						ns_adp_puts "            if (value instanceof Date) {"
+						ns_adp_puts "                return value.toISOString();"
+						ns_adp_puts "            }"
+						ns_adp_puts "            return value;"
+						ns_adp_puts "        }"
+						ns_adp_puts "    )"
+						ns_adp_puts ");"
+						ns_adp_puts "mainData.sendAllData("
+						ns_adp_puts "    '$click_action',"
+						ns_adp_puts "    \[\],"
+						ns_adp_puts "    false,"
+						ns_adp_puts "    eventData"
+						ns_adp_puts ");"
+						ns_adp_puts "},"
+					}
+					# -------------------------------------------------------
+					# Drag/drop
+					# -------------------------------------------------------
+					if {
+						$calendar_editable eq "true" &&
+						[dict exists $pr_dict update_action] &&
+						$update_action ne ""
+					} {
+						ns_adp_puts "eventDrop: function(info) {"
+						ns_adp_puts "const eventData = {"
+						ns_adp_puts "    event: {"
+						ns_adp_puts "        id: info.event.id,"
+						ns_adp_puts "        start: info.event.start"
+						ns_adp_puts "            ? info.event.start.toISOString()"
+						ns_adp_puts "            : null,"
+						ns_adp_puts "        end: info.event.end"
+						ns_adp_puts "            ? info.event.end.toISOString()"
+						ns_adp_puts "            : null"
+						ns_adp_puts "    }"
+						ns_adp_puts "};"
+						ns_adp_puts "mainData.sendAllData("
+						ns_adp_puts "    '$update_action',"
+						ns_adp_puts "    \[\],"
+						ns_adp_puts "    false,"
+						ns_adp_puts "    eventData"
+						ns_adp_puts ");"
+						ns_adp_puts "},"
+						# Resize support editable=true allows resizing too, so we must persist that just like drag/drop.
+						ns_adp_puts "eventResize: function(info) {"
+						ns_adp_puts "const eventData = {"
+						ns_adp_puts "    event: {"
+						ns_adp_puts "        id: info.event.id,"
+						ns_adp_puts "        start: info.event.start"
+						ns_adp_puts "            ? info.event.start.toISOString()"
+						ns_adp_puts "            : null,"
+						ns_adp_puts "        end: info.event.end"
+						ns_adp_puts "            ? info.event.end.toISOString()"
+						ns_adp_puts "            : null"
+						ns_adp_puts "    }"
+						ns_adp_puts "};"
+						ns_adp_puts "mainData.sendAllData("
+						ns_adp_puts "    '$update_action',"
+						ns_adp_puts "    \[\],"
+						ns_adp_puts "    false,"
+						ns_adp_puts "    eventData"
+						ns_adp_puts ");"
+						ns_adp_puts "},"
+					}
+					# Dummy option so previous callback may safely end with comma.
+					ns_adp_puts "pointer: true"
+					# End EventCalendar config
 					ns_adp_puts "});"
+					# -------------------------------------------------------
+					# Dynamic filter listeners
+					# -------------------------------------------------------
+					# Every filter automatically triggers event reload.
+					ns_adp_puts "filterMappings.forEach(filter => {"
+					ns_adp_puts "    const input = document.getElementById(filter.element);"
+					ns_adp_puts "    if (!input) {"
+					ns_adp_puts "        console.warn("
+					ns_adp_puts "            'Calendar filter element not found:',"
+					ns_adp_puts "            filter.element"
+					ns_adp_puts "        );"
+					ns_adp_puts "        return;"
+					ns_adp_puts "    }"
+					ns_adp_puts "    input.addEventListener('change', () => {"
+					ns_adp_puts "        ec.refetchEvents();"
+					ns_adp_puts "    });"
+					ns_adp_puts "});"
+					# Optional registry.
+					# Not necessary for filters, but useful later if OODZ needs to access a calendar from elsewhere.
+					ns_adp_puts "window.oodzCalendars = window.oodzCalendars || {};"
+					ns_adp_puts "window.oodzCalendars\['$var'\] = ec;"
+					# End IIFE
+					ns_adp_puts "})();"
 					ns_adp_puts "</script>"
 				}
 			############################################### CODE EDITOR WILL BE REMOVED###############################################
