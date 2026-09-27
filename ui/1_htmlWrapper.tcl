@@ -1862,7 +1862,7 @@ namespace eval oodz {
 				h5 ""\
 				h6 ""\
 				p ""\
-				link "btn btn-outline-dark btn-sm w-100"\
+				link "btn btn-outline-secondary btn-sm w-100"\
 				plain_html ""\
 				chart ""\
 				html_string ""\
@@ -1883,8 +1883,8 @@ namespace eval oodz {
 				date "form-control form-control-sm oodz_txt"\
 				time "form-control form-control-sm oodz_txt"\
 				clock "form-control form-control-sm oodz_txt"\
-				button "btn btn-outline-dark btn-sm w-100"\
-				mod_button "btn btn-outline-dark btn-sm"\
+				button "btn btn-outline-secondary btn-sm w-100"\
+				mod_button "btn btn-outline-secondary btn-sm w-100"\
 				modal ""\
 				text "form-control oodz_txt"\
 				msg "alert alert-dark"\

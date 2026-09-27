@@ -3,39 +3,20 @@ namespace eval oodz {
 		:property {oodzConf:object,required}
 		
 		:method init {} {
-			set :date_format [oodzConf get_global date_format]
-			set :timezone [oodzConf get_global timezone]
-			set :time_hm_format [oodzConf get_global time_hm_format]
-			set :now_date_time_format [oodzConf get_global now_date_time_format]
-			set :time_format [oodzConf get_global time_format]
-			set :timestamp_format [oodzConf get_global timestamp_format]
+			set :date_format [${:oodzConf} get_module_config date_time.date_format]
+			set :timezone [${:oodzConf} get_module_config date_time.timezone]
+			set :time_hm_format [${:oodzConf} get_module_config date_time.time_hm_format]
+			set :now_date_time_format [${:oodzConf} get_module_config date_time.now_date_time_format]
+			set :time_format [${:oodzConf} get_module_config date_time.time_format]
+			set :timestamp_format [${:oodzConf} get_module_config date_time.timestamp_format]
 		}
 
+		############################################## General ##############################################
 		:public method date {} {
 			set systemTime [clock seconds]
 			return [clock format $systemTime -format ${:date_format} -timezone "${:timezone}"]
 		}
 		
-		:public method ISO_date {} {
-			set systemTime [clock seconds]
-			return [clock format $systemTime -format %Y-%m-%d -timezone "${:timezone}"]
-		}
-
-		:public method ISO_year_month {} {
-			set systemTime [clock seconds]
-			return [clock format $systemTime -format %Y-%m -timezone "${:timezone}"]
-		}
-		
-		:public method ISO_time {} {
-			set systemTime [clock seconds]
-			return [clock format $systemTime -format %H:%M:%S -timezone "${:timezone}"]
-		}
-
-		:public method ISO_timestamp {} {
-			set systemTime [clock seconds]
-			return [clock format $systemTime -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
-		}
-
 		:public method year {} {
 			set systemTime [clock seconds]
 			return [clock format $systemTime -format %Y -timezone "${:timezone}"]
@@ -62,12 +43,8 @@ namespace eval oodz {
 		}
 
 		:public method yesterday {} {
-			return [clock format [clock scan "yesterday"] -format ${:date_format}]
-		}
-
-		:public method ISO_yesterday {} {
-			set systemTime [clock seconds]
-			return [clock format [clock scan "yesterday"] -format %Y-%m-%d -timezone "${:timezone}"]
+			set systemTime [clock scan "yesterday" -timezone ${:timezone}]
+			return [clock format $systemTime -format ${:date_format} -timezone ${:timezone}]
 		}
 
 		:public method today {} {
@@ -75,18 +52,9 @@ namespace eval oodz {
 			return [clock format $systemTime -format ${:date_format} -timezone "${:timezone}"]
 		}
 
-		:public method ISO_today {} {
-			set systemTime [clock seconds]
-			return [clock format $systemTime -format %Y-%m-%d -timezone "${:timezone}"]
-		}
-		
-		:public method ISO_now {} {
-			set systemTime [clock seconds]
-			return [clock format $systemTime -format %H:%M -timezone "${:timezone}"]
-		}
-
 		:public method tomorrow {} {
-			return [clock format [clock scan "tomorrow"] -format ${:date_format}]
+			set systemTime [clock scan "tomorrow" -timezone ${:timezone}]
+			return [clock format $systemTime -format ${:date_format} -timezone ${:timezone}]
 		}
 
 		:public method time {} {
@@ -104,13 +72,50 @@ namespace eval oodz {
 			return [clock format $systemTime -format ${:now_date_time_format} -timezone "${:timezone}"]
 		}
 
-		:public method day_of_week {{date ""}} {
-			if {$date eq ""} {
-				set systemTime [clock seconds]
-			} else {
-				set systemTime [clock scan "$date"]
+		:public method timestamp {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format "${:timestamp_format}" -timezone "${:timezone}"]
+		}
+
+		:public method now_date {what} {
+			set systemTime [clock seconds]
+			if {$what eq "year"} {
+				return [clock format $systemTime -format "%Y" -timezone "${:timezone}"]
+			} elseif {$what eq "month"} {
+				return [clock format $systemTime -format "%B" -timezone "${:timezone}"]
 			}
-			return [::msgcat::mc "[clock format $systemTime -format %A -timezone "${:timezone}"]"]
+		}
+
+		:public method digit_month_2_abbr {args} {
+			set month_num [lindex $args 0]
+			set abr_m [dict create 1 "Jan" 2 "Feb" 3 "Mar" 4 "Apr" 5 "May" 6 "Jun" 7 "Jul" 8 "Aug" 9 "Sep" 10 "Oct" 11 "Nov" 12 "Dez"]
+			if {$month_num ne ""} {
+				return [dict getnull $abr_m $month_num ]
+			} else {
+				return ""
+			}
+		}
+
+		:public method seconds_to_human {seconds} {
+			# Handle months differently, assuming 30.44 days per month for calculation
+			# Given the small number, it's more practical to start from days for readability
+			set days [expr {$seconds / (86400)}]
+			set hours [expr {($seconds % 86400) / 3600}]
+			set minutes [expr {($seconds % 3600) / 60}]
+			set secs [expr {$seconds % 60}]
+			# Building the readable format string
+			set readable ""
+			if {$days > 0} {
+				append readable "${days} days "
+			}
+			if {$hours > 0} {
+				append readable "${hours} hours "
+			}
+			if {$minutes > 0} {
+				append readable "${minutes} minutes "
+			}
+			append readable "${secs} seconds"
+			return [string trim $readable]
 		}
 
 		:public method make_timestamp {{dt ""} {tm ""}} {
@@ -125,52 +130,83 @@ namespace eval oodz {
 			}
 		}
 
-		:public method timestamp {} {
-			set systemTime [clock seconds]
-			return [clock format $systemTime -format "${:timestamp_format}" -timezone "${:timezone}"]
-		}
-
 		:public method months {days} {
 			set month 30.4
 			return [expr {round($days / $month)}]
 		}
 
-		:public method now_date {what} {
-			set systemTime [clock seconds]
-			if {$what eq "year"} {
-				return [clock format $systemTime -format "%Y" -timezone "${:timezone}"]
-			} elseif {$what eq "month"} {
-				return [clock format $systemTime -format "%B" -timezone "${:timezone}"]
+		:public method day_of_week {{date ""}} {
+			if {$date eq ""} {
+				set systemTime [clock seconds]
+			} else {
+				set systemTime [clock scan "$date" -timezone ${:timezone}]
 			}
+			return [::msgcat::mc "[clock format $systemTime -format %A -timezone "${:timezone}"]"]
+		}
+		############################################## ISO ##############################################
+		:public method ISO_date {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format %Y-%m-%d -timezone "${:timezone}"]
 		}
 
-		# :public method every {ms body} {
-			# eval $body
-			# after $ms [list every $ms $body]
-		# }
+		:public method ISO_year_month {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format %Y-%m -timezone "${:timezone}"]
+		}
+		
+		:public method ISO_time {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format %H:%M:%S -timezone "${:timezone}"]
+		}
 
-		# Compare 2 dates and return earlier date first
+		:public method ISO_timestamp {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
+		}
+		
+		:public method ISO_yesterday {} {
+			set systemTime [clock scan "yesterday" -timezone ${:timezone}]
+			return [clock format $systemTime -format "%Y-%m-%d" -timezone ${:timezone}]
+		}
+
+		:public method ISO_today {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format %Y-%m-%d -timezone "${:timezone}"]
+		}
+		
+		:public method ISO_now {} {
+			set systemTime [clock seconds]
+			return [clock format $systemTime -format %H:%M -timezone "${:timezone}"]
+		}
+
+		# Compare 2 dates and return earlier date first. date1 and date2 MUST be ISO dates: YYYY-MM-DD
 		:public method compare_dates {date1 date2} {
-			set d1 [clock scan "$date1"]
-			set d2 [clock scan "$date2"]
-			if { [expr { $date1 < $date2 }] } {
+			set d1 [clock scan $date1 -format "%Y-%m-%d" -timezone ${:timezone}]
+			set d2 [clock scan $date2 -format "%Y-%m-%d" -timezone ${:timezone}]
+			if { [expr { $date1 <= $date2 }] } {
 				return [list $date1 $date2]
 			} else {
 				return [list $date2 $date1]
 			}
 		}
 
-		# Returns boolean value 1 if timestamp in range, 0 if out of range
-		:public method in_range {date1 range range_unit date2} {
-			set range_start [clock scan "$date1"]
-			set range_stop [clock add $range_start $range $range_unit]
-			set date_in_range [clock scan "$date2"]
-			if { $date_in_range >= $range_start && $date_in_range <= $range_stop } {
-				return 1
-			} else {
-				return 0
-			}
+		# Returns 1 if date2 is inside date1 + range, otherwise 0. date1/date2 MUST be ISO dates: YYYY-MM-DD
+		:public method date_in_range {date1 range range_unit date2} {
+			set range_start [clock scan $date1 -format "%Y-%m-%d" -timezone ${:timezone}]
+			set range_stop [clock add $range_start $range $range_unit -timezone ${:timezone}]
+			set date_in_range [clock scan $date2 -format "%Y-%m-%d" -timezone ${:timezone}]
+			return [expr {$date_in_range >= $range_start &&	$date_in_range <= $range_stop}]
 		}
+
+		# ts1/ts2 MUST be ISO timestamps: YYYY-MM-DD HH:MM:SS
+		:public method in_range {ts1 range range_unit ts2} {
+			set range_start [clock scan $ts1 -format "%Y-%m-%d %H:%M:%S" -timezone ${:timezone}]
+			set range_stop [clock add $range_start $range $range_unit -timezone ${:timezone}]
+			set timestamp_in_range [clock scan $ts2 -format "%Y-%m-%d %H:%M:%S" -timezone ${:timezone}]
+			return [expr {$timestamp_in_range >= $range_start && $timestamp_in_range <= $range_stop}]
+		}
+		################################################### NEED TO BE CHECKED ###################################################
+
 
 		:public method is_it_now {date_future} {
 			set now [clock scan [: date]]
@@ -194,46 +230,9 @@ namespace eval oodz {
 			return [clock format [clock add [clock scan $init_date -format "%Y-%m-%d %H:%M:%S"] $action$val $val_type] -format "%Y-%m-%d %H:%M:%S" -timezone "${:timezone}"]
 		}
 
-		# :public method get_country_timezone {args} {
-			# set srv [srv_info]
-			# set query "SELECT country.nicename, timezone.zone_name FROM country LEFT JOIN timezone ON timezone.country_code = country.iso WHERE nicename='[lindex $args 0]' ORDER BY timezone.country_code ASC"
-			# return [execute_qry $query]
-		# }
-
-		:public method digit_month_2_abbr {args} {
-			set month_num [lindex $args 0]
-			set abr_m [dict create 1 "Jan" 2 "Feb" 3 "Mar" 4 "Apr" 5 "May" 6 "Jun" 7 "Jul" 8 "Aug" 9 "Sep" 10 "Oct" 11 "Nov" 12 "Dez"]
-			if {$month_num ne ""} {
-				return [dict getnull $abr_m $month_num ]
-			} else {
-				return ""
-			}
-		}
 		
-		:public method seconds_to_human {seconds} {
-			# Handle months differently, assuming 30.44 days per month for calculation
-			# Given the small number, it's more practical to start from days for readability
-			set days [expr {$seconds / (86400)}]
-			set hours [expr {($seconds % 86400) / 3600}]
-			set minutes [expr {($seconds % 3600) / 60}]
-			set secs [expr {$seconds % 60}]
-
-			# Building the readable format string
-			set readable ""
-
-			if {$days > 0} {
-				append readable "${days} days "
-			}
-			if {$hours > 0} {
-				append readable "${hours} hours "
-			}
-			if {$minutes > 0} {
-				append readable "${minutes} minutes "
-			}
-			append readable "${secs} seconds"
-
-			return [string trim $readable]
-		}
+		
+		
 		
 		:public method extract {ISO_date what} {
 			if {$ISO_date ne "" } {
