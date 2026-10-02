@@ -76,6 +76,16 @@ nx::Class create SQLBuilder {
 		}
 	}
 
+    :public method addValueCondition {column operator value} {
+        set allowedOperators {= != <> > >= < <= LIKE ILIKE}
+        set operator [string toupper $operator]
+        if {$operator ni $allowedOperators} {
+            return -code error "Unsupported SQL operator '$operator'"
+        }
+       set quotedValue [ns_dbquotevalue $value]
+        :addCondition "$column $operator $quotedValue"
+    }
+
     # Define the addJoin method
     :public method addJoin {joinType table joinCondition} {
         lappend :joinList [list $joinType $table $joinCondition]

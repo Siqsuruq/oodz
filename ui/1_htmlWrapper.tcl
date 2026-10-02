@@ -1883,7 +1883,7 @@ namespace eval oodz {
 				date "form-control form-control-sm oodz_txt"\
 				time "form-control form-control-sm oodz_txt"\
 				clock "form-control form-control-sm oodz_txt"\
-				button "btn btn-outline-secondary btn-sm w-100"\
+				button "btn btn-outline-dark btn-sm w-100"\
 				mod_button "btn btn-outline-secondary btn-sm w-100"\
 				modal ""\
 				text "form-control oodz_txt"\

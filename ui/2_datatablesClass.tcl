@@ -61,31 +61,8 @@ nx::Class create datatablesClass {
                     }
                 }
             }
-            # set :columns $filteredColumns
-            # # Inject order info into corresponding columns
-            # dict for {idx orderEntry} $orderDict {
-            #     if {
-            #         [dict exists $orderEntry column] &&
-            #         [dict exists $orderEntry dir]
-            #     } {
-            #         set colIdx [dict get $orderEntry column]
-            #         set dir [dict get $orderEntry dir]
-            #         set column [dict getnull $columnsDict $colIdx]
-            #         if {$column ne ""} {
-            #             dict set column order_direction $dir
-            #             dict set column order_index $idx
-            #             dict set columnsDict $colIdx $column
-            #         }
-            #     }
-            # }
-
-            # # Store dicts directly into instance properties
-            # #set :columns $columnsDict
-            # set :order_columns_indx $orderDict
-            
             # Store only valid columns
             set :columns $filteredColumns
-
             # Inject order info only into valid filtered columns
             dict for {idx orderEntry} $orderDict {
                 if {
@@ -94,26 +71,18 @@ nx::Class create datatablesClass {
                 } {
                     set colIdx [dict get $orderEntry column]
                     set dir [string tolower [dict get $orderEntry dir]]
-
                     if {$dir ni {asc desc}} {
                         set dir asc
                     }
-
                     if {[dict exists ${:columns} $colIdx]} {
                         set column [dict get ${:columns} $colIdx]
-
                         dict set column order_direction $dir
                         dict set column order_index $idx
-
                         dict set :columns $colIdx $column
                     }
                 }
             }
-
             set :order_columns_indx $orderDict
-
-
-
             :pagination
             :order
             :search
@@ -134,49 +103,31 @@ nx::Class create datatablesClass {
         return -code ok ${:result}
     }
 
-    # :method order {} {
-    #     dict for {key value} ${:order_columns_indx} {
-    #         set col [dict get [dict get ${:columns} [dict get $value column]] data]
-    #         lappend :order_list $col [dict get $value dir]
-    #     }
-    # }
-
     :method order {} {
         set :order_list ""
-
         dict for {key value} ${:order_columns_indx} {
             if {![dict exists $value column]} {
                 continue
             }
-
             set colIdx [dict get $value column]
-
             if {![dict exists ${:columns} $colIdx]} {
                 continue
             }
-
             set columnDict [dict get ${:columns} $colIdx]
-
             if {![dict exists $columnDict data]} {
                 continue
             }
-
             set col [dict get $columnDict data]
-
             if {[lsearch -exact ${:valid_columns} $col] == -1} {
                 continue
             }
-
             set dir [dict getnull $value dir]
             set dir [string tolower $dir]
-
             if {$dir ni {asc desc}} {
                 set dir asc
             }
-
             lappend :order_list $col $dir
         }
-
         return -code ok
     }
 
@@ -197,29 +148,55 @@ nx::Class create datatablesClass {
         dict set :result OFFSET ${:offset}
     }
 
-    :public method build_query {tableName} {
+    :public method build_query {tableName {translate ""}} {
         set :valid_columns [::db select_columns_names $tableName]
         :parse_datatable_request
         set sb [SQLBuilder new -tableName $tableName]
         try {
             set recordsTotal [dict getnull [lindex [db execute_query [$sb buildCountQuery]] 0] count]
-                
             if {${:global_search} ne "" && ${:search_columns} ne ""} {
                 $sb search ${:global_search} ${:search_columns}
             }
-            ############## Pagination ###################### 
+            ############## Pagination ######################
             $sb setLimit ${:limit}
             $sb setOffset ${:offset}
             ################################################
             $sb addOrderBy ${:order_list}
-
-            set a [dbj execute_query [$sb buildSelectQuery]]
+            if {$translate ne ""} {
+                set rows [db execute_query [$sb buildSelectQuery]]
+                set js_lines_arr [::oodz::nsJsonArray new]
+                try {
+                    foreach row $rows {
+                        foreach column $translate {
+                            if {![dict exists $row $column]} {
+                                continue
+                            }
+                            set value [dict get $row $column]
+                            if {$value eq ""} {
+                                continue
+                            }
+                            dict set row $column [::msgcat::mc $value]
+                        }
+                        set jsObj [::oodz::JsonObj new]
+                        try {
+                            $jsObj addDict $row
+                            $js_lines_arr addObject [$jsObj asJSON]
+                        } finally {
+                            $jsObj destroy
+                        }
+                    }
+                    set a [$js_lines_arr asJSON]
+                } finally {
+                    $js_lines_arr destroy
+                }
+            } else {
+                set a [dbj execute_query [$sb buildSelectQuery]]
+            }
             set recordsFiltered [dict getnull [lindex [db execute_query [$sb buildCountQuery]] 0] count]
             if {$a eq ""} {
-                set res "{ \"recordsTotal\": $recordsTotal , \"recordsFiltered\" : $recordsFiltered, \"data\" : \[\]}"
-            } else {
-                set res "{ \"recordsTotal\": $recordsTotal , \"recordsFiltered\" : $recordsFiltered, \"data\" : $a }"
+                set a "\[\]"
             }
+            set res "{\"recordsTotal\": $recordsTotal,\"recordsFiltered\": $recordsFiltered,\"data\": $a}"
             return -code ok $res
         } on error {errMsg} {
             ::oodzLog error "Class=datatablesClass method=build_query error=$errMsg"
