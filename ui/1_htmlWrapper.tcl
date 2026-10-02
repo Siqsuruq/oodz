@@ -994,8 +994,10 @@ namespace eval oodz {
 							set calendar_end_var $end_var
 						}
 						ns_adp_puts "select: function(info) {"
-						ns_adp_puts "const formatDateTime = dt =>"
-						ns_adp_puts "    dt.toISOString().slice(0, 16);"
+						ns_adp_puts "const formatDateTime = dt => {"
+						ns_adp_puts "    const pad = n => String(n).padStart(2, '0');"
+						ns_adp_puts {    return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;}
+						ns_adp_puts "};"
 						ns_adp_puts "const startInput = document.getElementById('$calendar_start_var');"
 						ns_adp_puts "const endInput = document.getElementById('$calendar_end_var');"
 						ns_adp_puts "if (startInput) {"
