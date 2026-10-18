@@ -18,6 +18,7 @@ package require json::write
 package require tzint
 package require sha256
 package require fileutil
+package require ooxml
 #package require hrfilesize
 #package require struct::list
 #package require smtp
@@ -30,5 +31,4 @@ package require fileutil
 #package require valtype::common
 #package require valtype::luhn
 #package require vfs
-#package require ooxml
 # package require Hpdf

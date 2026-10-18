@@ -228,10 +228,13 @@ namespace eval oodz {
 					} else {
 						set img_tag ""
 					}
-					ns_adp_puts "\n<a class=\"$class\" href=\"$i_v\" target=\"_blank\">"
-					ns_adp_puts "$img_tag"
-					ns_adp_puts "[::msgcat::mc $val]"
-					ns_adp_puts "</a>"
+					# Show link only if value exists:
+					if {$i_v ne ""} {
+						ns_adp_puts "\n<a class=\"$class\" href=\"$i_v\" target=\"_blank\">"
+						ns_adp_puts "$img_tag"
+						ns_adp_puts "[::msgcat::mc $val]"
+						ns_adp_puts "</a>"
+					}
 				}
 			################################################# LABEL ################################################# 
 			} elseif {$tag eq "label"} {
@@ -1259,6 +1262,8 @@ namespace eval oodz {
 					set class ""
 					set source "file"
 					set multiple "false"
+					set state_url ""
+					set state_params ""
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
 					#
@@ -1297,7 +1302,7 @@ namespace eval oodz {
 					#
 					# Wrapper
 					#
-					ns_adp_puts "<div id=\"$var\" class=\"oodz-clickmap $class\" data-multiple=\"$multiple\">"
+					ns_adp_puts "<div id=\"$var\" class=\"oodz-clickmap $class\" data-multiple=\"$multiple\" data-state-url=\"[ns_quotehtml $state_url]\" data-state-params=\"[ns_quotehtml $state_params]\">"
 					#
 					# IMPORTANT:
 					# Put SVG directly into DOM, not <img src='...'>
@@ -1326,6 +1331,63 @@ namespace eval oodz {
 						// Read mode from:
 						// data-multiple=\"true\" / data-multiple=\"false\"
 						const multiple = root.dataset.multiple === 'true';
+						const stateUrl = root.dataset.stateUrl || '';
+						const stateParams = root.dataset.stateParams || '';
+						root.addEventListener('clickmap:set-state', (event) => {
+							const states = event.detail?.state || {};
+
+							root.querySelectorAll('\[data-value\]').forEach(el => {
+								const value = states\[el.dataset.value\];
+								if (typeof value === 'string' && value !== '') {
+									el.dataset.state = value;
+								} else {
+									delete el.dataset.state;
+								}
+							});
+						});
+
+						if (stateUrl) {
+							const url = new URL(stateUrl, document.baseURI);
+							for (const name of stateParams.trim().split(/\s+/).filter(Boolean)) {
+								const field = document.getElementsByName(name).item(0) || document.getElementById(name);
+								if (!field || !field.value) {
+									console.warn('Clickmap: missing state parameter', name);
+									return;
+								}
+								url.searchParams.set(name, field.value);
+							}
+							fetch(url.toString(), {
+								method: 'GET',
+								credentials: 'same-origin',
+								headers: {
+									'Accept': 'application/json'
+								}
+							})
+							.then(response => {
+								if (!response.ok) {
+									throw new Error('Clickmap HTTP error: ' + response.status);
+								}
+								return response.json();
+							})
+							.then(data => {
+								if (data.code !== undefined && data.code !== 200) {
+									throw new Error(data.details || 'Clickmap state request failed');
+								}
+
+								const state = data.state ?? data.data?.state;
+								if (!state || typeof state !== 'object' || Array.isArray(state)) {
+									throw new Error('Invalid clickmap state response');
+								}
+
+								root.dispatchEvent(new CustomEvent('clickmap:set-state', {
+									detail: { state }
+								}));
+							})
+							.catch(error => {
+								console.error('Clickmap state loading failed:', error);
+							});
+						}
+
 						root.addEventListener('click', (event) => {
 							const region = event.target.closest('\[data-value\]');
 							if (!region || !root.contains(region)) {
