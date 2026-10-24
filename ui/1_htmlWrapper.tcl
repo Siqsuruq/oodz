@@ -384,6 +384,10 @@ namespace eval oodz {
 									}
 								}
 							}
+							"func_color_dict" {
+								set func [lindex [dict get $pr_dict values] 0]
+								set option_dict [$func]
+							}
 							"ajax" {
 								set values [ns_unquotehtml [dict get $pr_dict values]]
 								set remote_data 1
@@ -420,19 +424,28 @@ namespace eval oodz {
 							ns_adp_puts "<button class=\"btn btn-outline-dark btn-sm\" type=\"button\" data-toggle=\"modal\" data-target=\"\#[dict get $pr_dict but_cmd]\">[::msgcat::mc "[dict get $pr_dict but_txt]"]</button>"
 							ns_adp_puts "</div>"
 						}
-
+						
 						set cmd_attrs [:render_cmd_attrs [:normalize_cmd_config $pr_dict]]
-
-						ns_adp_puts "<select name=\"$var\" id=\"$var\" class=\"$class\" $cmd_attrs data-placeholder=\"$placeholder\" $data_attr $mandatory $state>"
+						set color_attr ""
+						if {$vtype eq "func_color_dict"} {
+							set color_attr "data-color-options=\"true\""
+						}
+						ns_adp_puts "<select name=\"$var\" id=\"$var\" class=\"$class\" $cmd_attrs data-placeholder=\"$placeholder\" $data_attr $color_attr $mandatory $state>"
 						ns_adp_puts "<option value=\"\" selected></option>"
 
 						if {$remote_data == 0} {
 							dict for {dkey dval} $option_dict {
-								if {$dval eq $i_v || $dkey eq $i_v} {
-									ns_adp_puts "<option value=\"$dkey\" selected>$dval</option>"
-								} else {
-									ns_adp_puts "<option value=\"$dkey\">$dval</option>"
+								set option_attr ""
+								set option_text $dval
+								if {$vtype eq "func_color_dict"} {
+									set option_text [dict get $dval text]
+									set color [dict getdef $dval color ""]
+									if {[regexp {^#[0-9A-Fa-f]{6}$} $color]} {
+										set option_attr " data-color=\"[ns_quotehtml $color]\""
+									}
 								}
+								set selected [expr {$dkey eq $i_v || $option_text eq $i_v ? " selected" : ""}]
+								ns_adp_puts "<option value=\"[ns_quotehtml $dkey]\"$option_attr$selected>[ns_quotehtml $option_text]</option>"
 							}
 						} elseif {$remote_data == 1} {
 							if {$i_v ne "" && $selected_text ne ""} {
@@ -1266,11 +1279,7 @@ namespace eval oodz {
 					set state_params ""
 					set pr_dict [: props_2_dict $props $tag $val]
 					dict with pr_dict {}
-					#
-					# values:
-					#   0 = module
-					#   1 = svg filename
-					#
+					# values: 0 = module, 1 = svg filename
 					set module   [lindex $values 0]
 					set svg_name [lindex $values 1]
 					if {$module eq "" || $svg_name eq ""} {
@@ -1288,34 +1297,21 @@ namespace eval oodz {
 							} finally {
 								close $fd
 							}
-							#
-							# Remove XML declaration if SVG was exported
-							# from Inkscape/Illustrator/etc.
-							#
+							# Remove XML declaration if SVG was exported from Inkscape/Illustrator/etc.
 							regsub -all {<\?xml[^>]*\?>} $svg_data "" svg_data
 						}
-
 						default {
 							error "Unknown clickmap source '$source'"
 						}
 					}
-					#
 					# Wrapper
-					#
 					ns_adp_puts "<div id=\"$var\" class=\"oodz-clickmap $class\" data-multiple=\"$multiple\" data-state-url=\"[ns_quotehtml $state_url]\" data-state-params=\"[ns_quotehtml $state_params]\">"
-					#
-					# IMPORTANT:
-					# Put SVG directly into DOM, not <img src='...'>
-					#
+					# IMPORTANT: Put SVG directly into DOM, not <img src='...'>
 					ns_adp_puts $svg_data
-					#
 					# Standard form value
-					#
 					ns_adp_puts "<input type=\"hidden\" id=\"${var}_value\" name=\"$var\" data-type=\"json\" value=\"\">"
 					ns_adp_puts "</div>"
-					#
-					# First version JS
-					#
+
 					ns_adp_puts "<script>
 					(() => {
 						const root = document.getElementById('$var');
@@ -1333,15 +1329,25 @@ namespace eval oodz {
 						const multiple = root.dataset.multiple === 'true';
 						const stateUrl = root.dataset.stateUrl || '';
 						const stateParams = root.dataset.stateParams || '';
+
 						root.addEventListener('clickmap:set-state', (event) => {
 							const states = event.detail?.state || {};
 
 							root.querySelectorAll('\[data-value\]').forEach(el => {
 								const value = states\[el.dataset.value\];
-								if (typeof value === 'string' && value !== '') {
-									el.dataset.state = value;
+								const state = typeof value === 'string' ? value : (value && typeof value === 'object' ? value.state : '');
+								const color = value && typeof value === 'object' ? value.color : '';
+								if (typeof state === 'string' && state !== '') {
+									el.dataset.state = state;
 								} else {
 									delete el.dataset.state;
+								}
+								if (typeof color === 'string' && /^#\[0-9a-fA-F\]{6}$/.test(color)) {
+									el.style.setProperty('--clickmap-state-color', color);
+									el.classList.add('clickmap-has-color');
+								} else {
+									el.style.removeProperty('--clickmap-state-color');
+									el.classList.remove('clickmap-has-color');
 								}
 							});
 						});
@@ -1350,11 +1356,12 @@ namespace eval oodz {
 							const url = new URL(stateUrl, document.baseURI);
 							for (const name of stateParams.trim().split(/\s+/).filter(Boolean)) {
 								const field = document.getElementsByName(name).item(0) || document.getElementById(name);
-								if (!field || !field.value) {
+								const value = field?.value || new URLSearchParams(window.location.search).get(name);
+								if (!value) {
 									console.warn('Clickmap: missing state parameter', name);
 									return;
 								}
-								url.searchParams.set(name, field.value);
+								url.searchParams.set(name, value);
 							}
 							fetch(url.toString(), {
 								method: 'GET',
@@ -1395,19 +1402,12 @@ namespace eval oodz {
 							}
 							const value = region.dataset.value;
 							if (multiple) {
-								/*
-								* Check whether this logical value is already selected.
-								* There may be several SVG paths with the same data-value.
-								*/
 								const alreadySelected = Array.from(
 									root.querySelectorAll('\[data-value\]')
 								).some(el =>
 									el.dataset.value === value &&
 									el.classList.contains('clickmap-selected')
 								);
-								/*
-								* Toggle every SVG part belonging to this value.
-								*/
 								root.querySelectorAll('\[data-value\]').forEach(el => {
 
 									if (el.dataset.value !== value) {
@@ -1420,28 +1420,18 @@ namespace eval oodz {
 									}
 								});
 							} else {
-								/*
-								* Single selection:
-								* clear everything first.
-								*/
+								/* Single selection: clear everything first. */
 								root.querySelectorAll('\[data-value\]').forEach(el => {
 									el.classList.remove('clickmap-selected');
 								});
-								/*
-								* Select all SVG parts having the same logical value.
-								*/
+								/* Select all SVG parts having the same logical value. */
 								root.querySelectorAll('\[data-value\]').forEach(el => {
 									if (el.dataset.value === value) {
 										el.classList.add('clickmap-selected');
 									}
 								});
 							}
-							/*
-							* Collect selected values.
-							*
-							* Several SVG paths can have the same data-value,
-							* therefore Set removes duplicates.
-							*/
+							/* Collect selected values. Several SVG paths can have the same data-value, therefore Set removes duplicates. */
 							const values = Array.from(
 								new Set(
 									Array.from(
@@ -1451,31 +1441,18 @@ namespace eval oodz {
 									).map(el => el.dataset.value)
 								)
 							);
-							/*
-							* Store result in hidden input.
-							*
-							* multiple=true:
-							*     \[\"14\",\"15\",\"16\"\]
-							*
-							* multiple=false:
-							*     14
-							*/
+							
 							if (multiple) {
 								input.value = JSON.stringify(values);
 							} else {
 								input.value = values.find(() => true) || '';
 							}
-							/*
-							* Notify normal form listeners.
-							*/
+							
 							input.dispatchEvent(
 								new Event('change', {
 									bubbles: true
 								})
 							);
-							/*
-							* Generic clickmap event.
-							*/
 							root.dispatchEvent(
 								new CustomEvent('clickmap:select', {
 									bubbles: true,
@@ -1491,6 +1468,38 @@ namespace eval oodz {
 						});
 					})();
 					</script>"
+				}
+			} elseif {$tag eq "colorlegend"} {
+				if {$tagsgn ne "/"} {
+					set pr_dict [: props_2_dict $props $tag $val]
+					set func [lindex [dict get $pr_dict values] 0]
+					set items [$func]
+
+					ns_adp_puts "<div class=\"my-3\">"
+					ns_adp_puts "<div class=\"fw-semibold mb-2\">[::msgcat::mc $val]</div>"
+					ns_adp_puts "<div class=\"d-flex flex-wrap gap-3 small\">"
+
+					dict for {key item} $items {
+						set name [dict get $item text]
+						set color [dict getdef $item color ""]
+						if {![regexp {^#[0-9A-Fa-f]{6}$} $color]} { continue }
+
+						ns_adp_puts "<span class=\"d-inline-flex align-items-center gap-2\">"
+						ns_adp_puts "<span class=\"d-inline-block border rounded flex-shrink-0\" style=\"width:16px;height:16px;background-color:$color;\"></span>"
+						ns_adp_puts "<span>[::msgcat::mc $name]</span>"
+						ns_adp_puts "</span>"
+					}
+
+					set selected_color [dict getdef $pr_dict selected_color ""]
+					if {[regexp {^#[0-9A-Fa-f]{6}$} $selected_color]} {
+						set selected_label [dict getdef $pr_dict selected_label "Selected"]
+						ns_adp_puts "<span class=\"d-inline-flex align-items-center gap-2\">"
+						ns_adp_puts "<span class=\"d-inline-block border rounded flex-shrink-0\" style=\"width:16px;height:16px;background-color:$selected_color;\"></span>"
+						ns_adp_puts "<span>[::msgcat::mc $selected_label]</span>"
+						ns_adp_puts "</span>"
+					}
+
+					ns_adp_puts "</div></div>"
 				}
 			}
 		}
