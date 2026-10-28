@@ -573,23 +573,65 @@ namespace eval oodz {
 						ns_adp_puts "</table>"
 						
 						######################## JScript ########################
+						# Escape a value for use inside a single-quoted JavaScript string literal.
+						# Backslash must be mapped first; newlines are escaped rather than stripped.
+						set jsMap [list "\\" "\\\\" "'" "\\'" "\r" "\\r" "\n" "\\n" "</" "<\\/"]
 						ns_adp_puts "<script>(function(){"
-						ns_adp_puts "  let id = '$var';"
+						ns_adp_puts "  let id = '[string map $jsMap $var]';"
 						ns_adp_puts "  let \$t = \$('#' + id);"
 						ns_adp_puts "  if (!\$t.length) return;"
 
 						# Editor init
-						if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
+						set editorEnabled [::oodz::DataType is_bool [dict getnull $pr_dict editor]]
+						if {$editorEnabled} {
+							# Fields: use the explicit "fields" attribute when present, otherwise derive one field per header.
+							set editorFields {}
+							if {[dict exists $pr_dict fields]} {
+								# fields is a list of dicts, e.g. {name price type number} {name title type text}
+								set editorFields [dict get $pr_dict fields]
+								set editorFields [::htmlparse::mapEscapes $editorFields]
+							} else {
+								foreach thead $theads thead_trns $theads_trns {
+									lappend editorFields [dict create name $thead label $thead_trns]
+								}
+							}
+
 							ns_adp_puts "  let editor = new DataTable.Editor({"
-							ns_adp_puts "    ajax: { url: '$editUrl',"
-							ns_adp_puts "    type: 'PUT' ,"
-							ns_adp_puts "    contentType: 'application/json',"
-							ns_adp_puts "    data: function (d) { return JSON.stringify(d); }},"
-							ns_adp_puts "    table: '#$var',"
-							ns_adp_puts "    idSrc: '$idSrc',"
+							ns_adp_puts "    ajax: {"
+							ns_adp_puts "      url: '[string map $jsMap $editUrl]',"
+							ns_adp_puts "      type: 'POST',"
+							ns_adp_puts "      contentType: 'application/json',"
+							ns_adp_puts "      data: function (d) { return JSON.stringify(d); }"
+							ns_adp_puts "    },"
+							ns_adp_puts "    table: '[string map $jsMap $var]',"
+							ns_adp_puts "    idSrc: '[string map $jsMap $idSrc]',"
+
+							# Form options: submit only changed fields by default.
+							ns_adp_puts "    formOptions: {"
+							ns_adp_puts "      main: { submit: 'changed' }"
+							ns_adp_puts "    },"
+
 							ns_adp_puts "    fields: \["
-							foreach thead $theads thead_trns $theads_trns {
-								ns_adp_puts "      { label: '$thead_trns', name: '$thead' },"
+							foreach field $editorFields {
+								set fOpts {}
+								set fName [dict getdef $field name ""]
+								if {$fName eq ""} {
+									continue
+								}
+								lappend fOpts "name: '[string map $jsMap $fName]'"
+								lappend fOpts "label: '[string map $jsMap [dict getdef $field label $fName]]'"
+								if {[dict exists $field type]} {
+									lappend fOpts "type: '[string map $jsMap [dict get $field type]]'"
+								}
+								dict unset -nocomplain field name label
+								foreach {okey oval} $field {
+									switch -- $okey {
+										default {
+											lappend fOpts "$okey: '[string map $jsMap $oval]'"
+										}
+									}
+								}
+								ns_adp_puts "      { [join $fOpts {, }] },"
 							}
 							ns_adp_puts "    \]"
 							ns_adp_puts "  });"
@@ -661,7 +703,11 @@ namespace eval oodz {
 						ns_adp_puts "    lengthMenu: \[\[ 15,20,25,50,100,-1 \],\['15','20','25','50','100', \"$a_trns\" \]\],"
 
 						if {![::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]} {
-							ns_adp_puts "    buttons: \['copy', 'excel', 'pdf'\],"
+							if {$editorEnabled && ![::oodz::DataType is_bool [dict getnull $pr_dict editor_buttons_hide]]} {
+								ns_adp_puts "    buttons: \[\{extend: 'create', editor: editor, text: '[string map $jsMap [::msgcat::mc "New"]]'\}, \{extend: 'edit', editor: editor, text: '[string map $jsMap [::msgcat::mc "Edit"]]'\}, \{extend: 'remove', editor: editor, text: '[string map $jsMap [::msgcat::mc "Delete"]]'\}, 'copy', 'excel', 'pdf'\],"
+							} else {
+								ns_adp_puts "    buttons: \['copy', 'excel', 'pdf'\],"
+							}
 							ns_adp_puts "    layout: {topStart: 'buttons', topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
 						} else {
 							ns_adp_puts "    layout: {topStart: null, topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
@@ -669,16 +715,38 @@ namespace eval oodz {
 
 						ns_adp_puts "    columns: \["
 						foreach thead $theads thead_trns $theads_trns {
-							ns_adp_puts "      { data: '$thead', name: '$thead_trns' },"
+							ns_adp_puts "      { data: '[string map $jsMap $thead]', name: '[string map $jsMap $thead_trns]' },"
 						}
 						ns_adp_puts "    \]"
 
 						ns_adp_puts "  });"
 
 						# Editor inline binding
-						if {[::oodz::DataType is_bool [dict getnull $pr_dict editor]]} {
-							ns_adp_puts "  table.on('click', 'tbody td:not(:first-child)', function (e) {"
-							ns_adp_puts "    console.log('clicked cell', this);"
+						if {$editorEnabled} {
+							# Only bind inline editing when the column maps to an editable field.
+							set inlineFields {}
+							foreach field $editorFields {
+								set fName [dict getdef $field name ""]
+								if {$fName eq ""} {
+									continue
+								}
+								if {[dict getdef $field inline 1] eq "0"} {
+									continue
+								}
+								lappend inlineFields "'[string map $jsMap $fName]'"
+							}
+							# Bind by field name; columns without a matching field stay read-only.
+							if {[llength $inlineFields]} {
+								ns_adp_puts "  let inlineFields = \[[join $inlineFields {, }]\]"
+							} else {
+								ns_adp_puts "  let inlineFields = \[\]"
+							}
+							ns_adp_puts "  table.on('click', 'tbody td', function (e) {"
+							ns_adp_puts "    let col = table.column(this);"
+							ns_adp_puts "    let idx = col.index();"
+							ns_adp_puts "    let colName = null;"
+							ns_adp_puts "    try { colName = table.settings()\[0\].aoColumns\[idx\].mData; } catch (err) { colName = null; }"
+							ns_adp_puts "    if (!colName || !inlineFields.length || inlineFields.indexOf(colName) === -1) return;"
 							ns_adp_puts "    editor.inline(this);"
 							ns_adp_puts "  });"
 						}
