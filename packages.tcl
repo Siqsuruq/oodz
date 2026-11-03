@@ -20,7 +20,8 @@ package require sha256
 package require fileutil
 package require ooxml
 #package require hrfilesize
-#package require struct::list
+package require struct
+package require struct::list
 #package require smtp
 #package require mime
 #package require uri
