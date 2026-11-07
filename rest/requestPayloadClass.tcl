@@ -28,8 +28,9 @@ namespace eval oodz {
 				set tmpdict [json::json2dict $json]
 				:add [dict create $key $tmpdict]
 				return -code ok
-			} on error {e} {
-				return -code error "Error in json2dict"
+			} on error {errMsg} {
+				::oodzLog error "Class=requestPayload method=convertJsonToDict error=$errMsg"
+				return -code error "$errMsg"
 			}
 		}
 

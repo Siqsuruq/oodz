@@ -2,7 +2,7 @@ namespace eval oodz {
 	nx::Class create conf -superclass baseClass -mixins superClass {
 		:property {conf_table "dz_conf"}
 		:property {conf_file "default.ini"}
-		:property -accessor public {oodz_version "2.2.5"}
+		:property -accessor public {oodz_version:substdefault {[oodz::conf read_version]}}
 	 	:property -accessor public {srv:substdefault {[ns_info server]}}
 	 	:property -accessor public {srvpath:substdefault {[ns_pagepath]}}
 	 	:property -accessor public {srvaddress:substdefault {https://[ns_info server]}}
@@ -11,6 +11,17 @@ namespace eval oodz {
 
 		:public object method create {args} {
     		return [expr {[info exists :instance] ? ${:instance} : [set :instance [next]]}]
+		}
+
+		:public object method read_version {} {
+			set f [file join [ns_library shared] oodz version]
+			if {[file readable $f]} {
+				set fd [open $f r]
+				set v [string trim [read $fd]]
+				close $fd
+				return $v
+			}
+			return "UKNOWN OODZ VERSION"
 		}
 
 		:method init {} {

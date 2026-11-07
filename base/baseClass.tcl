@@ -15,7 +15,9 @@ namespace eval oodz {
 				}
 				:props
 			} else {
-				return -code error "Invalid argument: expected a dictionary"
+				set errMsg "Invalid argument: expected a dictionary"
+				::oodzLog error "Class=baseClass method=add error=$errMsg"
+				return -code error $errMsg
 			}
 		}
 
@@ -40,6 +42,7 @@ namespace eval oodz {
 					set result 0
 				}
 			} on error {errMsg} {
+				::oodzLog error "Class=baseClass method=prop_exists error=$errMsg"
 				set result 0
 			} finally {
 				return $result
@@ -60,6 +63,7 @@ namespace eval oodz {
 				}
 				# Iterate over the properties and gather their values 
 				foreach prop $what {
+					if {![: prop_exists $prop]} continue
 					set val [: cget -${prop}]
 					if {$result_type eq "L"} {
 						if {[:prop_isobj $val] == 1} {
@@ -76,21 +80,25 @@ namespace eval oodz {
 					}
 				}
 			} on error {errMsg} {
+				::oodzLog error "Class=baseClass method=get error=$errMsg"
 				return -code error $errMsg
-			} finally {
-				return $result
 			}
+			return $result
 		}
 
 		:method prop_isobj {varName} {
-			return [::nsf::is object $varName]
-			# Check if the variable is an object by attempting to get its class info
-			# if { [catch {${varName} info class}] } {
-			# 	return 0
-			# } else {
-			# 	return 1
-			# }
+			expr {[string match ::* $varName] && [::nsf::is object $varName] && [llength [$varName info lookup methods get]] > 0}
 		}
+
+		# :method prop_isobj {varName} {
+		# 	return [::nsf::is object $varName]
+		# 	# Check if the variable is an object by attempting to get its class info
+		# 	# if { [catch {${varName} info class}] } {
+		# 	# 	return 0
+		# 	# } else {
+		# 	# 	return 1
+		# 	# }
+		# }
 
 		# Public interface to remove specific keys from object data, accepts list as of keys as parameter
 		:public method remove {args} {
