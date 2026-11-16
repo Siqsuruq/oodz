@@ -113,20 +113,6 @@ namespace eval oodz {
 				} else {
 					ns_adp_puts "<div>"
 				}
-			################################################# CONTAINER ################################################# 
-			} elseif {$tag eq "container"} {
-				if {$tagsgn eq "/"} {
-					ns_adp_puts "</div>\n"
-				} else {
-					set pr_dict [: props_2_dict $props $tag $val]
-					dict with pr_dict {}
-					if {[dict get $pr_dict type] eq "frame" && [dict get $pr_dict pos] eq "hor"} {
-						ns_adp_puts "<div class=\"row gx-1 mt-2\">"
-					} elseif {[dict get $pr_dict type] eq "frame" && [dict get $pr_dict pos] eq "ver"} {
-						# Bootstrap Auto-layout columns
-						ns_adp_puts "<div class=\"col d-flex flex-column gap-1\">"
-					}
-				}
 			} elseif {$tag eq "row"} {
 				if {$tagsgn eq "/"} {
 					ns_adp_puts "</div>\n"
@@ -1991,7 +1977,6 @@ namespace eval oodz {
 				row "row gx-1 mt-2"\
 				col "col d-flex flex-column gap-1"\
 				line ""\
-				container ""\
 				accordion "accordion accordion-sm"\
 				accordion-item ""\
 				label ""\
