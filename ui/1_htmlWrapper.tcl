@@ -486,6 +486,9 @@ namespace eval oodz {
 						
 						set editUrl [dict getdef $pr_dict edit-url $val]
 						set rowKey [dict getdef $pr_dict row-key ""]
+					    # Editor row identifier. Accept both idSrc (existing XML) and id-src,
+					    # defaulting to the DataTables/Editor convention.
+					    set idSrc [dict getdef $pr_dict idSrc [dict getdef $pr_dict id-src "DT_RowId"]]
 
 						set i_v [: Check_sdata $var]
 						set theads_trns {}
@@ -533,6 +536,15 @@ namespace eval oodz {
 								set row [lindex $i_v $i]
 								# Build object triples from the key-value pairs in each row
 								set obj_triples {}
+								set rowIdVal ""
+								if {$rowKey ne "" && [dict exists $row $rowKey]} {
+									set rowIdVal [dict get $row $rowKey]
+								} elseif {[dict exists $row id]} {
+									set rowIdVal [dict get $row id]
+								}
+								if {$rowIdVal ne ""} {
+									lappend obj_triples DT_RowId string $rowIdVal
+								}
 								foreach {key val} $row {
 									lappend obj_triples $key string $val
 								}
@@ -559,186 +571,230 @@ namespace eval oodz {
 						ns_adp_puts "</table>"
 						
 						######################## JScript ########################
-						# Escape a value for use inside a single-quoted JavaScript string literal.
-						# Backslash must be mapped first; newlines are escaped rather than stripped.
-						set jsMap [list "\\" "\\\\" "'" "\\'" "\r" "\\r" "\n" "\\n" "</" "<\\/"]
-						ns_adp_puts "<script>(function(){"
-						ns_adp_puts "  let id = '[string map $jsMap $var]';"
-						ns_adp_puts "  let \$t = \$('#' + id);"
-						ns_adp_puts "  if (!\$t.length) return;"
-
-						# Editor init
 						set editorEnabled [::oodz::DataType is_bool [dict getnull $pr_dict editor]]
+						set buttonsHidden [::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]
+						set editorButtons [expr {$editorEnabled && !$buttonsHidden && ![::oodz::DataType is_bool [dict getnull $pr_dict editor_buttons_hide]]}]
+
+						ns_adp_puts "<script>(function(){"
+						ns_adp_puts "  const \$t = \$('#$var');"
+						ns_adp_puts {  if (!$t.length) return;}
+
+########################################################################## Editor ##########################################################################
+
 						if {$editorEnabled} {
-							# Fields: use the explicit "fields" attribute when present, otherwise derive one field per header.
-							set editorFields {}
-							if {[dict exists $pr_dict fields]} {
-								# fields is a list of dicts, e.g. {name price type number} {name title type text}
-								set editorFields [dict get $pr_dict fields]
-								set editorFields [::htmlparse::mapEscapes $editorFields]
-							} else {
-								foreach thead $theads thead_trns $theads_trns {
-									lappend editorFields [dict create name $thead label $thead_trns]
+							set tableName [dict getdef $pr_dict table ""]
+							set coltypes [dict create]
+							set fieldsArr [::oodz::nsJsonArray new]
+							set editableCols {}
+
+							if {$tableName ne ""} {
+								if {[catch {::db get_columns_types $tableName} coltypes]} {
+									::oodzLog error "htmlWrapper: cannot read column types for table '$tableName'"
+									set coltypes [dict create]
 								}
 							}
 
-							ns_adp_puts "  let editor = new DataTable.Editor({"
-							ns_adp_puts "    ajax: {"
-							ns_adp_puts "      url: '[string map $jsMap $editUrl]',"
-							ns_adp_puts "      type: 'POST',"
-							ns_adp_puts "      contentType: 'application/json',"
-							ns_adp_puts "      data: function (d) { return JSON.stringify(d); }"
-							ns_adp_puts "    },"
-							ns_adp_puts "    table: '[string map $jsMap $var]',"
-							ns_adp_puts "    idSrc: '[string map $jsMap $idSrc]',"
-
-							# Form options: submit only changed fields by default.
-							ns_adp_puts "    formOptions: {"
-							ns_adp_puts "      main: { submit: 'changed' }"
-							ns_adp_puts "    },"
-
-							ns_adp_puts "    fields: \["
-							foreach field $editorFields {
-								set fOpts {}
-								set fName [dict getdef $field name ""]
-								if {$fName eq ""} {
-									continue
-								}
-								lappend fOpts "name: '[string map $jsMap $fName]'"
-								lappend fOpts "label: '[string map $jsMap [dict getdef $field label $fName]]'"
-								if {[dict exists $field type]} {
-									lappend fOpts "type: '[string map $jsMap [dict get $field type]]'"
-								}
-								dict unset -nocomplain field name label
-								foreach {okey oval} $field {
-									switch -- $okey {
-										default {
-											lappend fOpts "$okey: '[string map $jsMap $oval]'"
-										}
+							foreach thead $theads thead_trns $theads_trns {
+								if {$thead eq "id" || [string match "uuid_*" $thead]} { continue }
+								set fo [::oodz::nsJsonObject new]
+								$fo addString name $thead
+								$fo addString label $thead_trns
+								switch -- [dict getdef $coltypes $thead ""] {
+									boolean {
+										$fo addString type checkbox
+										set options [::oodz::nsJsonArray new]
+										set opt [::oodz::nsJsonObject new]
+										$opt addString label ""
+										$opt addString value "true"
+										$options addObject [$opt asJSON]
+										$fo addArray options [$options asJSON]
+										$fo addString separator ""
+										$fo addString unselectedValue "false"
+										$opt destroy
+										$options destroy
+									}
+									timestamp {
+										$fo addString type datetime
+									}
+									"timestamp with time zone" - "timestamp without time zone" - date {
+										$fo addString type text
+									}
+									bigint - integer - smallint - numeric - real - "double precision" - money {
+										set at [::oodz::nsJsonObject new]
+										$at addString type number
+										$fo addObject attr [$at asJSON]
+										$at destroy
 									}
 								}
-								ns_adp_puts "      { [join $fOpts {, }] },"
+								$fieldsArr addObject [$fo asJSON]
+								lappend editableCols $thead
+								$fo destroy
 							}
-							ns_adp_puts "    \]"
-							ns_adp_puts "  });"
-						} else {
-							ns_adp_puts "  let editor = null;"
+
+							set foInline [::oodz::nsJsonObject new]
+							$foInline addString submit all
+							$foInline addBool buttons 0
+							$foInline addString onBlur submit
+							$foInline addString onReturn submit
+							$foInline addString onEsc close
+
+							set foMain [::oodz::nsJsonObject new]
+							$foMain addString submit changed
+							set formOpts [::oodz::nsJsonObject new]
+							$formOpts addObject main [$foMain asJSON]
+							$formOpts addObject inline [$foInline asJSON]
+							$foMain destroy
+							$foInline destroy
+
+							set edObj [::oodz::nsJsonObject new]
+							$edObj addString table "#$var"
+							$edObj addString idSrc $idSrc
+							set edAjax [::oodz::nsJsonObject new]
+							$edAjax addString url $editUrl
+							$edAjax addString type POST
+							$edObj addObject ajax [$edAjax asJSON]
+							$edAjax destroy
+							$edObj addObject formOptions [$formOpts asJSON]
+							$edObj addArray fields [$fieldsArr asJSON]
+							set edJson [$edObj asJSON]
+							$edObj destroy
+							$formOpts destroy
+							$fieldsArr destroy
+
+							set edColsArr [::oodz::nsJsonArray new]
+							foreach c $editableCols { $edColsArr addString $c }
+							set edColsJson [$edColsArr asJSON]
+							$edColsArr destroy
+							# Keep your existing DataTables Editor license key here.
+							ns_adp_puts "  DataTable.key('plus_1_20270926:SySH26KOk3ZcK8BMsBX4WaJLuwaTRQOd6zBkRyjgfP1eNgxMvFm/HyvZIvX3BjFAzEmV25ZyHXNFSuvGbkfbvg==');"
+							ns_adp_puts "  const editor = new DataTable.Editor($edJson);"
 						}
 
-						# DataTable init
-						ns_adp_puts "  let table = \$t.DataTable({"
-						ns_adp_puts "    processing: true,"
+########################################################################## DataTables ##########################################################################
 
-						################ ORDERING BLOCK: Enable ordering by default unless explicitly disabled. ################
+						set colArr [::oodz::nsJsonArray new]
+						foreach thead $theads thead_trns $theads_trns {
+							set o [::oodz::nsJsonObject new]
+							$o addString data $thead
+							$o addString name $thead_trns
+							$colArr addObject [$o asJSON]
+							$o destroy
+						}
+
+						set ordering true
 						if {[dict exists $pr_dict ordering]} {
 							set ordering [::oodz::DataType is_bool [dict get $pr_dict ordering]]
-						} else {
-							set ordering true
 						}
-						ns_adp_puts "    ordering: $ordering,"
-						if {$ordering} {
-							if {[dict exists $pr_dict order]} {
-								set order [dict get $pr_dict order]
-								ns_adp_puts "    order: \[\[ $order \]\],"
-							} else {
-								ns_adp_puts "    order: \[\[ 0, 'desc' \]\],"
-							}
-						} else {
-							# Preserve insertion order.
-							ns_adp_puts "    order: \[\],"
+						set oIdx 0
+						set oDir desc
+						if {[dict exists $pr_dict order]} {
+							set rawOrder [dict get $pr_dict order]
+							regexp {([0-9]+)} $rawOrder -> oIdx
+							regexp {(asc|desc)} $rawOrder -> oDir
 						}
-						#########################################################################################################
 
+						set lmArr [::oodz::nsJsonArray new]
+						foreach n {15 20 25 50 100 -1} { $lmArr addInt $n }
+
+						# Define buttons directly in layout, as in the official Editor examples.
+						set layObj [::oodz::nsJsonObject new]
+						if {$buttonsHidden} {
+							$layObj addNull topStart
+						} else {
+							set btnArr [::oodz::nsJsonArray new]
+							if {$editorButtons} {
+								foreach action {create edit remove} {
+									set btn [::oodz::nsJsonObject new]
+									$btn addString extend $action
+									$btn addString editor __EDITOR__
+									$btnArr addObject [$btn asJSON]
+									$btn destroy
+								}
+							}
+							foreach b {copy excel pdf} { $btnArr addString $b }
+							set topStart [::oodz::nsJsonObject new]
+							$topStart addArray buttons [$btnArr asJSON]
+							$layObj addObject topStart [$topStart asJSON]
+							$topStart destroy
+							$btnArr destroy
+						}
+						$layObj addString topEnd search
+						set bsArr [::oodz::nsJsonArray new]
+						$bsArr addString info
+						$bsArr addString pageLength
+						$layObj addArray bottomStart [$bsArr asJSON]
+						$bsArr destroy
+						$layObj addString bottomEnd paging
+
+						set dt [::oodz::nsJsonObject new]
+						$dt addBool processing 1
+						$dt addString rowId $idSrc
+						$dt addBool ordering $ordering
 						if {[dict exists $pr_dict select]} {
-							set select [dict get $pr_dict select]
-							switch $select {
-								"single" {
-									ns_adp_puts "    select: {style: 'single', blurable: false},"
-								}
-								"multi" {
-									ns_adp_puts "    select: {style: 'os', blurable: false},"
-								}
-								default {
-									ns_adp_puts "    select: {style: 'os', blurable: false},"
-								}
+							set selObj [::oodz::nsJsonObject new]
+							if {[dict get $pr_dict select] eq "single"} {
+								$selObj addString style single
+							} else {
+								$selObj addString style os
 							}
+							$selObj addBool blurable 1
+							if {$editorEnabled} {
+								$selObj addString selector "td:first-child"
+							}
+							$dt addObject select [$selObj asJSON]
+							$selObj destroy
 						} else {
-							ns_adp_puts "    select: false,"
+							$dt addBool select 0
 						}
 
-						if {[dict get $pr_dict type] eq "empty"} {
-							set serverSide "false"
+						if {[dict get $pr_dict type] eq "empty" || $i_v ne ""} {
+							set serverSide false
+						} else {
+							set serverSide true
 						}
-						ns_adp_puts "    serverSide: $serverSide,"
+						$dt addBool serverSide $serverSide
 						if {$serverSide eq "false"} {
-							if {$existing_data ne ""} {
-								ns_adp_puts "    data: $existing_data,"
-							}
+							if {$existing_data ne ""} { $dt addArray data $existing_data }
 						} else {
-							ns_adp_puts "    ajax: { url: '$val', type: 'POST', dataSrc: 'data' },"
+							set ajaxObj [::oodz::nsJsonObject new]
+							$ajaxObj addString url $val
+							$ajaxObj addString type POST
+							$ajaxObj addString dataSrc data
+							$dt addObject ajax [$ajaxObj asJSON]
+							$ajaxObj destroy
+						}
+						$dt addBool multiSort [::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]
+						$dt addArray lengthMenu [$lmArr asJSON]
+						$dt addObject layout [$layObj asJSON]
+						$dt addArray columns [$colArr asJSON]
+
+						# Replace JSON string placeholder with actual JavaScript Editor variable.
+						set dtJson [$dt asJSON]
+						if {$editorButtons} {
+							set dtJson [string map [list {"__EDITOR__"} editor] $dtJson]
 						}
 
-						if {[::oodz::DataType is_bool [dict getnull $pr_dict multiSort]]} {
-							set multiSort true
+						if {$ordering} {
+							ns_adp_puts "  const table = new DataTable('#$var', Object.assign($dtJson, {order: \[\[$oIdx, '$oDir'\]\]}));"
 						} else {
-							set multiSort false
+							ns_adp_puts "  const table = new DataTable('#$var', $dtJson);"
 						}
-						ns_adp_puts "    multiSort: $multiSort,"
+						$dt destroy
+						$lmArr destroy
+						$layObj destroy
+						$colArr destroy
 
-						set a_trns [::msgcat::mc "Show all"]
-						ns_adp_puts "    lengthMenu: \[\[ 15,20,25,50,100,-1 \],\['15','20','25','50','100', \"$a_trns\" \]\],"
+########################################################################## Inline Editing ##########################################################################
 
-						if {![::oodz::DataType is_bool [dict getnull $pr_dict buttons_hide]]} {
-							if {$editorEnabled && ![::oodz::DataType is_bool [dict getnull $pr_dict editor_buttons_hide]]} {
-								ns_adp_puts "    buttons: \[\{extend: 'create', editor: editor, text: '[string map $jsMap [::msgcat::mc "New"]]'\}, \{extend: 'edit', editor: editor, text: '[string map $jsMap [::msgcat::mc "Edit"]]'\}, \{extend: 'remove', editor: editor, text: '[string map $jsMap [::msgcat::mc "Delete"]]'\}, 'copy', 'excel', 'pdf'\],"
-							} else {
-								ns_adp_puts "    buttons: \['copy', 'excel', 'pdf'\],"
-							}
-							ns_adp_puts "    layout: {topStart: 'buttons', topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
-						} else {
-							ns_adp_puts "    layout: {topStart: null, topEnd: 'search', bottomStart: \['info', 'pageLength'\], bottomEnd: 'paging'} ,"
-						}
-
-						ns_adp_puts "    columns: \["
-						foreach thead $theads thead_trns $theads_trns {
-							ns_adp_puts "      { data: '[string map $jsMap $thead]', name: '[string map $jsMap $thead_trns]' },"
-						}
-						ns_adp_puts "    \]"
-
-						ns_adp_puts "  });"
-
-						# Editor inline binding
 						if {$editorEnabled} {
-							# Only bind inline editing when the column maps to an editable field.
-							set inlineFields {}
-							foreach field $editorFields {
-								set fName [dict getdef $field name ""]
-								if {$fName eq ""} {
-									continue
-								}
-								if {[dict getdef $field inline 1] eq "0"} {
-									continue
-								}
-								lappend inlineFields "'[string map $jsMap $fName]'"
-							}
-							# Bind by field name; columns without a matching field stay read-only.
-							if {[llength $inlineFields]} {
-								ns_adp_puts "  let inlineFields = \[[join $inlineFields {, }]\]"
-							} else {
-								ns_adp_puts "  let inlineFields = \[\]"
-							}
-							ns_adp_puts "  table.on('click', 'tbody td', function (e) {"
-							ns_adp_puts "    let col = table.column(this);"
-							ns_adp_puts "    let idx = col.index();"
-							ns_adp_puts "    let colName = null;"
-							ns_adp_puts "    try { colName = table.settings()\[0\].aoColumns\[idx\].mData; } catch (err) { colName = null; }"
-							ns_adp_puts "    if (!colName || !inlineFields.length || inlineFields.indexOf(colName) === -1) return;"
-							ns_adp_puts "    editor.inline(this);"
+							ns_adp_puts "  const editable = $edColsJson;"
+							ns_adp_puts "  table.on('click', 'tbody td:not(:first-child)', function () {"
+							ns_adp_puts {    if (!editable.includes(table.column(this).dataSrc())) return;}
+							ns_adp_puts {    editor.inline(table.cell(this).index(), {onBlur: 'submit', submit: 'all'});}
 							ns_adp_puts "  });"
 						}
-
 						ns_adp_puts "})();</script>"
-						
+
 						if {[dict getnull $pr_dict confirm_delete] ne ""} {
 						ns_adp_puts "<!-- Bootstrap Modal -->"
 							ns_adp_puts "<div id='deleteConfirmationModal' class='modal fade' tabindex='-1'>"
@@ -1557,6 +1613,75 @@ namespace eval oodz {
 				}
 			}
 		}
+		############################################ DataTables ############################################
+		:method editableColumns {tableName theads theads_trns} {
+			set coltypes [dict create]
+			set fieldsArr [::oodz::nsJsonArray new]
+			set editableCols {}
+			set result [dict create]
+
+			try {
+				if {$tableName ne ""} {
+					if {[catch {::db get_columns_types $tableName} coltypes]} {
+						::oodzLog error "htmlWrapper: cannot read column types for table '$tableName'"
+						set coltypes [dict create]
+					}
+				}
+
+				foreach thead $theads thead_trns $theads_trns {
+					if {$thead eq "id" || [string match "uuid_*" $thead]} {
+						continue
+					}
+					set fo [::oodz::nsJsonObject new]
+					$fo addString name $thead
+					$fo addString label $thead_trns
+
+					switch -- [dict getdef $coltypes $thead ""] {
+						boolean {
+							$fo addString type checkbox
+							set options [::oodz::nsJsonArray new]
+							set opt [::oodz::nsJsonObject new]
+							$opt addString label ""
+							$opt addString value "true"
+							$options addObject [$opt asJSON]
+							$fo addArray options [$options asJSON]
+							$fo addString separator ""
+							$fo addString unselectedValue "false"
+							$opt destroy
+							$options destroy
+						}
+						timestamp {
+							$fo addString type datetime
+						}
+						"timestamp with time zone" - "timestamp without time zone" - date {
+							$fo addString type text
+						}
+						bigint - integer - smallint - numeric - real - "double precision" - money {
+							set at [::oodz::nsJsonObject new]
+							$at addString type number
+							$fo addObject attr [$at asJSON]
+							$at destroy
+						}
+					}
+
+					$fieldsArr addObject [$fo asJSON]
+					lappend editableCols $thead
+					$fo destroy
+				}
+
+				set result [dict create fields [$fieldsArr asJSON] editable $editableCols]
+			} on error {errMsg} {
+				::oodzLog error "Error in editableColumns: $errMsg"
+				# Do not modify result — leave it as the empty dict
+			} finally {
+				if {[info exists fieldsArr]} {
+					$fieldsArr destroy
+				}
+			}
+			return $result
+		}
+
+		####################################################################################################
 		
 		:method input {props tag val} {
 			set pr_dict [: props_2_dict $props $tag $val]
